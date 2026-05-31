@@ -42,7 +42,7 @@ struct Wave {
 
 #[derive(Component)]
 struct Tower {
-    fire_timer: Timer,
+    fire_cooldown: Timer,
     rotational_speed: f32,
 }
 
@@ -94,11 +94,11 @@ fn main() {
         .add_systems(
             Update,
             (
+                progress_cooldown,
                 place_tower,
                 spawn_enemies,
                 move_enemies,
                 aim_towers,
-                towers_fire,
                 move_projectiles,
                 update_enemy_colors,
                 update_hud,
@@ -238,7 +238,7 @@ fn place_tower(
             Sprite::from_color(Color::srgb(0.22, 0.42, 0.74), Vec2::new(36.0, 36.0)),
             Transform::from_translation(grid_position.extend(2.0)),
             Tower {
-                fire_timer: Timer::from_seconds(0.42, TimerMode::Repeating),
+                fire_cooldown: Timer::from_seconds(0.42, TimerMode::Once),
                 rotational_speed: 1.5,
             },
         ))
@@ -246,6 +246,16 @@ fn place_tower(
             Sprite::from_color(Color::srgb(0.67, 0.83, 0.96), Vec2::new(12.0, 38.0)),
             Transform::from_translation(Vec3::new(0.0, 16.0, 1.0)),
         ));
+}
+
+fn progress_cooldown(
+    towers: Query<&mut Tower>,
+    time: Res<Time>,
+) {
+    let delta = time.delta();
+    for mut tower in towers {
+        tower.fire_cooldown.tick(delta);
+    }
 }
 
 fn spawn_enemies(
@@ -331,8 +341,8 @@ fn move_enemies(
 
 fn aim_towers(
     mut commands: Commands,
-    mut towers: Query<(&mut Transform, &Tower)>,
-    enemies: Query<(&Transform, &Enemy), Without<Tower>>,
+    mut towers: Query<(&mut Transform, &mut Tower)>,
+    enemies: Query<(Entity, &Transform, &Enemy), Without<Tower>>,
     game: Res<Game>,
     time: Res<Time>,
 ) {
@@ -340,73 +350,30 @@ fn aim_towers(
         return;
     }
 
-    for (mut tower_transform, tower) in &mut towers {
+    for (mut tower_transform, mut tower) in &mut towers {
         let tower_position = tower_transform.translation.truncate();
-        let target_position = enemies
+        let Some((target, target_position)) = enemies
             .iter()
-            .filter(|(_, enemy)| enemy.health > 0.0)
-            .filter_map(|(transform, enemy)| {
+            .filter(|(_, _, enemy)| enemy.health > 0.0)
+            .filter_map(|(entity, transform, enemy)| {
                 let enemy_position = transform.translation.truncate();
                 let distance = enemy_position.distance(tower_position);
                 let progress = enemy.progress;
-                (distance <= TOWER_RANGE).then_some((enemy_position, progress))
+                (distance <= TOWER_RANGE).then_some((entity, enemy_position, progress))
             })
-            .max_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(position, _)| position);
+            .max_by(|a, b| a.2.total_cmp(&b.2))
+            .map(|(entity, position, _)| (entity, position)) else { continue };
 
-        if let Some(target_position) = target_position {
-            let direction = target_position - tower_position;
-            let target_angle = direction.y.atan2(direction.x) - PI / 2.0;
-            let (_, current_angle) = tower_transform.rotation.to_axis_angle();
-            let clockwise_dist = if target_angle > current_angle { target_angle - current_angle } else { target_angle - current_angle + 2.0 * PI };
-            let cclockwise_dist = if target_angle < current_angle { current_angle - target_angle } else { current_angle - target_angle + 2.0 * PI };
-            let step = time.delta_secs() * tower.rotational_speed;
-            
-            let ready_to_shoot = if clockwise_dist < step || cclockwise_dist < step {
-                tower_transform.rotation = Quat::from_rotation_z(target_angle);
-                true
-            } else {
-                if clockwise_dist < cclockwise_dist {
-                    tower_transform.rotation = Quat::from_rotation_z(current_angle + step);
-                } else {
-                    tower_transform.rotation = Quat::from_rotation_z(current_angle - step);
-                }
-                false
-            };
+        let direction = target_position - tower_position;
+        let target_rotation = Quat::from_rotation_z(direction.y.atan2(direction.x) - PI / 2.0);
+        let current_rotation = tower_transform.rotation;
+        let step = time.delta_secs() * tower.rotational_speed;
 
-        }
-    }
-}
+        let ready_to_shoot = current_rotation.angle_between(target_rotation) <= step;
+        tower_transform.rotation = tower_transform.rotation.rotate_towards(target_rotation, step);
 
-fn towers_fire(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut towers: Query<(&Transform, &mut Tower)>,
-    enemies: Query<(Entity, &Transform, &Enemy)>,
-    game: Res<Game>,
-) {
-    if game.game_over {
-        return;
-    }
-
-    for (tower_transform, mut tower) in &mut towers {
-        tower.fire_timer.tick(time.delta());
-        if !tower.fire_timer.just_finished() {
-            continue;
-        }
-
-        let tower_position = tower_transform.translation.truncate();
-        let target = enemies
-            .iter()
-            .filter(|(_, _, enemy)| enemy.health > 0.0)
-            .filter_map(|(entity, transform, _)| {
-                let distance = transform.translation.truncate().distance(tower_position);
-                (distance <= TOWER_RANGE).then_some((entity, distance))
-            })
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(entity, _)| entity);
-
-        if let Some(target) = target {
+        if ready_to_shoot && tower.fire_cooldown.finished() {
+            tower.fire_cooldown.reset();
             commands.spawn((
                 Sprite::from_color(Color::srgb(0.96, 0.84, 0.28), Vec2::new(10.0, 10.0)),
                 Transform::from_translation(tower_position.extend(4.0)),
