@@ -209,12 +209,15 @@ pub enum EnemyKind {
 
 impl EnemyKind {
     pub fn max_health(self, wave: u32) -> f32 {
-        match self {
-            Self::Grunt => 55.0 + wave as f32 * 16.0,
-            Self::Runner => 38.0 + wave as f32 * 10.0,
-            Self::Brute => 105.0 + wave as f32 * 25.0,
-            Self::Armored => 80.0 + wave as f32 * 22.0,
-        }
+        let base_health = match self {
+            Self::Grunt => 71.0,
+            Self::Runner => 48.0,
+            Self::Brute => 130.0,
+            Self::Armored => 102.0,
+        };
+        let wave_growth = 1.12_f32.powi(wave.saturating_sub(1) as i32);
+
+        base_health * wave_growth
     }
 
     pub fn speed(self, wave: u32) -> f32 {
