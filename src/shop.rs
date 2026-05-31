@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -6,7 +7,25 @@ use crate::components::{
 };
 use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
-use crate::resources::{GameOver, Money, Shop};
+use crate::resources::{
+    AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
+    GameOver, MaxHp, Money, PassiveIncome, Regeneration, Shop, StatUpgradeKind, WaterDamage,
+};
+
+#[derive(SystemParam)]
+pub struct PlayerStatsMut<'w> {
+    current_hp: ResMut<'w, CurrentHp>,
+    max_hp: ResMut<'w, MaxHp>,
+    regeneration: ResMut<'w, Regeneration>,
+    attack_speed: ResMut<'w, AttackSpeed>,
+    passive_income: ResMut<'w, PassiveIncome>,
+    critical_chance: ResMut<'w, CriticalChance>,
+    explosion_size: ResMut<'w, ExplosionSize>,
+    earth_damage: ResMut<'w, EarthDamage>,
+    fire_damage: ResMut<'w, FireDamage>,
+    air_damage: ResMut<'w, AirDamage>,
+    water_damage: ResMut<'w, WaterDamage>,
+}
 
 pub fn update_shop_input(
     mut commands: Commands,
@@ -14,6 +33,7 @@ pub fn update_shop_input(
     mut shop: ResMut<Shop>,
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
+    mut stats: PlayerStatsMut,
 ) {
     if game_over.value {
         return;
@@ -39,6 +59,29 @@ pub fn update_shop_input(
             20.0,
         );
     }
+
+    if keyboard.just_pressed(KeyCode::KeyB) {
+        let Some(offer) = shop.selected_offer() else {
+            return;
+        };
+        let Some(upgrade) = offer.item.stat_upgrade_kind() else {
+            return;
+        };
+        if money.amount < offer.cost {
+            return;
+        }
+
+        money.amount -= offer.cost;
+        shop.take_selected_offer();
+        apply_stat_upgrade(upgrade, &mut stats);
+        spawn_floating_text(
+            &mut commands,
+            format!("-${}", offer.cost),
+            Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
+            Color::srgb(1.0, 0.86, 0.20),
+            20.0,
+        );
+    }
 }
 
 pub fn update_shop_text(
@@ -55,7 +98,10 @@ pub fn update_shop_text(
         return;
     };
 
-    text.0 = format!("Shop     1-3: select     E: reroll ${}", shop.reroll_cost);
+    text.0 = format!(
+        "Shop     1-3: select     B: buy upgrade     E: reroll ${}",
+        shop.reroll_cost
+    );
 
     for (slot, mut sprite) in &mut slots.p0() {
         let is_selected = slot.index == shop.selected;
@@ -77,6 +123,9 @@ pub fn update_shop_text(
         if let Some(kind) = offer.item.tower_kind() {
             sprite.color = kind.base_color();
             *visibility = Visibility::Visible;
+        } else if let Some(kind) = offer.item.stat_upgrade_kind() {
+            sprite.color = kind.icon_color();
+            *visibility = Visibility::Visible;
         }
     }
 
@@ -89,6 +138,8 @@ pub fn update_shop_text(
         if let Some(kind) = offer.item.tower_kind() {
             sprite.color = kind.barrel_color();
             *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
         }
     }
 
@@ -141,7 +192,10 @@ pub fn update_shop_tooltip(
 
         tooltip_text.0 = match offer.item.tower_kind() {
             Some(kind) => tower_tooltip(kind, offer.cost),
-            None => offer.item.name().to_string(),
+            None => match offer.item.stat_upgrade_kind() {
+                Some(kind) => upgrade_tooltip(kind, offer.cost),
+                None => offer.item.name().to_string(),
+            },
         };
         *tooltip_visibility = Visibility::Visible;
         return;
@@ -159,4 +213,49 @@ fn tower_tooltip(kind: TowerKind, cost: i32) -> String {
         kind.cooldown(),
         kind.explosion_radius(),
     )
+}
+
+fn upgrade_tooltip(kind: StatUpgradeKind, cost: i32) -> String {
+    format!(
+        "{}  ${}\nPermanent upgrade\n{}",
+        kind.name(),
+        cost,
+        kind.effect_text()
+    )
+}
+
+fn apply_stat_upgrade(kind: StatUpgradeKind, stats: &mut PlayerStatsMut) {
+    match kind {
+        StatUpgradeKind::MaxHp => {
+            stats.max_hp.amount += 5;
+            stats.current_hp.amount += 5;
+        }
+        StatUpgradeKind::Regeneration => {
+            stats.regeneration.amount += 1;
+        }
+        StatUpgradeKind::AttackSpeed => {
+            stats.attack_speed.value += 0.12;
+        }
+        StatUpgradeKind::PassiveIncome => {
+            stats.passive_income.amount += 1;
+        }
+        StatUpgradeKind::CriticalChance => {
+            stats.critical_chance.value = (stats.critical_chance.value + 0.04).min(1.0);
+        }
+        StatUpgradeKind::ExplosionSize => {
+            stats.explosion_size.value += 12.0;
+        }
+        StatUpgradeKind::EarthDamage => {
+            stats.earth_damage.value += 4.0;
+        }
+        StatUpgradeKind::FireDamage => {
+            stats.fire_damage.value += 4.0;
+        }
+        StatUpgradeKind::AirDamage => {
+            stats.air_damage.value += 4.0;
+        }
+        StatUpgradeKind::WaterDamage => {
+            stats.water_damage.value += 4.0;
+        }
+    }
 }

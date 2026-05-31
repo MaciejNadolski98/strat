@@ -99,24 +99,133 @@ pub struct NextWaveTimer {
 }
 
 #[derive(Clone, Copy)]
+pub enum StatUpgradeKind {
+    MaxHp,
+    Regeneration,
+    AttackSpeed,
+    PassiveIncome,
+    CriticalChance,
+    ExplosionSize,
+    EarthDamage,
+    FireDamage,
+    AirDamage,
+    WaterDamage,
+}
+
+impl StatUpgradeKind {
+    pub fn random() -> Self {
+        match rand::random::<u8>() % 10 {
+            0 => Self::MaxHp,
+            1 => Self::Regeneration,
+            2 => Self::AttackSpeed,
+            3 => Self::PassiveIncome,
+            4 => Self::CriticalChance,
+            5 => Self::ExplosionSize,
+            6 => Self::EarthDamage,
+            7 => Self::FireDamage,
+            8 => Self::AirDamage,
+            _ => Self::WaterDamage,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::MaxHp => "Max HP",
+            Self::Regeneration => "Regen",
+            Self::AttackSpeed => "Atk Speed",
+            Self::PassiveIncome => "Income",
+            Self::CriticalChance => "Crit",
+            Self::ExplosionSize => "Splash",
+            Self::EarthDamage => "Earth",
+            Self::FireDamage => "Fire",
+            Self::AirDamage => "Air",
+            Self::WaterDamage => "Water",
+        }
+    }
+
+    pub fn effect_text(self) -> &'static str {
+        match self {
+            Self::MaxHp => "+5 max HP",
+            Self::Regeneration => "+1 HP at wave start",
+            Self::AttackSpeed => "+12% tower attack speed",
+            Self::PassiveIncome => "+$1 at wave start",
+            Self::CriticalChance => "+4% critical chance",
+            Self::ExplosionSize => "+12 splash size",
+            Self::EarthDamage => "+4 earth damage",
+            Self::FireDamage => "+4 fire damage",
+            Self::AirDamage => "+4 air damage",
+            Self::WaterDamage => "+4 water damage",
+        }
+    }
+
+    pub fn cost(self) -> i32 {
+        match self {
+            Self::MaxHp => 35,
+            Self::Regeneration => 30,
+            Self::AttackSpeed => 45,
+            Self::PassiveIncome => 40,
+            Self::CriticalChance => 45,
+            Self::ExplosionSize => 35,
+            Self::EarthDamage | Self::FireDamage | Self::AirDamage | Self::WaterDamage => 35,
+        }
+    }
+
+    pub fn icon_color(self) -> Color {
+        match self {
+            Self::MaxHp => Color::srgb(0.74, 0.18, 0.18),
+            Self::Regeneration => Color::srgb(0.22, 0.62, 0.30),
+            Self::AttackSpeed => Color::srgb(0.86, 0.72, 0.24),
+            Self::PassiveIncome => Color::srgb(0.95, 0.78, 0.24),
+            Self::CriticalChance => Color::srgb(0.70, 0.22, 0.22),
+            Self::ExplosionSize => Color::srgb(0.82, 0.44, 0.18),
+            Self::EarthDamage => Color::srgb(0.46, 0.34, 0.22),
+            Self::FireDamage => Color::srgb(0.86, 0.24, 0.12),
+            Self::AirDamage => Color::srgb(0.58, 0.72, 0.92),
+            Self::WaterDamage => Color::srgb(0.18, 0.42, 0.78),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub enum ShopItem {
     Tower(TowerKind),
+    StatUpgrade(StatUpgradeKind),
 }
 
 impl ShopItem {
     pub fn random() -> Self {
-        Self::Tower(TowerKind::random())
+        if rand::random::<f32>() < 0.55 {
+            Self::Tower(TowerKind::random())
+        } else {
+            Self::StatUpgrade(StatUpgradeKind::random())
+        }
     }
 
     pub fn name(self) -> &'static str {
         match self {
             Self::Tower(kind) => kind.name(),
+            Self::StatUpgrade(kind) => kind.name(),
         }
     }
 
     pub fn tower_kind(self) -> Option<TowerKind> {
         match self {
             Self::Tower(kind) => Some(kind),
+            Self::StatUpgrade(_) => None,
+        }
+    }
+
+    pub fn stat_upgrade_kind(self) -> Option<StatUpgradeKind> {
+        match self {
+            Self::Tower(_) => None,
+            Self::StatUpgrade(kind) => Some(kind),
+        }
+    }
+
+    pub fn cost(self) -> i32 {
+        match self {
+            Self::Tower(_) => TOWER_COST,
+            Self::StatUpgrade(kind) => kind.cost(),
         }
     }
 }
@@ -129,9 +238,10 @@ pub struct ShopOffer {
 
 impl ShopOffer {
     pub fn random() -> Self {
+        let item = ShopItem::random();
         Self {
-            item: ShopItem::random(),
-            cost: TOWER_COST,
+            item,
+            cost: item.cost(),
         }
     }
 }
