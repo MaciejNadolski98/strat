@@ -249,6 +249,13 @@ pub struct Health {
 }
 
 #[derive(Component)]
+pub struct HealthBar {
+    pub owner: Entity,
+    pub width: f32,
+    pub fill: bool,
+}
+
+#[derive(Component)]
 pub struct Speed {
     pub value: f32,
 }

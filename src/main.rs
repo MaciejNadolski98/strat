@@ -14,7 +14,9 @@ use bevy::prelude::*;
 
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
 use effects::update_floating_text;
-use enemies::{enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors};
+use enemies::{
+    enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars,
+};
 use game::restart_game;
 use hud::update_hud;
 use projectiles::move_projectiles;
@@ -79,6 +81,7 @@ fn main() {
                 aim_towers,
                 move_projectiles,
                 update_enemy_colors,
+                update_enemy_health_bars,
                 update_floating_text,
                 update_hud,
                 restart_game,
