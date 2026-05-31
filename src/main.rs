@@ -16,25 +16,46 @@ use enemies::{enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors}
 use game::restart_game;
 use hud::update_hud;
 use projectiles::move_projectiles;
-use resources::{Game, PlayerStats, Wave};
+use resources::{
+    AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, EnemiesRemaining,
+    ExplosionSize, FireDamage, GameOver, KillCount, MaxHp, Money, NextWaveTimer, PassiveIncome,
+    Regeneration, SpawnTimer, WaterDamage, WaveNumber,
+};
 use setup::setup;
 use towers::{aim_towers, place_tower, progress_cooldown};
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::srgb(0.07, 0.09, 0.11)))
-        .insert_resource(Game {
-            money: STARTING_MONEY,
-            lives: PLAYER_BASE_MAX_HP,
-            kills: 0,
-            game_over: false,
+        .insert_resource(Money {
+            amount: STARTING_MONEY,
         })
-        .insert_resource(PlayerStats::default())
-        .insert_resource(Wave {
-            number: 1,
-            remaining: enemies_in_wave(1),
-            spawn_timer: Timer::from_seconds(0.8, TimerMode::Repeating),
-            next_wave_timer: Timer::from_seconds(2.5, TimerMode::Once),
+        .insert_resource(CurrentHp {
+            amount: PLAYER_BASE_MAX_HP,
+        })
+        .insert_resource(MaxHp {
+            amount: PLAYER_BASE_MAX_HP,
+        })
+        .insert_resource(KillCount { amount: 0 })
+        .insert_resource(GameOver { value: false })
+        .insert_resource(Regeneration { amount: 1 })
+        .insert_resource(AttackSpeed { value: 1.0 })
+        .insert_resource(PassiveIncome { amount: 2 })
+        .insert_resource(CriticalChance { value: 0.12 })
+        .insert_resource(ExplosionSize { value: 0.0 })
+        .insert_resource(EarthDamage { value: 0.0 })
+        .insert_resource(FireDamage { value: 0.0 })
+        .insert_resource(AirDamage { value: 0.0 })
+        .insert_resource(WaterDamage { value: 0.0 })
+        .insert_resource(WaveNumber { value: 1 })
+        .insert_resource(EnemiesRemaining {
+            count: enemies_in_wave(1),
+        })
+        .insert_resource(SpawnTimer {
+            timer: Timer::from_seconds(0.8, TimerMode::Repeating),
+        })
+        .insert_resource(NextWaveTimer {
+            timer: Timer::from_seconds(2.5, TimerMode::Once),
         })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

@@ -2,43 +2,59 @@ use bevy::prelude::*;
 
 use crate::components::{Enemy, EnemyKind, Health, PathProgress, Reward, Speed, Waypoint};
 use crate::constants::PATH;
-use crate::resources::{Game, PlayerStats, Wave};
+use crate::resources::{
+    CurrentHp, EnemiesRemaining, GameOver, MaxHp, Money, NextWaveTimer, PassiveIncome,
+    Regeneration, SpawnTimer, WaveNumber,
+};
 
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
-    mut wave: ResMut<Wave>,
-    mut game: ResMut<Game>,
-    stats: Res<PlayerStats>,
+    mut wave_number: ResMut<WaveNumber>,
+    mut remaining: ResMut<EnemiesRemaining>,
+    mut spawn_timer: ResMut<SpawnTimer>,
+    mut next_wave_timer: ResMut<NextWaveTimer>,
+    game_over: Res<GameOver>,
+    mut money: ResMut<Money>,
+    mut hp: ResMut<CurrentHp>,
+    max_hp: Res<MaxHp>,
+    regeneration: Res<Regeneration>,
+    passive_income: Res<PassiveIncome>,
     enemies: Query<(), With<Enemy>>,
 ) {
-    if game.game_over {
+    if game_over.value {
         return;
     }
 
-    if wave.remaining == 0 {
+    if remaining.count == 0 {
         if enemies.is_empty() {
-            wave.next_wave_timer.tick(time.delta());
-            if wave.next_wave_timer.just_finished() {
-                wave.number += 1;
-                wave.remaining = enemies_in_wave(wave.number);
-                wave.next_wave_timer.reset();
-                apply_wave_start_stats(&mut game, &stats);
+            next_wave_timer.timer.tick(time.delta());
+            if next_wave_timer.timer.just_finished() {
+                wave_number.value += 1;
+                remaining.count = enemies_in_wave(wave_number.value);
+                next_wave_timer.timer.reset();
+                apply_wave_start_stats(
+                    &mut money,
+                    &mut hp,
+                    &max_hp,
+                    &regeneration,
+                    &passive_income,
+                );
             }
         }
         return;
     }
 
-    wave.spawn_timer.tick(time.delta());
-    if !wave.spawn_timer.just_finished() {
+    spawn_timer.timer.tick(time.delta());
+    if !spawn_timer.timer.just_finished() {
         return;
     }
 
-    let spawn_index = enemies_in_wave(wave.number) - wave.remaining;
-    wave.remaining -= 1;
+    let spawn_index = enemies_in_wave(wave_number.value) - remaining.count;
+    remaining.count -= 1;
 
-    let kind = EnemyKind::for_spawn(wave.number, spawn_index);
-    let max_health = kind.max_health(wave.number);
+    let kind = EnemyKind::for_spawn(wave_number.value, spawn_index);
+    let max_health = kind.max_health(wave_number.value);
     commands.spawn((
         Sprite::from_color(enemy_color(kind, 1.0), kind.size()),
         Transform::from_translation(PATH[0].extend(3.0)),
@@ -51,10 +67,10 @@ pub fn spawn_enemies(
             max: max_health,
         },
         Speed {
-            value: kind.speed(wave.number),
+            value: kind.speed(wave_number.value),
         },
         Reward {
-            amount: kind.reward(wave.number),
+            amount: kind.reward(wave_number.value),
         },
     ));
 }
@@ -62,7 +78,8 @@ pub fn spawn_enemies(
 pub fn move_enemies(
     mut commands: Commands,
     time: Res<Time>,
-    mut game: ResMut<Game>,
+    mut hp: ResMut<CurrentHp>,
+    mut game_over: ResMut<GameOver>,
     mut enemies: Query<
         (
             Entity,
@@ -75,7 +92,7 @@ pub fn move_enemies(
         With<Enemy>,
     >,
 ) {
-    if game.game_over {
+    if game_over.value {
         return;
     }
 
@@ -95,9 +112,9 @@ pub fn move_enemies(
             waypoint.index += 1;
             if waypoint.index >= PATH.len() {
                 commands.entity(entity).despawn();
-                game.lives -= 1;
-                if game.lives <= 0 {
-                    game.game_over = true;
+                hp.amount -= 1;
+                if hp.amount <= 0 {
+                    game_over.value = true;
                 }
             }
         } else {
@@ -126,12 +143,18 @@ fn enemy_color(kind: EnemyKind, health_ratio: f32) -> Color {
     )
 }
 
-fn apply_wave_start_stats(game: &mut Game, stats: &PlayerStats) {
-    if stats.regeneration > 0 {
-        game.lives = (game.lives + stats.regeneration).min(stats.max_hp);
+fn apply_wave_start_stats(
+    money: &mut Money,
+    hp: &mut CurrentHp,
+    max_hp: &MaxHp,
+    regeneration: &Regeneration,
+    passive_income: &PassiveIncome,
+) {
+    if regeneration.amount > 0 {
+        hp.amount = (hp.amount + regeneration.amount).min(max_hp.amount);
     }
 
-    if stats.passive_income > 0 {
-        game.money += stats.passive_income;
+    if passive_income.amount > 0 {
+        money.amount += passive_income.amount;
     }
 }

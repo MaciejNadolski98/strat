@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::resources::PlayerStats;
+use crate::resources::{AirDamage, EarthDamage, FireDamage, WaterDamage};
 
 #[derive(Component)]
 pub struct Tower;
@@ -288,12 +288,19 @@ pub struct DamageFormula {
 }
 
 impl DamageFormula {
-    pub fn calculate_damage(&self, stats: &PlayerStats, crit: bool) -> u32 {
+    pub fn calculate_damage(
+        &self,
+        earth_damage: &EarthDamage,
+        fire_damage: &FireDamage,
+        air_damage: &AirDamage,
+        water_damage: &WaterDamage,
+        crit: bool,
+    ) -> u32 {
         let mut dmg = self.flat as f32;
-        dmg += self.earth_multiplier * stats.earth_damage;
-        dmg += self.air_multiplier * stats.air_damage;
-        dmg += self.fire_multiplier * stats.fire_damage;
-        dmg += self.water_multiplier * stats.water_damage;
+        dmg += self.earth_multiplier * earth_damage.value;
+        dmg += self.air_multiplier * air_damage.value;
+        dmg += self.fire_multiplier * fire_damage.value;
+        dmg += self.water_multiplier * water_damage.value;
         if crit {
             (dmg * self.crit_multiplier) as u32
         } else {

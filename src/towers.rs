@@ -5,13 +5,16 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health, PathProgress, Projectile,
-    AngularSpeed, Speed, Target, Tower, TowerKind,
+    AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
+    PathProgress, Projectile, Speed, Target, Tower, TowerKind,
 };
 use crate::constants::{GRID_SIZE, TOWER_COST};
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
-use crate::resources::{Game, PlayerStats};
+use crate::resources::{
+    AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize, FireDamage, GameOver,
+    Money, WaterDamage,
+};
 
 pub fn place_tower(
     mut commands: Commands,
@@ -19,10 +22,11 @@ pub fn place_tower(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     towers: Query<&Transform, With<Tower>>,
-    mut game: ResMut<Game>,
-    stats: Res<PlayerStats>,
+    mut money: ResMut<Money>,
+    game_over: Res<GameOver>,
+    attack_speed: Res<AttackSpeed>,
 ) {
-    if game.game_over || !mouse.just_pressed(MouseButton::Left) || game.money < TOWER_COST {
+    if game_over.value || !mouse.just_pressed(MouseButton::Left) || money.amount < TOWER_COST {
         return;
     }
 
@@ -48,7 +52,7 @@ pub fn place_tower(
         return;
     }
 
-    game.money -= TOWER_COST;
+    money.amount -= TOWER_COST;
     let tower_kind = TowerKind::random();
     commands
         .spawn((
@@ -59,7 +63,7 @@ pub fn place_tower(
             tower_kind.damage_formula(),
             FireCooldown {
                 timer: Timer::new(
-                    Duration::from_secs_f32(tower_kind.cooldown() / stats.attack_speed.max(0.1)),
+                    Duration::from_secs_f32(tower_kind.cooldown() / attack_speed.value.max(0.1)),
                     TimerMode::Once,
                 ),
             },
@@ -76,12 +80,12 @@ pub fn place_tower(
 pub fn progress_cooldown(
     mut towers: Query<(&TowerKind, &mut FireCooldown), With<Tower>>,
     time: Res<Time>,
-    stats: Res<PlayerStats>,
+    attack_speed: Res<AttackSpeed>,
 ) {
     let delta = time.delta();
     for (kind, mut cooldown) in &mut towers {
         cooldown.timer.set_duration(Duration::from_secs_f32(
-            kind.cooldown() / stats.attack_speed.max(0.1),
+            kind.cooldown() / attack_speed.value.max(0.1),
         ));
         cooldown.timer.tick(delta);
     }
@@ -100,11 +104,16 @@ pub fn aim_towers(
         With<Tower>,
     >,
     enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
-    game: Res<Game>,
+    game_over: Res<GameOver>,
     time: Res<Time>,
-    stats: Res<PlayerStats>,
+    critical_chance: Res<CriticalChance>,
+    explosion_size: Res<ExplosionSize>,
+    earth_damage: Res<EarthDamage>,
+    fire_damage: Res<FireDamage>,
+    air_damage: Res<AirDamage>,
+    water_damage: Res<WaterDamage>,
 ) {
-    if game.game_over {
+    if game_over.value {
         return;
     }
 
@@ -141,8 +150,14 @@ pub fn aim_towers(
             .rotate_towards(target_rotation, step);
 
         if ready_to_shoot && cooldown.timer.finished() {
-            let is_critical = roll_critical_hit(stats.critical_chance);
-            let damage = damage_formula.calculate_damage(&stats, is_critical) as f32;
+            let is_critical = roll_critical_hit(critical_chance.value);
+            let damage = damage_formula.calculate_damage(
+                &earth_damage,
+                &fire_damage,
+                &air_damage,
+                &water_damage,
+                is_critical,
+            ) as f32;
 
             cooldown.timer.reset();
             commands.spawn((
@@ -162,7 +177,7 @@ pub fn aim_towers(
                 },
                 Damage { amount: damage },
                 ExplosionRadius {
-                    value: stats.explosion_size + tower_kind.explosion_radius(),
+                    value: explosion_size.value + tower_kind.explosion_radius(),
                 },
             ));
         }

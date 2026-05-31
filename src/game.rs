@@ -3,14 +3,23 @@ use bevy::prelude::*;
 use crate::components::{Enemy, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
 use crate::enemies::enemies_in_wave;
-use crate::resources::{Game, PlayerStats, Wave};
+use crate::resources::{
+    CurrentHp, EnemiesRemaining, GameOver, KillCount, MaxHp, Money, NextWaveTimer, SpawnTimer,
+    WaveNumber,
+};
 
 pub fn restart_game(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut game: ResMut<Game>,
-    mut wave: ResMut<Wave>,
-    stats: Res<PlayerStats>,
+    mut money: ResMut<Money>,
+    mut hp: ResMut<CurrentHp>,
+    max_hp: Res<MaxHp>,
+    mut kills: ResMut<KillCount>,
+    mut game_over: ResMut<GameOver>,
+    mut wave_number: ResMut<WaveNumber>,
+    mut remaining: ResMut<EnemiesRemaining>,
+    mut spawn_timer: ResMut<SpawnTimer>,
+    mut next_wave_timer: ResMut<NextWaveTimer>,
     towers: Query<Entity, With<Tower>>,
     enemies: Query<Entity, With<Enemy>>,
     projectiles: Query<Entity, With<Projectile>>,
@@ -27,13 +36,13 @@ pub fn restart_game(
         commands.entity(entity).despawn();
     }
 
-    game.money = STARTING_MONEY;
-    game.lives = stats.max_hp;
-    game.kills = 0;
-    game.game_over = false;
+    money.amount = STARTING_MONEY;
+    hp.amount = max_hp.amount;
+    kills.amount = 0;
+    game_over.value = false;
 
-    wave.number = 1;
-    wave.remaining = enemies_in_wave(1);
-    wave.spawn_timer.reset();
-    wave.next_wave_timer.reset();
+    wave_number.value = 1;
+    remaining.count = enemies_in_wave(1);
+    spawn_timer.timer.reset();
+    next_wave_timer.timer.reset();
 }

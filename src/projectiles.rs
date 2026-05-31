@@ -3,12 +3,13 @@ use bevy::prelude::*;
 use crate::components::{
     Damage, Enemy, ExplosionRadius, Health, Projectile, Reward, Speed, Target,
 };
-use crate::resources::Game;
+use crate::resources::{KillCount, Money};
 
 pub fn move_projectiles(
     mut commands: Commands,
     time: Res<Time>,
-    mut game: ResMut<Game>,
+    mut money: ResMut<Money>,
+    mut kills: ResMut<KillCount>,
     mut projectiles: Query<
         (
             Entity,
@@ -76,8 +77,8 @@ pub fn move_projectiles(
             commands.entity(projectile_entity).despawn();
 
             for (entity, reward) in killed {
-                game.money += reward;
-                game.kills += 1;
+                money.amount += reward;
+                kills.amount += 1;
                 commands.entity(entity).despawn();
             }
         } else {
