@@ -1,10 +1,11 @@
 use std::f32::consts::PI;
+use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::components::{Enemy, Projectile, Tower};
-use crate::constants::{GRID_SIZE, TOWER_COST, TOWER_RANGE};
+use crate::components::{Enemy, Projectile, Tower, TowerKind};
+use crate::constants::{GRID_SIZE, TOWER_COST};
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
 use crate::resources::{Game, PlayerStats};
@@ -45,24 +46,31 @@ pub fn place_tower(
     }
 
     game.money -= TOWER_COST;
+    let tower_kind = TowerKind::random();
     commands
         .spawn((
-            Sprite::from_color(Color::srgb(0.22, 0.42, 0.74), Vec2::new(36.0, 36.0)),
+            Sprite::from_color(tower_kind.base_color(), tower_kind.base_size()),
             Transform::from_translation(grid_position.extend(2.0)),
             Tower {
-                fire_cooldown: Timer::new(stats.tower_cooldown(), TimerMode::Once),
-                rotational_speed: 1.5,
+                kind: tower_kind,
+                fire_cooldown: Timer::new(
+                    Duration::from_secs_f32(tower_kind.cooldown() / stats.attack_speed),
+                    TimerMode::Once,
+                ),
+                rotational_speed: tower_kind.rotational_speed(),
             },
         ))
         .with_child((
-            Sprite::from_color(Color::srgb(0.67, 0.83, 0.96), Vec2::new(12.0, 38.0)),
-            Transform::from_translation(Vec3::new(0.0, 16.0, 1.0)),
+            Sprite::from_color(tower_kind.barrel_color(), tower_kind.barrel_size()),
+            Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
         ));
 }
 
-pub fn progress_cooldown(towers: Query<&mut Tower>, time: Res<Time>) {
+pub fn progress_cooldown(towers: Query<&mut Tower>, time: Res<Time>, stats: Res<PlayerStats>) {
     let delta = time.delta();
     for mut tower in towers {
+        let kind = tower.kind;
+        tower.fire_cooldown.set_duration(Duration::from_secs_f32(kind.cooldown() / stats.attack_speed));
         tower.fire_cooldown.tick(delta);
     }
 }
@@ -80,6 +88,7 @@ pub fn aim_towers(
     }
 
     for (mut tower_transform, mut tower) in &mut towers {
+        let tower_kind = tower.kind;
         let tower_position = tower_transform.translation.truncate();
         let Some((target, target_position)) = enemies
             .iter()
@@ -88,7 +97,7 @@ pub fn aim_towers(
                 let enemy_position = transform.translation.truncate();
                 let distance = enemy_position.distance(tower_position);
                 let progress = enemy.progress;
-                (distance <= TOWER_RANGE).then_some((entity, enemy_position, progress))
+                (distance <= tower_kind.range()).then_some((entity, enemy_position, progress))
             })
             .max_by(|a, b| a.2.total_cmp(&b.2))
             .map(|(entity, position, _)| (entity, position))
@@ -108,13 +117,13 @@ pub fn aim_towers(
 
         if ready_to_shoot && tower.fire_cooldown.finished() {
             let is_critical = roll_critical_hit(stats.critical_chance);
+            let base_damage = tower.kind.damage();
             let damage = if is_critical {
-                stats.projectile_damage() * 2.0
+                base_damage * 2.0
             } else {
-                stats.projectile_damage()
+                base_damage
             };
 
-            tower.fire_cooldown.set_duration(stats.tower_cooldown());
             tower.fire_cooldown.reset();
             commands.spawn((
                 Sprite::from_color(
@@ -128,9 +137,9 @@ pub fn aim_towers(
                 Transform::from_translation(tower_position.extend(4.0)),
                 Projectile {
                     target,
-                    speed: 430.0,
+                    speed: tower_kind.projectile_speed(),
                     damage,
-                    explosion_radius: stats.explosion_size,
+                    explosion_radius: stats.explosion_size + tower_kind.explosion_radius(),
                 },
             ));
         }

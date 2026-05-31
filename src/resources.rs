@@ -1,8 +1,6 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 
-use crate::constants::{BASE_PROJECTILE_DAMAGE, BASE_TOWER_COOLDOWN, PLAYER_BASE_MAX_HP};
+use crate::constants::PLAYER_BASE_MAX_HP;
 
 #[derive(Resource)]
 pub struct Game {
@@ -40,20 +38,6 @@ impl Default for PlayerStats {
             air_damage: 0.0,
             water_damage: 0.0,
         }
-    }
-}
-
-impl PlayerStats {
-    pub fn projectile_damage(&self) -> f32 {
-        BASE_PROJECTILE_DAMAGE
-            + self.earth_damage
-            + self.fire_damage
-            + self.air_damage
-            + self.water_damage
-    }
-
-    pub fn tower_cooldown(&self) -> Duration {
-        Duration::from_secs_f32(BASE_TOWER_COOLDOWN / self.attack_speed.max(0.1))
     }
 }
 

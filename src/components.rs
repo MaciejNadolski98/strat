@@ -1,9 +1,151 @@
 use bevy::prelude::*;
 
+use crate::resources::PlayerStats;
+
 #[derive(Component)]
 pub struct Tower {
+    pub kind: TowerKind,
     pub fire_cooldown: Timer,
     pub rotational_speed: f32,
+}
+
+#[derive(Clone, Copy)]
+pub enum TowerKind {
+    Ballista,
+    Cannon,
+    Sprayer,
+    Sniper,
+}
+
+impl TowerKind {
+    pub fn random() -> Self {
+        match rand::random::<u8>() % 4 {
+            0 => Self::Ballista,
+            1 => Self::Cannon,
+            2 => Self::Sprayer,
+            _ => Self::Sniper,
+        }
+    }
+
+    pub fn range(self) -> f32 {
+        match self {
+            Self::Ballista => 185.0,
+            Self::Cannon => 150.0,
+            Self::Sprayer => 125.0,
+            Self::Sniper => 260.0,
+        }
+    }
+
+    pub fn cooldown(self) -> f32 {
+        match self {
+            Self::Ballista => 1.0,
+            Self::Cannon => 1.45,
+            Self::Sprayer => 0.55,
+            Self::Sniper => 1.85,
+        }
+    }
+
+    pub fn damage(self) -> f32 {
+        match self {
+            Self::Ballista => 1.0,
+            Self::Cannon => 1.4,
+            Self::Sprayer => 0.45,
+            Self::Sniper => 2.3,
+        }
+    }
+
+    pub fn projectile_speed(self) -> f32 {
+        match self {
+            Self::Ballista => 430.0,
+            Self::Cannon => 320.0,
+            Self::Sprayer => 520.0,
+            Self::Sniper => 720.0,
+        }
+    }
+
+    pub fn explosion_radius(self) -> f32 {
+        match self {
+            Self::Cannon => 64.0,
+            _ => 0.0,
+        }
+    }
+
+    pub fn rotational_speed(self) -> f32 {
+        match self {
+            Self::Ballista => 1.5,
+            Self::Cannon => 1.0,
+            Self::Sprayer => 2.4,
+            Self::Sniper => 0.9,
+        }
+    }
+
+    pub fn base_color(self) -> Color {
+        match self {
+            Self::Ballista => Color::srgb(0.22, 0.42, 0.74),
+            Self::Cannon => Color::srgb(0.42, 0.36, 0.30),
+            Self::Sprayer => Color::srgb(0.20, 0.52, 0.46),
+            Self::Sniper => Color::srgb(0.34, 0.28, 0.56),
+        }
+    }
+
+    pub fn barrel_color(self) -> Color {
+        match self {
+            Self::Ballista => Color::srgb(0.67, 0.83, 0.96),
+            Self::Cannon => Color::srgb(0.74, 0.66, 0.54),
+            Self::Sprayer => Color::srgb(0.62, 0.92, 0.78),
+            Self::Sniper => Color::srgb(0.82, 0.76, 0.98),
+        }
+    }
+
+    pub fn base_size(self) -> Vec2 {
+        match self {
+            Self::Cannon => Vec2::new(40.0, 40.0),
+            Self::Sprayer => Vec2::new(32.0, 32.0),
+            _ => Vec2::new(36.0, 36.0),
+        }
+    }
+
+    pub fn barrel_size(self) -> Vec2 {
+        match self {
+            Self::Ballista => Vec2::new(12.0, 38.0),
+            Self::Cannon => Vec2::new(18.0, 30.0),
+            Self::Sprayer => Vec2::new(10.0, 28.0),
+            Self::Sniper => Vec2::new(8.0, 48.0),
+        }
+    }
+
+    pub fn barrel_offset(self) -> f32 {
+        match self {
+            Self::Sniper => 20.0,
+            Self::Cannon => 13.0,
+            Self::Sprayer => 12.0,
+            Self::Ballista => 16.0,
+        }
+    }
+}
+
+pub struct DamageFormula {
+    flat: u32,
+    crit_multiplier: f32,
+    earth_multiplier: f32,
+    fire_multiplier: f32,
+    air_multiplier: f32,
+    water_multiplier: f32,
+}
+
+impl DamageFormula {
+    pub fn calculate_damage(&self, stats: &PlayerStats, crit: bool) -> u32 {
+        let mut dmg = self.flat as f32;
+        dmg += self.earth_multiplier * stats.earth_damage;
+        dmg += self.air_multiplier * stats.air_damage;
+        dmg += self.fire_multiplier * stats.fire_damage;
+        dmg += self.water_multiplier * stats.water_damage;
+        if crit {
+            (dmg * self.crit_multiplier) as u32
+        } else {
+            dmg as u32
+        }
+    }
 }
 
 #[derive(Component)]
