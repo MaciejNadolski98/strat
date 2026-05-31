@@ -1,4 +1,5 @@
 use std::f32::consts::PI;
+use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -7,7 +8,9 @@ const WINDOW_WIDTH: f32 = 1000.0;
 const WINDOW_HEIGHT: f32 = 700.0;
 const TOWER_COST: i32 = 40;
 const STARTING_MONEY: i32 = 120;
-const STARTING_LIVES: i32 = 20;
+const PLAYER_BASE_MAX_HP: i32 = 20;
+const BASE_TOWER_COOLDOWN: f32 = 0.42;
+const BASE_PROJECTILE_DAMAGE: f32 = 24.0;
 const TOWER_RANGE: f32 = 185.0;
 const GRID_SIZE: f32 = 48.0;
 const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
@@ -33,6 +36,54 @@ struct Game {
 }
 
 #[derive(Resource)]
+struct PlayerStats {
+    max_hp: i32,
+    attack_speed: f32,
+    passive_income: i32,
+    critical_chance: f32,
+    explosion_size: f32,
+    earth_damage: f32,
+    fire_damage: f32,
+    air_damage: f32,
+    water_damage: f32,
+}
+
+impl Default for PlayerStats {
+    fn default() -> Self {
+        Self {
+            max_hp: PLAYER_BASE_MAX_HP,
+            attack_speed: 1.0,
+            passive_income: 2,
+            critical_chance: 0.12,
+            explosion_size: 0.0,
+            earth_damage: 0.0,
+            fire_damage: 0.0,
+            air_damage: 0.0,
+            water_damage: 0.0,
+        }
+    }
+}
+
+impl PlayerStats {
+    fn projectile_damage(&self) -> f32 {
+        BASE_PROJECTILE_DAMAGE
+            + self.earth_damage
+            + self.fire_damage
+            + self.air_damage
+            + self.water_damage
+    }
+
+    fn tower_cooldown(&self) -> Duration {
+        Duration::from_secs_f32(BASE_TOWER_COOLDOWN / self.attack_speed.max(0.1))
+    }
+}
+
+#[derive(Resource)]
+struct PassiveIncomeClock {
+    timer: Timer,
+}
+
+#[derive(Resource)]
 struct Wave {
     number: u32,
     remaining: u32,
@@ -48,6 +99,7 @@ struct Tower {
 
 #[derive(Component)]
 struct Enemy {
+    kind: EnemyKind,
     waypoint: usize,
     progress: f32,
     health: f32,
@@ -56,11 +108,81 @@ struct Enemy {
     reward: i32,
 }
 
+#[derive(Clone, Copy)]
+enum EnemyKind {
+    Grunt,
+    Runner,
+    Brute,
+    Armored,
+}
+
+impl EnemyKind {
+    fn for_spawn(wave: u32, spawn_index: u32) -> Self {
+        let sequence = spawn_index + 1;
+
+        if wave >= 5 && sequence % 7 == 0 {
+            Self::Armored
+        } else if wave >= 3 && sequence % 5 == 0 {
+            Self::Brute
+        } else if wave >= 2 && sequence % 3 == 0 {
+            Self::Runner
+        } else {
+            Self::Grunt
+        }
+    }
+
+    fn max_health(self, wave: u32) -> f32 {
+        match self {
+            Self::Grunt => 55.0 + wave as f32 * 16.0,
+            Self::Runner => 38.0 + wave as f32 * 10.0,
+            Self::Brute => 105.0 + wave as f32 * 25.0,
+            Self::Armored => 80.0 + wave as f32 * 22.0,
+        }
+    }
+
+    fn speed(self, wave: u32) -> f32 {
+        match self {
+            Self::Grunt => 58.0 + wave as f32 * 3.5,
+            Self::Runner => 92.0 + wave as f32 * 5.0,
+            Self::Brute => 38.0 + wave as f32 * 2.0,
+            Self::Armored => 54.0 + wave as f32 * 2.5,
+        }
+    }
+
+    fn reward(self, wave: u32) -> i32 {
+        match self {
+            Self::Grunt => 12 + wave as i32,
+            Self::Runner => 10 + wave as i32,
+            Self::Brute => 28 + wave as i32 * 2,
+            Self::Armored => 22 + wave as i32 * 2,
+        }
+    }
+
+    fn size(self) -> Vec2 {
+        match self {
+            Self::Grunt => Vec2::new(26.0, 26.0),
+            Self::Runner => Vec2::new(20.0, 20.0),
+            Self::Brute => Vec2::new(34.0, 34.0),
+            Self::Armored => Vec2::new(28.0, 28.0),
+        }
+    }
+
+    fn colors(self) -> ((f32, f32, f32), (f32, f32, f32)) {
+        match self {
+            Self::Grunt => ((0.95, 0.18, 0.16), (0.70, 0.76, 0.16)),
+            Self::Runner => ((0.98, 0.45, 0.12), (0.94, 0.82, 0.24)),
+            Self::Brute => ((0.45, 0.12, 0.11), (0.72, 0.22, 0.18)),
+            Self::Armored => ((0.25, 0.28, 0.35), (0.42, 0.58, 0.72)),
+        }
+    }
+}
+
 #[derive(Component)]
 struct Projectile {
     target: Entity,
     speed: f32,
     damage: f32,
+    explosion_radius: f32,
 }
 
 #[derive(Component)]
@@ -71,9 +193,13 @@ fn main() {
         .insert_resource(ClearColor(Color::srgb(0.07, 0.09, 0.11)))
         .insert_resource(Game {
             money: STARTING_MONEY,
-            lives: STARTING_LIVES,
+            lives: PLAYER_BASE_MAX_HP,
             kills: 0,
             game_over: false,
+        })
+        .insert_resource(PlayerStats::default())
+        .insert_resource(PassiveIncomeClock {
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         })
         .insert_resource(Wave {
             number: 1,
@@ -96,6 +222,7 @@ fn main() {
             (
                 progress_cooldown,
                 place_tower,
+                apply_passive_income,
                 spawn_enemies,
                 move_enemies,
                 aim_towers,
@@ -205,6 +332,7 @@ fn place_tower(
     camera: Query<(&Camera, &GlobalTransform)>,
     towers: Query<&Transform, With<Tower>>,
     mut game: ResMut<Game>,
+    stats: Res<PlayerStats>,
 ) {
     if game.game_over || !mouse.just_pressed(MouseButton::Left) || game.money < TOWER_COST {
         return;
@@ -238,7 +366,7 @@ fn place_tower(
             Sprite::from_color(Color::srgb(0.22, 0.42, 0.74), Vec2::new(36.0, 36.0)),
             Transform::from_translation(grid_position.extend(2.0)),
             Tower {
-                fire_cooldown: Timer::from_seconds(0.42, TimerMode::Once),
+                fire_cooldown: Timer::new(stats.tower_cooldown(), TimerMode::Once),
                 rotational_speed: 1.5,
             },
         ))
@@ -248,13 +376,26 @@ fn place_tower(
         ));
 }
 
-fn progress_cooldown(
-    towers: Query<&mut Tower>,
-    time: Res<Time>,
-) {
+fn progress_cooldown(towers: Query<&mut Tower>, time: Res<Time>) {
     let delta = time.delta();
     for mut tower in towers {
         tower.fire_cooldown.tick(delta);
+    }
+}
+
+fn apply_passive_income(
+    time: Res<Time>,
+    stats: Res<PlayerStats>,
+    mut game: ResMut<Game>,
+    mut income: ResMut<PassiveIncomeClock>,
+) {
+    if game.game_over || stats.passive_income <= 0 {
+        return;
+    }
+
+    income.timer.tick(time.delta());
+    if income.timer.just_finished() {
+        game.money += stats.passive_income;
     }
 }
 
@@ -286,18 +427,22 @@ fn spawn_enemies(
         return;
     }
 
+    let spawn_index = enemies_in_wave(wave.number) - wave.remaining;
     wave.remaining -= 1;
-    let max_health = 55.0 + wave.number as f32 * 16.0;
+
+    let kind = EnemyKind::for_spawn(wave.number, spawn_index);
+    let max_health = kind.max_health(wave.number);
     commands.spawn((
-        Sprite::from_color(Color::srgb(0.72, 0.22, 0.18), Vec2::new(26.0, 26.0)),
+        Sprite::from_color(enemy_color(kind, 1.0), kind.size()),
         Transform::from_translation(PATH[0].extend(3.0)),
         Enemy {
+            kind,
             waypoint: 1,
             progress: 0.0,
             health: max_health,
             max_health,
-            speed: 58.0 + wave.number as f32 * 3.5,
-            reward: 12 + wave.number as i32,
+            speed: kind.speed(wave.number),
+            reward: kind.reward(wave.number),
         },
     ));
 }
@@ -345,6 +490,7 @@ fn aim_towers(
     enemies: Query<(Entity, &Transform, &Enemy), Without<Tower>>,
     game: Res<Game>,
     time: Res<Time>,
+    stats: Res<PlayerStats>,
 ) {
     if game.game_over {
         return;
@@ -362,7 +508,10 @@ fn aim_towers(
                 (distance <= TOWER_RANGE).then_some((entity, enemy_position, progress))
             })
             .max_by(|a, b| a.2.total_cmp(&b.2))
-            .map(|(entity, position, _)| (entity, position)) else { continue };
+            .map(|(entity, position, _)| (entity, position))
+        else {
+            continue;
+        };
 
         let direction = target_position - tower_position;
         let target_rotation = Quat::from_rotation_z(direction.y.atan2(direction.x) - PI / 2.0);
@@ -370,17 +519,35 @@ fn aim_towers(
         let step = time.delta_secs() * tower.rotational_speed;
 
         let ready_to_shoot = current_rotation.angle_between(target_rotation) <= step;
-        tower_transform.rotation = tower_transform.rotation.rotate_towards(target_rotation, step);
+        tower_transform.rotation = tower_transform
+            .rotation
+            .rotate_towards(target_rotation, step);
 
         if ready_to_shoot && tower.fire_cooldown.finished() {
+            let is_critical = roll_critical_hit(stats.critical_chance);
+            let damage = if is_critical {
+                stats.projectile_damage() * 2.0
+            } else {
+                stats.projectile_damage()
+            };
+
+            tower.fire_cooldown.set_duration(stats.tower_cooldown());
             tower.fire_cooldown.reset();
             commands.spawn((
-                Sprite::from_color(Color::srgb(0.96, 0.84, 0.28), Vec2::new(10.0, 10.0)),
+                Sprite::from_color(
+                    projectile_color(is_critical),
+                    if is_critical {
+                        Vec2::new(13.0, 13.0)
+                    } else {
+                        Vec2::new(10.0, 10.0)
+                    },
+                ),
                 Transform::from_translation(tower_position.extend(4.0)),
                 Projectile {
                     target,
                     speed: 430.0,
-                    damage: 24.0,
+                    damage,
+                    explosion_radius: stats.explosion_size,
                 },
             ));
         }
@@ -392,10 +559,10 @@ fn move_projectiles(
     time: Res<Time>,
     mut game: ResMut<Game>,
     mut projectiles: Query<(Entity, &mut Transform, &Projectile), Without<Enemy>>,
-    mut enemies: Query<(&Transform, &mut Enemy)>,
+    mut enemies: Query<(Entity, &Transform, &mut Enemy)>,
 ) {
     for (projectile_entity, mut projectile_transform, projectile) in &mut projectiles {
-        let Ok((enemy_transform, mut enemy)) = enemies.get_mut(projectile.target) else {
+        let Ok((_, enemy_transform, enemy)) = enemies.get(projectile.target) else {
             commands.entity(projectile_entity).despawn();
             continue;
         };
@@ -411,13 +578,38 @@ fn move_projectiles(
         let step = projectile.speed * time.delta_secs();
 
         if to_enemy.length() <= step + 10.0 {
-            enemy.health -= projectile.damage;
+            let impact_position = enemy_position;
+            let mut killed = Vec::new();
+
+            if let Ok((entity, _, mut enemy)) = enemies.get_mut(projectile.target) {
+                enemy.health -= projectile.damage;
+                if enemy.health <= 0.0 {
+                    killed.push((entity, enemy.reward));
+                }
+            }
+
+            if projectile.explosion_radius > 0.0 {
+                for (entity, transform, mut enemy) in &mut enemies {
+                    if entity == projectile.target || enemy.health <= 0.0 {
+                        continue;
+                    }
+
+                    let distance = transform.translation.truncate().distance(impact_position);
+                    if distance <= projectile.explosion_radius {
+                        enemy.health -= projectile.damage * 0.5;
+                        if enemy.health <= 0.0 {
+                            killed.push((entity, enemy.reward));
+                        }
+                    }
+                }
+            }
+
             commands.entity(projectile_entity).despawn();
 
-            if enemy.health <= 0.0 {
-                game.money += enemy.reward;
+            for (entity, reward) in killed {
+                game.money += reward;
                 game.kills += 1;
-                commands.entity(projectile.target).despawn();
+                commands.entity(entity).despawn();
             }
         } else {
             projectile_transform.translation += (to_enemy.normalize() * step).extend(0.0);
@@ -425,14 +617,40 @@ fn move_projectiles(
     }
 }
 
-fn update_enemy_colors(mut enemies: Query<(&Enemy, &mut Sprite)>) {
-    for (enemy, mut sprite) in &mut enemies {
-        let health_ratio = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
-        sprite.color = Color::srgb(0.95 - health_ratio * 0.25, 0.18 + health_ratio * 0.58, 0.16);
+fn roll_critical_hit(critical_chance: f32) -> bool {
+    rand::random::<f32>() < critical_chance.clamp(0.0, 1.0)
+}
+
+fn projectile_color(is_critical: bool) -> Color {
+    if is_critical {
+        Color::srgb(1.0, 0.42, 0.16)
+    } else {
+        Color::srgb(0.96, 0.84, 0.28)
     }
 }
 
-fn update_hud(game: Res<Game>, wave: Res<Wave>, mut hud: Query<&mut Text, With<HudText>>) {
+fn update_enemy_colors(mut enemies: Query<(&Enemy, &mut Sprite)>) {
+    for (enemy, mut sprite) in &mut enemies {
+        let health_ratio = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
+        sprite.color = enemy_color(enemy.kind, health_ratio);
+    }
+}
+
+fn enemy_color(kind: EnemyKind, health_ratio: f32) -> Color {
+    let (damaged, healthy) = kind.colors();
+    Color::srgb(
+        damaged.0 + (healthy.0 - damaged.0) * health_ratio,
+        damaged.1 + (healthy.1 - damaged.1) * health_ratio,
+        damaged.2 + (healthy.2 - damaged.2) * health_ratio,
+    )
+}
+
+fn update_hud(
+    game: Res<Game>,
+    wave: Res<Wave>,
+    stats: Res<PlayerStats>,
+    mut hud: Query<&mut Text, With<HudText>>,
+) {
     let Ok(mut text) = hud.single_mut() else {
         return;
     };
@@ -444,8 +662,21 @@ fn update_hud(game: Res<Game>, wave: Res<Wave>, mut hud: Query<&mut Text, With<H
     };
 
     text.0 = format!(
-        "Money: ${}   Lives: {}   Wave: {}   Kills: {}\n{}",
-        game.money, game.lives, wave.number, game.kills, status
+        "Money: ${}   HP: {}/{}   Wave: {}   Kills: {}\nAtk speed: {:.2}x   Income: ${}/s   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        game.money,
+        game.lives,
+        stats.max_hp,
+        wave.number,
+        game.kills,
+        stats.attack_speed,
+        stats.passive_income,
+        stats.critical_chance * 100.0,
+        stats.explosion_size,
+        stats.earth_damage,
+        stats.fire_damage,
+        stats.air_damage,
+        stats.water_damage,
+        status
     );
 }
 
@@ -454,6 +685,8 @@ fn restart_game(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut game: ResMut<Game>,
     mut wave: ResMut<Wave>,
+    stats: Res<PlayerStats>,
+    mut income: ResMut<PassiveIncomeClock>,
     towers: Query<Entity, With<Tower>>,
     enemies: Query<Entity, With<Enemy>>,
     projectiles: Query<Entity, With<Projectile>>,
@@ -471,7 +704,7 @@ fn restart_game(
     }
 
     game.money = STARTING_MONEY;
-    game.lives = STARTING_LIVES;
+    game.lives = stats.max_hp;
     game.kills = 0;
     game.game_over = false;
 
@@ -479,6 +712,7 @@ fn restart_game(
     wave.remaining = enemies_in_wave(1);
     wave.spawn_timer.reset();
     wave.next_wave_timer.reset();
+    income.timer.reset();
 }
 
 fn enemies_in_wave(wave: u32) -> u32 {
