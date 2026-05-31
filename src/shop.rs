@@ -151,17 +151,12 @@ pub fn update_shop_tooltip(
 fn tower_tooltip(kind: TowerKind, cost: i32) -> String {
     let damage = kind.damage_formula();
     format!(
-        "{}  ${}\nDamage: {}\nRange: {:.0}\nCooldown: {:.2}s\nProjectile: {:.0}/s\nSplash: {:.0}\nElement scaling E/F/A/W: {:.1}/{:.1}/{:.1}/{:.1}",
+        "{}  ${}\nDamage: {}\nRange: {:.0}\nCooldown: {:.2}s\nSplash: {:.0}",
         kind.name(),
         cost,
-        damage.flat,
+        damage,
         kind.range(),
         kind.cooldown(),
-        kind.projectile_speed(),
         kind.explosion_radius(),
-        damage.earth_multiplier,
-        damage.fire_multiplier,
-        damage.air_multiplier,
-        damage.water_multiplier,
     )
 }

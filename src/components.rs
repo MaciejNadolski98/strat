@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use std::fmt;
 
 use crate::resources::{AirDamage, EarthDamage, FireDamage, WaterDamage};
 
@@ -96,34 +97,34 @@ impl TowerKind {
             Self::Ballista => DamageFormula {
                 flat: 24,
                 crit_multiplier: 2.0,
-                earth_multiplier: 1.0,
-                fire_multiplier: 1.0,
-                air_multiplier: 1.0,
-                water_multiplier: 1.0,
+                earth_multiplier: 0.0,
+                fire_multiplier: 0.0,
+                air_multiplier: 0.5,
+                water_multiplier: 0.5,
             },
             Self::Cannon => DamageFormula {
                 flat: 34,
                 crit_multiplier: 2.0,
-                earth_multiplier: 1.4,
-                fire_multiplier: 1.2,
-                air_multiplier: 0.7,
-                water_multiplier: 0.8,
+                earth_multiplier: 1.0,
+                fire_multiplier: 0.0,
+                air_multiplier: 0.0,
+                water_multiplier: 0.0,
             },
             Self::Sprayer => DamageFormula {
                 flat: 11,
                 crit_multiplier: 2.0,
-                earth_multiplier: 0.5,
-                fire_multiplier: 0.8,
-                air_multiplier: 1.3,
-                water_multiplier: 1.2,
+                earth_multiplier: 0.0,
+                fire_multiplier: 0.0,
+                air_multiplier: 0.0,
+                water_multiplier: 1.0,
             },
             Self::Sniper => DamageFormula {
                 flat: 55,
                 crit_multiplier: 2.0,
-                earth_multiplier: 0.9,
-                fire_multiplier: 1.1,
-                air_multiplier: 1.5,
-                water_multiplier: 0.6,
+                earth_multiplier: 0.0,
+                fire_multiplier: 0.0,
+                air_multiplier: 0.0,
+                water_multiplier: 1.0,
             },
         }
     }
@@ -359,5 +360,24 @@ impl DamageFormula {
         } else {
             dmg as u32
         }
+    }
+}
+
+impl fmt::Display for DamageFormula {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.flat)?;
+        if self.earth_multiplier != 0.0 {
+            write!(formatter, " + {} earth", self.earth_multiplier)?;
+        }
+        if self.air_multiplier != 0.0 {
+            write!(formatter, " + {} air", self.air_multiplier)?;
+        }
+        if self.fire_multiplier != 0.0 {
+            write!(formatter, " + {} fire", self.fire_multiplier)?;
+        }
+        if self.water_multiplier != 0.0 {
+            write!(formatter, " + {} water", self.water_multiplier)?;
+        }
+        Ok(())
     }
 }
