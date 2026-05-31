@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::components::{Enemy, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
 use crate::enemies::enemies_in_wave;
-use crate::resources::{Game, PassiveIncomeClock, PlayerStats, Wave};
+use crate::resources::{Game, PlayerStats, Wave};
 
 pub fn restart_game(
     mut commands: Commands,
@@ -11,7 +11,6 @@ pub fn restart_game(
     mut game: ResMut<Game>,
     mut wave: ResMut<Wave>,
     stats: Res<PlayerStats>,
-    mut income: ResMut<PassiveIncomeClock>,
     towers: Query<Entity, With<Tower>>,
     enemies: Query<Entity, With<Enemy>>,
     projectiles: Query<Entity, With<Projectile>>,
@@ -37,5 +36,4 @@ pub fn restart_game(
     wave.remaining = enemies_in_wave(1);
     wave.spawn_timer.reset();
     wave.next_wave_timer.reset();
-    income.timer.reset();
 }

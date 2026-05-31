@@ -58,11 +58,6 @@ impl PlayerStats {
 }
 
 #[derive(Resource)]
-pub struct PassiveIncomeClock {
-    pub timer: Timer,
-}
-
-#[derive(Resource)]
 pub struct Wave {
     pub number: u32,
     pub remaining: u32,

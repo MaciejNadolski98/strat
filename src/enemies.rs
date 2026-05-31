@@ -23,7 +23,7 @@ pub fn spawn_enemies(
                 wave.number += 1;
                 wave.remaining = enemies_in_wave(wave.number);
                 wave.next_wave_timer.reset();
-                apply_regeneration(&mut game, &stats);
+                apply_wave_start_stats(&mut game, &stats);
             }
         }
         return;
@@ -111,10 +111,12 @@ fn enemy_color(kind: EnemyKind, health_ratio: f32) -> Color {
     )
 }
 
-fn apply_regeneration(game: &mut Game, stats: &PlayerStats) {
-    if stats.regeneration <= 0 {
-        return;
+fn apply_wave_start_stats(game: &mut Game, stats: &PlayerStats) {
+    if stats.regeneration > 0 {
+        game.lives = (game.lives + stats.regeneration).min(stats.max_hp);
     }
 
-    game.lives = (game.lives + stats.regeneration).min(stats.max_hp);
+    if stats.passive_income > 0 {
+        game.money += stats.passive_income;
+    }
 }

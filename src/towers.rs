@@ -7,7 +7,7 @@ use crate::components::{Enemy, Projectile, Tower};
 use crate::constants::{GRID_SIZE, TOWER_COST, TOWER_RANGE};
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
-use crate::resources::{Game, PassiveIncomeClock, PlayerStats};
+use crate::resources::{Game, PlayerStats};
 
 pub fn place_tower(
     mut commands: Commands,
@@ -64,22 +64,6 @@ pub fn progress_cooldown(towers: Query<&mut Tower>, time: Res<Time>) {
     let delta = time.delta();
     for mut tower in towers {
         tower.fire_cooldown.tick(delta);
-    }
-}
-
-pub fn apply_passive_income(
-    time: Res<Time>,
-    stats: Res<PlayerStats>,
-    mut game: ResMut<Game>,
-    mut income: ResMut<PassiveIncomeClock>,
-) {
-    if game.game_over || stats.passive_income <= 0 {
-        return;
-    }
-
-    income.timer.tick(time.delta());
-    if income.timer.just_finished() {
-        game.money += stats.passive_income;
     }
 }
 

@@ -16,9 +16,9 @@ use enemies::{enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors}
 use game::restart_game;
 use hud::update_hud;
 use projectiles::move_projectiles;
-use resources::{Game, PassiveIncomeClock, PlayerStats, Wave};
+use resources::{Game, PlayerStats, Wave};
 use setup::setup;
-use towers::{aim_towers, apply_passive_income, place_tower, progress_cooldown};
+use towers::{aim_towers, place_tower, progress_cooldown};
 
 fn main() {
     App::new()
@@ -30,9 +30,6 @@ fn main() {
             game_over: false,
         })
         .insert_resource(PlayerStats::default())
-        .insert_resource(PassiveIncomeClock {
-            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-        })
         .insert_resource(Wave {
             number: 1,
             remaining: enemies_in_wave(1),
@@ -54,7 +51,6 @@ fn main() {
             (
                 progress_cooldown,
                 place_tower,
-                apply_passive_income,
                 spawn_enemies,
                 move_enemies,
                 aim_towers,
