@@ -18,6 +18,9 @@ pub struct HudText;
 pub struct ShopText;
 
 #[derive(Component)]
+pub struct ShopTooltip;
+
+#[derive(Component)]
 pub struct ShopSlot {
     pub index: usize,
 }

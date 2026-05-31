@@ -29,6 +29,11 @@ pub struct GameOver {
 }
 
 #[derive(Resource)]
+pub struct Paused {
+    pub value: bool,
+}
+
+#[derive(Resource)]
 pub struct Regeneration {
     pub amount: i32,
 }

@@ -1,6 +1,9 @@
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
-use crate::components::{ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText};
+use crate::components::{
+    ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText, ShopTooltip, TowerKind,
+};
 use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{GameOver, Money, Shop};
@@ -96,4 +99,69 @@ pub fn update_shop_text(
             "Empty".to_string()
         };
     }
+}
+
+pub fn update_shop_tooltip(
+    shop: Res<Shop>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    slots: Query<(&ShopSlot, &Transform)>,
+    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+) {
+    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+        return;
+    };
+
+    *tooltip_visibility = Visibility::Hidden;
+
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Ok((camera, camera_transform)) = camera.single() else {
+        return;
+    };
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+    let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
+        return;
+    };
+
+    for (slot, transform) in &slots {
+        let slot_position = transform.translation.truncate();
+        let inside_slot = (world_position.x - slot_position.x).abs() <= 48.0
+            && (world_position.y - slot_position.y).abs() <= 36.0;
+        if !inside_slot {
+            continue;
+        }
+
+        let Some(offer) = shop.offers[slot.index] else {
+            return;
+        };
+
+        tooltip_text.0 = match offer.item.tower_kind() {
+            Some(kind) => tower_tooltip(kind, offer.cost),
+            None => offer.item.name().to_string(),
+        };
+        *tooltip_visibility = Visibility::Visible;
+        return;
+    }
+}
+
+fn tower_tooltip(kind: TowerKind, cost: i32) -> String {
+    let damage = kind.damage_formula();
+    format!(
+        "{}  ${}\nDamage: {}\nRange: {:.0}\nCooldown: {:.2}s\nProjectile: {:.0}/s\nSplash: {:.0}\nElement scaling E/F/A/W: {:.1}/{:.1}/{:.1}/{:.1}",
+        kind.name(),
+        cost,
+        damage.flat,
+        kind.range(),
+        kind.cooldown(),
+        kind.projectile_speed(),
+        kind.explosion_radius(),
+        damage.earth_multiplier,
+        damage.fire_multiplier,
+        damage.air_multiplier,
+        damage.water_multiplier,
+    )
 }

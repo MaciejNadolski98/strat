@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use crate::components::{HudText, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText};
+use crate::components::{
+    HudText, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText, ShopTooltip,
+};
 use crate::constants::{GRID_SIZE, PATH, PATH_HALF_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::snap_axis;
 
@@ -62,6 +64,26 @@ pub fn setup(mut commands: Commands) {
             ..default()
         },
         ShopText,
+    ));
+
+    commands.spawn((
+        Text::new(""),
+        TextFont {
+            font_size: 16.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.94, 0.94, 0.86)),
+        TextShadow::default(),
+        BackgroundColor(Color::srgba(0.03, 0.04, 0.04, 0.92)),
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(18.0),
+            bottom: Val::Px(152.0),
+            padding: UiRect::all(Val::Px(10.0)),
+            ..default()
+        },
+        Visibility::Hidden,
+        ShopTooltip,
     ));
 
     spawn_shop_slots(&mut commands);

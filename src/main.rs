@@ -18,16 +18,16 @@ use effects::update_floating_text;
 use enemies::{
     enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars,
 };
-use game::restart_game;
+use game::{game_is_running, restart_game, toggle_pause};
 use hud::update_hud;
 use projectiles::move_projectiles;
 use resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, EnemiesRemaining,
     ExplosionSize, FireDamage, GameOver, KillCount, MaxHp, Money, NextWaveTimer, PassiveIncome,
-    Regeneration, Shop, SpawnTimer, WaterDamage, WaveNumber,
+    Paused, Regeneration, Shop, SpawnTimer, WaterDamage, WaveNumber,
 };
 use setup::setup;
-use shop::{update_shop_input, update_shop_text};
+use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
 use towers::{aim_towers, place_tower, progress_cooldown};
 
 fn main() {
@@ -44,6 +44,7 @@ fn main() {
         })
         .insert_resource(KillCount { amount: 0 })
         .insert_resource(GameOver { value: false })
+        .insert_resource(Paused { value: false })
         .insert_resource(Regeneration { amount: 1 })
         .insert_resource(AttackSpeed { value: 1.0 })
         .insert_resource(PassiveIncome { amount: 2 })
@@ -74,6 +75,7 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
+        .add_systems(Update, toggle_pause)
         .add_systems(
             Update,
             (
@@ -84,14 +86,24 @@ fn main() {
                 move_enemies,
                 aim_towers,
                 move_projectiles,
+                update_floating_text,
+            )
+                .chain()
+                .run_if(game_is_running)
+                .after(toggle_pause),
+        )
+        .add_systems(
+            Update,
+            (
                 update_enemy_colors,
                 update_enemy_health_bars,
-                update_floating_text,
                 update_hud,
                 update_shop_text,
+                update_shop_tooltip,
                 restart_game,
             )
-                .chain(),
+                .chain()
+                .after(update_floating_text),
         )
         .run();
 }
