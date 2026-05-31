@@ -10,25 +10,25 @@ mod resources;
 mod setup;
 mod shop;
 mod towers;
+mod waves;
 
 use bevy::prelude::*;
 
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
 use effects::update_floating_text;
-use enemies::{
-    enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars,
-};
+use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
 use hud::update_hud;
 use projectiles::move_projectiles;
 use resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, EnemiesRemaining,
-    ExplosionSize, FireDamage, GameOver, KillCount, MaxHp, Money, NextWaveTimer, PassiveIncome,
-    Paused, Regeneration, Shop, SpawnTimer, WaterDamage, WaveNumber,
+    ExplosionSize, FireDamage, GameOver, GameWon, KillCount, MaxHp, Money, NextWaveTimer,
+    PassiveIncome, Paused, Regeneration, Shop, SpawnTimer, WaterDamage, WaveNumber,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
 use towers::{aim_towers, place_tower, progress_cooldown};
+use waves::enemies_in_wave;
 
 fn main() {
     App::new()
@@ -44,6 +44,7 @@ fn main() {
         })
         .insert_resource(KillCount { amount: 0 })
         .insert_resource(GameOver { value: false })
+        .insert_resource(GameWon { value: false })
         .insert_resource(Paused { value: false })
         .insert_resource(Regeneration { amount: 1 })
         .insert_resource(AttackSpeed { value: 1.0 })
@@ -58,9 +59,7 @@ fn main() {
         .insert_resource(EnemiesRemaining {
             count: enemies_in_wave(1),
         })
-        .insert_resource(SpawnTimer {
-            timer: Timer::from_seconds(0.8, TimerMode::Repeating),
-        })
+        .insert_resource(SpawnTimer::new())
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
         })

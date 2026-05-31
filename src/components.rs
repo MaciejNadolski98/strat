@@ -208,20 +208,6 @@ pub enum EnemyKind {
 }
 
 impl EnemyKind {
-    pub fn for_spawn(wave: u32, spawn_index: u32) -> Self {
-        let sequence = spawn_index + 1;
-
-        if wave >= 5 && sequence % 7 == 0 {
-            Self::Armored
-        } else if wave >= 3 && sequence % 5 == 0 {
-            Self::Brute
-        } else if wave >= 2 && sequence % 3 == 0 {
-            Self::Runner
-        } else {
-            Self::Grunt
-        }
-    }
-
     pub fn max_health(self, wave: u32) -> f32 {
         match self {
             Self::Grunt => 55.0 + wave as f32 * 16.0,

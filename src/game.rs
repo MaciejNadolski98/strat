@@ -2,26 +2,27 @@ use bevy::prelude::*;
 
 use crate::components::{Enemy, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
-use crate::enemies::enemies_in_wave;
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, KillCount, MaxHp, Money, NextWaveTimer, Paused, Shop,
-    SpawnTimer, WaveNumber,
+    CurrentHp, EnemiesRemaining, GameOver, GameWon, KillCount, MaxHp, Money, NextWaveTimer, Paused,
+    Shop, SpawnTimer, WaveNumber,
 };
+use crate::waves::enemies_in_wave;
 
 pub fn toggle_pause(
     keyboard: Res<ButtonInput<KeyCode>>,
     game_over: Res<GameOver>,
+    game_won: Res<GameWon>,
     mut paused: ResMut<Paused>,
 ) {
-    if game_over.value || !keyboard.just_pressed(KeyCode::Space) {
+    if game_over.value || game_won.value || !keyboard.just_pressed(KeyCode::Space) {
         return;
     }
 
     paused.value = !paused.value;
 }
 
-pub fn game_is_running(paused: Res<Paused>) -> bool {
-    !paused.value
+pub fn game_is_running(paused: Res<Paused>, game_won: Res<GameWon>) -> bool {
+    !paused.value && !game_won.value
 }
 
 pub fn restart_game(
@@ -32,6 +33,7 @@ pub fn restart_game(
     max_hp: Res<MaxHp>,
     mut kills: ResMut<KillCount>,
     mut game_over: ResMut<GameOver>,
+    mut game_won: ResMut<GameWon>,
     mut wave_number: ResMut<WaveNumber>,
     mut remaining: ResMut<EnemiesRemaining>,
     mut spawn_timer: ResMut<SpawnTimer>,
@@ -62,10 +64,11 @@ pub fn restart_game(
     hp.amount = max_hp.amount;
     kills.amount = 0;
     game_over.value = false;
+    game_won.value = false;
 
     wave_number.value = 1;
     remaining.count = enemies_in_wave(1);
-    spawn_timer.timer.reset();
+    spawn_timer.reset();
     next_wave_timer.timer.reset();
     *shop = Shop::new();
     paused.value = false;

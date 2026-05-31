@@ -29,6 +29,11 @@ pub struct GameOver {
 }
 
 #[derive(Resource)]
+pub struct GameWon {
+    pub value: bool,
+}
+
+#[derive(Resource)]
 pub struct Paused {
     pub value: bool,
 }
@@ -90,7 +95,33 @@ pub struct EnemiesRemaining {
 
 #[derive(Resource)]
 pub struct SpawnTimer {
-    pub timer: Timer,
+    pub elapsed: f32,
+    pub spawned_by_group: Vec<u32>,
+}
+
+impl SpawnTimer {
+    pub fn new() -> Self {
+        Self {
+            elapsed: 0.0,
+            spawned_by_group: Vec::new(),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.elapsed = 0.0;
+        self.spawned_by_group.clear();
+    }
+
+    pub fn spawned_in_group(&self, index: usize) -> u32 {
+        self.spawned_by_group.get(index).copied().unwrap_or(0)
+    }
+
+    pub fn set_spawned_in_group(&mut self, index: usize, count: u32) {
+        if self.spawned_by_group.len() <= index {
+            self.spawned_by_group.resize(index + 1, 0);
+        }
+        self.spawned_by_group[index] = count;
+    }
 }
 
 #[derive(Resource)]

@@ -4,9 +4,10 @@ use bevy::prelude::*;
 use crate::components::HudText;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, KillCount, MaxHp, Money, PassiveIncome, Paused, Regeneration, WaterDamage,
+    GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, Paused, Regeneration, WaterDamage,
     WaveNumber,
 };
+use crate::waves::FINAL_WAVE;
 
 #[derive(SystemParam)]
 pub struct HudStats<'w> {
@@ -25,6 +26,7 @@ pub struct HudStats<'w> {
     air_damage: Res<'w, AirDamage>,
     water_damage: Res<'w, WaterDamage>,
     game_over: Res<'w, GameOver>,
+    game_won: Res<'w, GameWon>,
     paused: Res<'w, Paused>,
 }
 
@@ -33,7 +35,9 @@ pub fn update_hud(stats: HudStats, mut hud: Query<&mut Text, With<HudText>>) {
         return;
     };
 
-    let status = if stats.game_over.value {
+    let status = if stats.game_won.value {
+        "Victory - press R to restart"
+    } else if stats.game_over.value {
         "Game over - press R to restart"
     } else if stats.paused.value {
         "Paused - press Space to resume"
@@ -42,12 +46,13 @@ pub fn update_hud(stats: HudStats, mut hud: Query<&mut Text, With<HudText>>) {
     };
 
     text.0 = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}   Kills: {}\nAtk speed: {:.2}x   Income: ${}/s   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}\nAtk speed: {:.2}x   Income: ${}/s   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.amount,
         stats.regeneration.amount,
         stats.wave_number.value,
+        FINAL_WAVE,
         stats.kills.amount,
         stats.attack_speed.value,
         stats.passive_income.amount,

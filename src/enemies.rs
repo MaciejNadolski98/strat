@@ -6,9 +6,10 @@ use crate::components::{
 use crate::constants::{PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, MaxHp, Money, NextWaveTimer, PassiveIncome,
+    CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, Money, NextWaveTimer, PassiveIncome,
     Regeneration, SpawnTimer, WaveNumber,
 };
+use crate::waves::{FINAL_WAVE, enemies_in_wave, wave};
 
 pub fn spawn_enemies(
     mut commands: Commands,
@@ -18,6 +19,7 @@ pub fn spawn_enemies(
     mut spawn_timer: ResMut<SpawnTimer>,
     mut next_wave_timer: ResMut<NextWaveTimer>,
     game_over: Res<GameOver>,
+    mut game_won: ResMut<GameWon>,
     mut money: ResMut<Money>,
     mut hp: ResMut<CurrentHp>,
     max_hp: Res<MaxHp>,
@@ -25,16 +27,22 @@ pub fn spawn_enemies(
     passive_income: Res<PassiveIncome>,
     enemies: Query<(), With<Enemy>>,
 ) {
-    if game_over.value {
+    if game_over.value || game_won.value {
         return;
     }
 
     if remaining.count == 0 {
         if enemies.is_empty() {
+            if wave_number.value >= FINAL_WAVE {
+                game_won.value = true;
+                return;
+            }
+
             next_wave_timer.timer.tick(time.delta());
             if next_wave_timer.timer.just_finished() {
                 wave_number.value += 1;
                 remaining.count = enemies_in_wave(wave_number.value);
+                spawn_timer.reset();
                 next_wave_timer.timer.reset();
                 apply_wave_start_stats(
                     &mut commands,
@@ -49,16 +57,26 @@ pub fn spawn_enemies(
         return;
     }
 
-    spawn_timer.timer.tick(time.delta());
-    if !spawn_timer.timer.just_finished() {
+    let Some(current_wave) = wave(wave_number.value) else {
+        remaining.count = 0;
         return;
+    };
+
+    spawn_timer.elapsed += time.delta_secs();
+
+    for (group_index, group) in current_wave.groups.iter().enumerate() {
+        let mut spawned = spawn_timer.spawned_in_group(group_index);
+        while spawned < group.count && spawn_timer.elapsed >= group.spawn_time(spawned) {
+            spawn_enemy(&mut commands, group.kind, wave_number.value);
+            spawned += 1;
+            remaining.count -= 1;
+        }
+        spawn_timer.set_spawned_in_group(group_index, spawned);
     }
+}
 
-    let spawn_index = enemies_in_wave(wave_number.value) - remaining.count;
-    remaining.count -= 1;
-
-    let kind = EnemyKind::for_spawn(wave_number.value, spawn_index);
-    let max_health = kind.max_health(wave_number.value);
+fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32) {
+    let max_health = kind.max_health(wave_number);
     let size = kind.size();
     let enemy = commands
         .spawn((
@@ -73,15 +91,15 @@ pub fn spawn_enemies(
                 max: max_health,
             },
             Speed {
-                value: kind.speed(wave_number.value),
+                value: kind.speed(wave_number),
             },
             Reward {
-                amount: kind.reward(wave_number.value),
+                amount: kind.reward(wave_number),
             },
         ))
         .id();
 
-    spawn_health_bar(&mut commands, enemy, size);
+    spawn_health_bar(commands, enemy, size);
 }
 
 pub fn move_enemies(
@@ -161,10 +179,6 @@ pub fn update_enemy_health_bars(
             sprite.color = Color::srgb(1.0 - health_ratio * 0.2, 0.18 + health_ratio * 0.78, 0.16);
         }
     }
-}
-
-pub fn enemies_in_wave(wave: u32) -> u32 {
-    8 + wave * 3
 }
 
 fn enemy_color(kind: EnemyKind, health_ratio: f32) -> Color {
