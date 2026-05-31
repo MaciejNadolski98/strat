@@ -5,10 +5,11 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
+    AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical,
     PathProgress, Projectile, Speed, Target, Tower, TowerKind,
 };
 use crate::constants::{GRID_SIZE, TOWER_COST};
+use crate::effects::spawn_floating_text;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
 use crate::resources::{
@@ -53,6 +54,14 @@ pub fn place_tower(
     }
 
     money.amount -= TOWER_COST;
+    spawn_floating_text(
+        &mut commands,
+        format!("-${TOWER_COST}"),
+        grid_position + Vec2::new(-30.0, 32.0),
+        Color::srgb(1.0, 0.86, 0.20),
+        20.0,
+    );
+
     let tower_kind = TowerKind::random();
     commands
         .spawn((
@@ -176,6 +185,7 @@ pub fn aim_towers(
                     value: tower_kind.projectile_speed(),
                 },
                 Damage { amount: damage },
+                IsCritical { value: is_critical },
                 ExplosionRadius {
                     value: explosion_size.value + tower_kind.explosion_radius(),
                 },

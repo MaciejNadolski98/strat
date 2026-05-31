@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    Damage, Enemy, ExplosionRadius, Health, Projectile, Reward, Speed, Target,
+    Damage, Enemy, ExplosionRadius, Health, IsCritical, Projectile, Reward, Speed, Target,
 };
+use crate::effects::spawn_floating_text;
 use crate::resources::{KillCount, Money};
 
 pub fn move_projectiles(
@@ -17,6 +18,7 @@ pub fn move_projectiles(
             &Target,
             &Speed,
             &Damage,
+            &IsCritical,
             &ExplosionRadius,
         ),
         (With<Projectile>, Without<Enemy>),
@@ -29,6 +31,7 @@ pub fn move_projectiles(
         target,
         projectile_speed,
         damage,
+        is_critical,
         explosion_radius,
     ) in &mut projectiles
     {
@@ -52,9 +55,13 @@ pub fn move_projectiles(
             let mut killed = Vec::new();
 
             if let Ok((entity, _, mut health, reward)) = enemies.get_mut(target.entity) {
+                let hp_lost = damage.amount.min(health.current).max(0.0);
                 health.current -= damage.amount;
+                if hp_lost > 0.0 {
+                    spawn_damage_text(&mut commands, impact_position, hp_lost, is_critical.value);
+                }
                 if health.current <= 0.0 {
-                    killed.push((entity, reward.amount));
+                    killed.push((entity, reward.amount, impact_position));
                 }
             }
 
@@ -66,9 +73,19 @@ pub fn move_projectiles(
 
                     let distance = transform.translation.truncate().distance(impact_position);
                     if distance <= explosion_radius.value {
-                        health.current -= damage.amount * 0.5;
+                        let splash_damage = damage.amount * 0.5;
+                        let hp_lost = splash_damage.min(health.current).max(0.0);
+                        health.current -= splash_damage;
+                        if hp_lost > 0.0 {
+                            spawn_damage_text(
+                                &mut commands,
+                                transform.translation.truncate(),
+                                hp_lost,
+                                is_critical.value,
+                            );
+                        }
                         if health.current <= 0.0 {
-                            killed.push((entity, reward.amount));
+                            killed.push((entity, reward.amount, transform.translation.truncate()));
                         }
                     }
                 }
@@ -76,15 +93,40 @@ pub fn move_projectiles(
 
             commands.entity(projectile_entity).despawn();
 
-            for (entity, reward) in killed {
+            for (entity, reward, position) in killed {
                 money.amount += reward;
                 kills.amount += 1;
+                spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), reward);
                 commands.entity(entity).despawn();
             }
         } else {
             projectile_transform.translation += (to_enemy.normalize() * step).extend(0.0);
         }
     }
+}
+
+fn spawn_damage_text(commands: &mut Commands, position: Vec2, amount: f32, is_critical: bool) {
+    spawn_floating_text(
+        commands,
+        format!("-{:.0}", amount),
+        position + Vec2::new(0.0, 20.0),
+        if is_critical {
+            Color::srgb(1.0, 0.16, 0.12)
+        } else {
+            Color::srgb(1.0, 1.0, 1.0)
+        },
+        if is_critical { 23.0 } else { 20.0 },
+    );
+}
+
+fn spawn_money_text(commands: &mut Commands, position: Vec2, amount: i32) {
+    spawn_floating_text(
+        commands,
+        format!("+${amount}"),
+        position,
+        Color::srgb(1.0, 0.86, 0.20),
+        19.0,
+    );
 }
 
 pub fn projectile_color(is_critical: bool) -> Color {

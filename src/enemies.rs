@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 use crate::components::{Enemy, EnemyKind, Health, PathProgress, Reward, Speed, Waypoint};
-use crate::constants::PATH;
+use crate::constants::{PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::effects::spawn_floating_text;
 use crate::resources::{
     CurrentHp, EnemiesRemaining, GameOver, MaxHp, Money, NextWaveTimer, PassiveIncome,
     Regeneration, SpawnTimer, WaveNumber,
@@ -34,6 +35,7 @@ pub fn spawn_enemies(
                 remaining.count = enemies_in_wave(wave_number.value);
                 next_wave_timer.timer.reset();
                 apply_wave_start_stats(
+                    &mut commands,
                     &mut money,
                     &mut hp,
                     &max_hp,
@@ -144,6 +146,7 @@ fn enemy_color(kind: EnemyKind, health_ratio: f32) -> Color {
 }
 
 fn apply_wave_start_stats(
+    commands: &mut Commands,
     money: &mut Money,
     hp: &mut CurrentHp,
     max_hp: &MaxHp,
@@ -156,5 +159,12 @@ fn apply_wave_start_stats(
 
     if passive_income.amount > 0 {
         money.amount += passive_income.amount;
+        spawn_floating_text(
+            commands,
+            format!("+${}", passive_income.amount),
+            Vec2::new(-WINDOW_WIDTH * 0.5 + 150.0, WINDOW_HEIGHT * 0.5 - 104.0),
+            Color::srgb(1.0, 0.86, 0.20),
+            22.0,
+        );
     }
 }

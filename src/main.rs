@@ -1,5 +1,6 @@
 mod components;
 mod constants;
+mod effects;
 mod enemies;
 mod game;
 mod hud;
@@ -12,6 +13,7 @@ mod towers;
 use bevy::prelude::*;
 
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
+use effects::update_floating_text;
 use enemies::{enemies_in_wave, move_enemies, spawn_enemies, update_enemy_colors};
 use game::restart_game;
 use hud::update_hud;
@@ -77,6 +79,7 @@ fn main() {
                 aim_towers,
                 move_projectiles,
                 update_enemy_colors,
+                update_floating_text,
                 update_hud,
                 restart_game,
             )

@@ -14,6 +14,12 @@ pub struct Projectile;
 #[derive(Component)]
 pub struct HudText;
 
+#[derive(Component)]
+pub struct FloatingText {
+    pub lifetime: Timer,
+    pub velocity: Vec3,
+}
+
 #[derive(Component, Clone, Copy)]
 pub enum TowerKind {
     Ballista,
@@ -270,6 +276,11 @@ pub struct Target {
 #[derive(Component)]
 pub struct Damage {
     pub amount: f32,
+}
+
+#[derive(Component)]
+pub struct IsCritical {
+    pub value: bool,
 }
 
 #[derive(Component)]
