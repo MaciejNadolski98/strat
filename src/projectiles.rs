@@ -1,22 +1,42 @@
 use bevy::prelude::*;
 
-use crate::components::{Enemy, Projectile};
+use crate::components::{
+    Damage, Enemy, ExplosionRadius, Health, Projectile, Reward, Speed, Target,
+};
 use crate::resources::Game;
 
 pub fn move_projectiles(
     mut commands: Commands,
     time: Res<Time>,
     mut game: ResMut<Game>,
-    mut projectiles: Query<(Entity, &mut Transform, &Projectile), Without<Enemy>>,
-    mut enemies: Query<(Entity, &Transform, &mut Enemy)>,
+    mut projectiles: Query<
+        (
+            Entity,
+            &mut Transform,
+            &Target,
+            &Speed,
+            &Damage,
+            &ExplosionRadius,
+        ),
+        (With<Projectile>, Without<Enemy>),
+    >,
+    mut enemies: Query<(Entity, &Transform, &mut Health, &Reward), With<Enemy>>,
 ) {
-    for (projectile_entity, mut projectile_transform, projectile) in &mut projectiles {
-        let Ok((_, enemy_transform, enemy)) = enemies.get(projectile.target) else {
+    for (
+        projectile_entity,
+        mut projectile_transform,
+        target,
+        projectile_speed,
+        damage,
+        explosion_radius,
+    ) in &mut projectiles
+    {
+        let Ok((_, enemy_transform, health, _)) = enemies.get(target.entity) else {
             commands.entity(projectile_entity).despawn();
             continue;
         };
 
-        if enemy.health <= 0.0 {
+        if health.current <= 0.0 {
             commands.entity(projectile_entity).despawn();
             continue;
         }
@@ -24,30 +44,30 @@ pub fn move_projectiles(
         let projectile_position = projectile_transform.translation.truncate();
         let enemy_position = enemy_transform.translation.truncate();
         let to_enemy = enemy_position - projectile_position;
-        let step = projectile.speed * time.delta_secs();
+        let step = projectile_speed.value * time.delta_secs();
 
         if to_enemy.length() <= step + 10.0 {
             let impact_position = enemy_position;
             let mut killed = Vec::new();
 
-            if let Ok((entity, _, mut enemy)) = enemies.get_mut(projectile.target) {
-                enemy.health -= projectile.damage;
-                if enemy.health <= 0.0 {
-                    killed.push((entity, enemy.reward));
+            if let Ok((entity, _, mut health, reward)) = enemies.get_mut(target.entity) {
+                health.current -= damage.amount;
+                if health.current <= 0.0 {
+                    killed.push((entity, reward.amount));
                 }
             }
 
-            if projectile.explosion_radius > 0.0 {
-                for (entity, transform, mut enemy) in &mut enemies {
-                    if entity == projectile.target || enemy.health <= 0.0 {
+            if explosion_radius.value > 0.0 {
+                for (entity, transform, mut health, reward) in &mut enemies {
+                    if entity == target.entity || health.current <= 0.0 {
                         continue;
                     }
 
                     let distance = transform.translation.truncate().distance(impact_position);
-                    if distance <= projectile.explosion_radius {
-                        enemy.health -= projectile.damage * 0.5;
-                        if enemy.health <= 0.0 {
-                            killed.push((entity, enemy.reward));
+                    if distance <= explosion_radius.value {
+                        health.current -= damage.amount * 0.5;
+                        if health.current <= 0.0 {
+                            killed.push((entity, reward.amount));
                         }
                     }
                 }

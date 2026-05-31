@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{Enemy, EnemyKind};
+use crate::components::{Enemy, EnemyKind, Health, PathProgress, Reward, Speed, Waypoint};
 use crate::constants::PATH;
 use crate::resources::{Game, PlayerStats, Wave};
 
@@ -42,14 +42,19 @@ pub fn spawn_enemies(
     commands.spawn((
         Sprite::from_color(enemy_color(kind, 1.0), kind.size()),
         Transform::from_translation(PATH[0].extend(3.0)),
-        Enemy {
-            kind,
-            waypoint: 1,
-            progress: 0.0,
-            health: max_health,
-            max_health,
-            speed: kind.speed(wave.number),
-            reward: kind.reward(wave.number),
+        Enemy,
+        kind,
+        Waypoint { index: 1 },
+        PathProgress { distance: 0.0 },
+        Health {
+            current: max_health,
+            max: max_health,
+        },
+        Speed {
+            value: kind.speed(wave.number),
+        },
+        Reward {
+            amount: kind.reward(wave.number),
         },
     ));
 }
@@ -58,27 +63,37 @@ pub fn move_enemies(
     mut commands: Commands,
     time: Res<Time>,
     mut game: ResMut<Game>,
-    mut enemies: Query<(Entity, &mut Transform, &mut Enemy)>,
+    mut enemies: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut Waypoint,
+            &mut PathProgress,
+            &Health,
+            &Speed,
+        ),
+        With<Enemy>,
+    >,
 ) {
     if game.game_over {
         return;
     }
 
-    for (entity, mut transform, mut enemy) in &mut enemies {
-        if enemy.health <= 0.0 {
+    for (entity, mut transform, mut waypoint, mut progress, health, speed) in &mut enemies {
+        if health.current <= 0.0 {
             continue;
         }
 
-        let target = PATH[enemy.waypoint];
+        let target = PATH[waypoint.index];
         let position = transform.translation.truncate();
         let to_target = target - position;
-        let step = enemy.speed * time.delta_secs();
-        enemy.progress += step;
+        let step = speed.value * time.delta_secs();
+        progress.distance += step;
 
         if to_target.length() <= step {
             transform.translation = target.extend(3.0);
-            enemy.waypoint += 1;
-            if enemy.waypoint >= PATH.len() {
+            waypoint.index += 1;
+            if waypoint.index >= PATH.len() {
                 commands.entity(entity).despawn();
                 game.lives -= 1;
                 if game.lives <= 0 {
@@ -91,10 +106,10 @@ pub fn move_enemies(
     }
 }
 
-pub fn update_enemy_colors(mut enemies: Query<(&Enemy, &mut Sprite)>) {
-    for (enemy, mut sprite) in &mut enemies {
-        let health_ratio = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
-        sprite.color = enemy_color(enemy.kind, health_ratio);
+pub fn update_enemy_colors(mut enemies: Query<(&EnemyKind, &Health, &mut Sprite), With<Enemy>>) {
+    for (kind, health, mut sprite) in &mut enemies {
+        let health_ratio = (health.current / health.max).clamp(0.0, 1.0);
+        sprite.color = enemy_color(*kind, health_ratio);
     }
 }
 

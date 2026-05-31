@@ -4,7 +4,10 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::components::{Enemy, Projectile, Tower, TowerKind};
+use crate::components::{
+    Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health, PathProgress, Projectile,
+    AngularSpeed, Speed, Target, Tower, TowerKind,
+};
 use crate::constants::{GRID_SIZE, TOWER_COST};
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
@@ -51,13 +54,17 @@ pub fn place_tower(
         .spawn((
             Sprite::from_color(tower_kind.base_color(), tower_kind.base_size()),
             Transform::from_translation(grid_position.extend(2.0)),
-            Tower {
-                kind: tower_kind,
-                fire_cooldown: Timer::new(
-                    Duration::from_secs_f32(tower_kind.cooldown() / stats.attack_speed),
+            Tower,
+            tower_kind,
+            tower_kind.damage_formula(),
+            FireCooldown {
+                timer: Timer::new(
+                    Duration::from_secs_f32(tower_kind.cooldown() / stats.attack_speed.max(0.1)),
                     TimerMode::Once,
                 ),
-                rotational_speed: tower_kind.rotational_speed(),
+            },
+            AngularSpeed {
+                value: tower_kind.rotational_speed(),
             },
         ))
         .with_child((
@@ -66,19 +73,33 @@ pub fn place_tower(
         ));
 }
 
-pub fn progress_cooldown(towers: Query<&mut Tower>, time: Res<Time>, stats: Res<PlayerStats>) {
+pub fn progress_cooldown(
+    mut towers: Query<(&TowerKind, &mut FireCooldown), With<Tower>>,
+    time: Res<Time>,
+    stats: Res<PlayerStats>,
+) {
     let delta = time.delta();
-    for mut tower in towers {
-        let kind = tower.kind;
-        tower.fire_cooldown.set_duration(Duration::from_secs_f32(kind.cooldown() / stats.attack_speed));
-        tower.fire_cooldown.tick(delta);
+    for (kind, mut cooldown) in &mut towers {
+        cooldown.timer.set_duration(Duration::from_secs_f32(
+            kind.cooldown() / stats.attack_speed.max(0.1),
+        ));
+        cooldown.timer.tick(delta);
     }
 }
 
 pub fn aim_towers(
     mut commands: Commands,
-    mut towers: Query<(&mut Transform, &mut Tower)>,
-    enemies: Query<(Entity, &Transform, &Enemy), Without<Tower>>,
+    mut towers: Query<
+        (
+            &mut Transform,
+            &TowerKind,
+            &DamageFormula,
+            &mut FireCooldown,
+            &AngularSpeed,
+        ),
+        With<Tower>,
+    >,
+    enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
     game: Res<Game>,
     time: Res<Time>,
     stats: Res<PlayerStats>,
@@ -87,17 +108,21 @@ pub fn aim_towers(
         return;
     }
 
-    for (mut tower_transform, mut tower) in &mut towers {
-        let tower_kind = tower.kind;
+    for (mut tower_transform, tower_kind, damage_formula, mut cooldown, rotation_speed) in
+        &mut towers
+    {
         let tower_position = tower_transform.translation.truncate();
         let Some((target, target_position)) = enemies
             .iter()
-            .filter(|(_, _, enemy)| enemy.health > 0.0)
-            .filter_map(|(entity, transform, enemy)| {
+            .filter(|(_, _, health, _)| health.current > 0.0)
+            .filter_map(|(entity, transform, _, progress)| {
                 let enemy_position = transform.translation.truncate();
                 let distance = enemy_position.distance(tower_position);
-                let progress = enemy.progress;
-                (distance <= tower_kind.range()).then_some((entity, enemy_position, progress))
+                (distance <= tower_kind.range()).then_some((
+                    entity,
+                    enemy_position,
+                    progress.distance,
+                ))
             })
             .max_by(|a, b| a.2.total_cmp(&b.2))
             .map(|(entity, position, _)| (entity, position))
@@ -108,24 +133,20 @@ pub fn aim_towers(
         let direction = target_position - tower_position;
         let target_rotation = Quat::from_rotation_z(direction.y.atan2(direction.x) - PI / 2.0);
         let current_rotation = tower_transform.rotation;
-        let step = time.delta_secs() * tower.rotational_speed;
+        let step = time.delta_secs() * rotation_speed.value;
 
         let ready_to_shoot = current_rotation.angle_between(target_rotation) <= step;
         tower_transform.rotation = tower_transform
             .rotation
             .rotate_towards(target_rotation, step);
 
-        if ready_to_shoot && tower.fire_cooldown.finished() {
+        if ready_to_shoot && cooldown.timer.finished() {
             let is_critical = roll_critical_hit(stats.critical_chance);
-            let base_damage = tower.kind.damage();
-            let damage = if is_critical {
-                base_damage * 2.0
-            } else {
-                base_damage
-            };
+            let damage = damage_formula.calculate_damage(&stats, is_critical) as f32;
 
-            tower.fire_cooldown.reset();
+            cooldown.timer.reset();
             commands.spawn((
+                Projectile,
                 Sprite::from_color(
                     projectile_color(is_critical),
                     if is_critical {
@@ -135,11 +156,13 @@ pub fn aim_towers(
                     },
                 ),
                 Transform::from_translation(tower_position.extend(4.0)),
-                Projectile {
-                    target,
-                    speed: tower_kind.projectile_speed(),
-                    damage,
-                    explosion_radius: stats.explosion_size + tower_kind.explosion_radius(),
+                Target { entity: target },
+                Speed {
+                    value: tower_kind.projectile_speed(),
+                },
+                Damage { amount: damage },
+                ExplosionRadius {
+                    value: stats.explosion_size + tower_kind.explosion_radius(),
                 },
             ));
         }

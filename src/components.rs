@@ -3,13 +3,18 @@ use bevy::prelude::*;
 use crate::resources::PlayerStats;
 
 #[derive(Component)]
-pub struct Tower {
-    pub kind: TowerKind,
-    pub fire_cooldown: Timer,
-    pub rotational_speed: f32,
-}
+pub struct Tower;
 
-#[derive(Clone, Copy)]
+#[derive(Component)]
+pub struct Enemy;
+
+#[derive(Component)]
+pub struct Projectile;
+
+#[derive(Component)]
+pub struct HudText;
+
+#[derive(Component, Clone, Copy)]
 pub enum TowerKind {
     Ballista,
     Cannon,
@@ -45,12 +50,40 @@ impl TowerKind {
         }
     }
 
-    pub fn damage(self) -> f32 {
+    pub fn damage_formula(self) -> DamageFormula {
         match self {
-            Self::Ballista => 1.0,
-            Self::Cannon => 1.4,
-            Self::Sprayer => 0.45,
-            Self::Sniper => 2.3,
+            Self::Ballista => DamageFormula {
+                flat: 24,
+                crit_multiplier: 2.0,
+                earth_multiplier: 1.0,
+                fire_multiplier: 1.0,
+                air_multiplier: 1.0,
+                water_multiplier: 1.0,
+            },
+            Self::Cannon => DamageFormula {
+                flat: 34,
+                crit_multiplier: 2.0,
+                earth_multiplier: 1.4,
+                fire_multiplier: 1.2,
+                air_multiplier: 0.7,
+                water_multiplier: 0.8,
+            },
+            Self::Sprayer => DamageFormula {
+                flat: 11,
+                crit_multiplier: 2.0,
+                earth_multiplier: 0.5,
+                fire_multiplier: 0.8,
+                air_multiplier: 1.3,
+                water_multiplier: 1.2,
+            },
+            Self::Sniper => DamageFormula {
+                flat: 55,
+                crit_multiplier: 2.0,
+                earth_multiplier: 0.9,
+                fire_multiplier: 1.1,
+                air_multiplier: 1.5,
+                water_multiplier: 0.6,
+            },
         }
     }
 
@@ -124,42 +157,7 @@ impl TowerKind {
     }
 }
 
-pub struct DamageFormula {
-    flat: u32,
-    crit_multiplier: f32,
-    earth_multiplier: f32,
-    fire_multiplier: f32,
-    air_multiplier: f32,
-    water_multiplier: f32,
-}
-
-impl DamageFormula {
-    pub fn calculate_damage(&self, stats: &PlayerStats, crit: bool) -> u32 {
-        let mut dmg = self.flat as f32;
-        dmg += self.earth_multiplier * stats.earth_damage;
-        dmg += self.air_multiplier * stats.air_damage;
-        dmg += self.fire_multiplier * stats.fire_damage;
-        dmg += self.water_multiplier * stats.water_damage;
-        if crit {
-            (dmg * self.crit_multiplier) as u32
-        } else {
-            dmg as u32
-        }
-    }
-}
-
-#[derive(Component)]
-pub struct Enemy {
-    pub kind: EnemyKind,
-    pub waypoint: usize,
-    pub progress: f32,
-    pub health: f32,
-    pub max_health: f32,
-    pub speed: f32,
-    pub reward: i32,
-}
-
-#[derive(Clone, Copy)]
+#[derive(Component, Clone, Copy)]
 pub enum EnemyKind {
     Grunt,
     Runner,
@@ -229,12 +227,77 @@ impl EnemyKind {
 }
 
 #[derive(Component)]
-pub struct Projectile {
-    pub target: Entity,
-    pub speed: f32,
-    pub damage: f32,
-    pub explosion_radius: f32,
+pub struct FireCooldown {
+    pub timer: Timer,
 }
 
 #[derive(Component)]
-pub struct HudText;
+pub struct AngularSpeed {
+    pub value: f32,
+}
+
+#[derive(Component)]
+pub struct Health {
+    pub current: f32,
+    pub max: f32,
+}
+
+#[derive(Component)]
+pub struct Speed {
+    pub value: f32,
+}
+
+#[derive(Component)]
+pub struct Reward {
+    pub amount: i32,
+}
+
+#[derive(Component)]
+pub struct Waypoint {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct PathProgress {
+    pub distance: f32,
+}
+
+#[derive(Component)]
+pub struct Target {
+    pub entity: Entity,
+}
+
+#[derive(Component)]
+pub struct Damage {
+    pub amount: f32,
+}
+
+#[derive(Component)]
+pub struct ExplosionRadius {
+    pub value: f32,
+}
+
+#[derive(Component, Clone, Copy)]
+pub struct DamageFormula {
+    pub flat: u32,
+    pub crit_multiplier: f32,
+    pub earth_multiplier: f32,
+    pub fire_multiplier: f32,
+    pub air_multiplier: f32,
+    pub water_multiplier: f32,
+}
+
+impl DamageFormula {
+    pub fn calculate_damage(&self, stats: &PlayerStats, crit: bool) -> u32 {
+        let mut dmg = self.flat as f32;
+        dmg += self.earth_multiplier * stats.earth_damage;
+        dmg += self.air_multiplier * stats.air_damage;
+        dmg += self.fire_multiplier * stats.fire_damage;
+        dmg += self.water_multiplier * stats.water_damage;
+        if crit {
+            (dmg * self.crit_multiplier) as u32
+        } else {
+            dmg as u32
+        }
+    }
+}
