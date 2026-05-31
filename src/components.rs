@@ -15,6 +15,29 @@ pub struct Projectile;
 pub struct HudText;
 
 #[derive(Component)]
+pub struct ShopText;
+
+#[derive(Component)]
+pub struct ShopSlot {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct ShopSlotIcon {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct ShopSlotBarrel {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct ShopSlotLabel {
+    pub index: usize,
+}
+
+#[derive(Component)]
 pub struct FloatingText {
     pub lifetime: Timer,
     pub velocity: Vec3,
@@ -35,6 +58,15 @@ impl TowerKind {
             1 => Self::Cannon,
             2 => Self::Sprayer,
             _ => Self::Sniper,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Ballista => "Ballista",
+            Self::Cannon => "Cannon",
+            Self::Sprayer => "Sprayer",
+            Self::Sniper => "Sniper",
         }
     }
 

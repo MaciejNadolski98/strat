@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 
 use crate::constants::{
-    GRID_SIZE, HUD_BUILD_LIMIT, PATH, PATH_HALF_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH,
+    GRID_SIZE, HUD_BUILD_LIMIT, PATH, PATH_HALF_WIDTH, SHOP_BUILD_LIMIT, WINDOW_WIDTH,
 };
 
 pub fn is_buildable_cell(position: Vec2) -> bool {
     let half_cell = GRID_SIZE * 0.5;
     position.x >= -WINDOW_WIDTH * 0.5 + half_cell
         && position.x <= WINDOW_WIDTH * 0.5 - half_cell
-        && position.y >= -WINDOW_HEIGHT * 0.5 + half_cell
+        && position.y >= SHOP_BUILD_LIMIT
         && position.y <= HUD_BUILD_LIMIT
         && !is_on_path(position)
 }

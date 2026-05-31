@@ -31,7 +31,7 @@ pub fn update_hud(
     let status = if game_over.value {
         "Game over - press R to restart"
     } else {
-        "Left click: place tower ($40)"
+        "Left click: place selected shop item"
     };
 
     text.0 = format!(

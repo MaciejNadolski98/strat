@@ -8,6 +8,7 @@ mod pathing;
 mod projectiles;
 mod resources;
 mod setup;
+mod shop;
 mod towers;
 
 use bevy::prelude::*;
@@ -23,9 +24,10 @@ use projectiles::move_projectiles;
 use resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, EnemiesRemaining,
     ExplosionSize, FireDamage, GameOver, KillCount, MaxHp, Money, NextWaveTimer, PassiveIncome,
-    Regeneration, SpawnTimer, WaterDamage, WaveNumber,
+    Regeneration, Shop, SpawnTimer, WaterDamage, WaveNumber,
 };
 use setup::setup;
+use shop::{update_shop_input, update_shop_text};
 use towers::{aim_towers, place_tower, progress_cooldown};
 
 fn main() {
@@ -61,6 +63,7 @@ fn main() {
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
         })
+        .insert_resource(Shop::new())
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Simple Tower Defense".to_string(),
@@ -75,6 +78,7 @@ fn main() {
             Update,
             (
                 progress_cooldown,
+                update_shop_input,
                 place_tower,
                 spawn_enemies,
                 move_enemies,
@@ -84,6 +88,7 @@ fn main() {
                 update_enemy_health_bars,
                 update_floating_text,
                 update_hud,
+                update_shop_text,
                 restart_game,
             )
                 .chain(),

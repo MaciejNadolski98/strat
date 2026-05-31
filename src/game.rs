@@ -4,8 +4,8 @@ use crate::components::{Enemy, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
 use crate::enemies::enemies_in_wave;
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, KillCount, MaxHp, Money, NextWaveTimer, SpawnTimer,
-    WaveNumber,
+    CurrentHp, EnemiesRemaining, GameOver, KillCount, MaxHp, Money, NextWaveTimer, Shop,
+    SpawnTimer, WaveNumber,
 };
 
 pub fn restart_game(
@@ -20,6 +20,7 @@ pub fn restart_game(
     mut remaining: ResMut<EnemiesRemaining>,
     mut spawn_timer: ResMut<SpawnTimer>,
     mut next_wave_timer: ResMut<NextWaveTimer>,
+    mut shop: ResMut<Shop>,
     towers: Query<Entity, With<Tower>>,
     enemies: Query<Entity, With<Enemy>>,
     projectiles: Query<Entity, With<Projectile>>,
@@ -45,4 +46,5 @@ pub fn restart_game(
     remaining.count = enemies_in_wave(1);
     spawn_timer.timer.reset();
     next_wave_timer.timer.reset();
+    *shop = Shop::new();
 }

@@ -8,13 +8,13 @@ use crate::components::{
     AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical,
     PathProgress, Projectile, Speed, Target, Tower, TowerKind,
 };
-use crate::constants::{GRID_SIZE, TOWER_COST};
+use crate::constants::GRID_SIZE;
 use crate::effects::spawn_floating_text;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize, FireDamage, GameOver,
-    Money, WaterDamage,
+    Money, Shop, WaterDamage,
 };
 
 pub fn place_tower(
@@ -26,10 +26,19 @@ pub fn place_tower(
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
     attack_speed: Res<AttackSpeed>,
+    mut shop: ResMut<Shop>,
 ) {
-    if game_over.value || !mouse.just_pressed(MouseButton::Left) || money.amount < TOWER_COST {
+    let Some(offer) = shop.selected_offer() else {
+        return;
+    };
+
+    if game_over.value || !mouse.just_pressed(MouseButton::Left) || money.amount < offer.cost {
         return;
     }
+
+    let Some(tower_kind) = offer.item.tower_kind() else {
+        return;
+    };
 
     let Ok(window) = windows.single() else {
         return;
@@ -53,16 +62,17 @@ pub fn place_tower(
         return;
     }
 
-    money.amount -= TOWER_COST;
+    money.amount -= offer.cost;
+    shop.take_selected_offer();
+
     spawn_floating_text(
         &mut commands,
-        format!("-${TOWER_COST}"),
+        format!("-${}", offer.cost),
         grid_position + Vec2::new(-30.0, 32.0),
         Color::srgb(1.0, 0.86, 0.20),
         20.0,
     );
 
-    let tower_kind = TowerKind::random();
     commands
         .spawn((
             Sprite::from_color(tower_kind.base_color(), tower_kind.base_size()),
