@@ -20,10 +20,11 @@ pub fn update_hud(
     };
 
     text.0 = format!(
-        "Money: ${}   HP: {}/{}   Wave: {}   Kills: {}\nAtk speed: {:.2}x   Income: ${}/s   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}   Kills: {}\nAtk speed: {:.2}x   Income: ${}/s   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
         game.money,
         game.lives,
         stats.max_hp,
+        stats.regeneration,
         wave.number,
         game.kills,
         stats.attack_speed,

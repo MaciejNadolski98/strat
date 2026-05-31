@@ -2,13 +2,14 @@ use bevy::prelude::*;
 
 use crate::components::{Enemy, EnemyKind};
 use crate::constants::PATH;
-use crate::resources::{Game, Wave};
+use crate::resources::{Game, PlayerStats, Wave};
 
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
     mut wave: ResMut<Wave>,
-    game: Res<Game>,
+    mut game: ResMut<Game>,
+    stats: Res<PlayerStats>,
     enemies: Query<(), With<Enemy>>,
 ) {
     if game.game_over {
@@ -22,6 +23,7 @@ pub fn spawn_enemies(
                 wave.number += 1;
                 wave.remaining = enemies_in_wave(wave.number);
                 wave.next_wave_timer.reset();
+                apply_regeneration(&mut game, &stats);
             }
         }
         return;
@@ -107,4 +109,12 @@ fn enemy_color(kind: EnemyKind, health_ratio: f32) -> Color {
         damaged.1 + (healthy.1 - damaged.1) * health_ratio,
         damaged.2 + (healthy.2 - damaged.2) * health_ratio,
     )
+}
+
+fn apply_regeneration(game: &mut Game, stats: &PlayerStats) {
+    if stats.regeneration <= 0 {
+        return;
+    }
+
+    game.lives = (game.lives + stats.regeneration).min(stats.max_hp);
 }

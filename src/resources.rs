@@ -15,6 +15,7 @@ pub struct Game {
 #[derive(Resource)]
 pub struct PlayerStats {
     pub max_hp: i32,
+    pub regeneration: i32,
     pub attack_speed: f32,
     pub passive_income: i32,
     pub critical_chance: f32,
@@ -29,6 +30,7 @@ impl Default for PlayerStats {
     fn default() -> Self {
         Self {
             max_hp: PLAYER_BASE_MAX_HP,
+            regeneration: 1,
             attack_speed: 1.0,
             passive_income: 2,
             critical_chance: 0.12,
