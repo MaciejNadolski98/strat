@@ -27,7 +27,7 @@ use resources::{
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
-use towers::{aim_towers, place_tower, progress_cooldown};
+use towers::{aim_towers, place_tower, progress_cooldown, update_tower_tooltip};
 use waves::enemies_in_wave;
 
 fn main() {
@@ -99,6 +99,7 @@ fn main() {
                 update_hud,
                 update_shop_text,
                 update_shop_tooltip,
+                update_tower_tooltip,
                 restart_game,
             )
                 .chain()

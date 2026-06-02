@@ -1,12 +1,13 @@
 use std::f32::consts::PI;
 use std::time::Duration;
 
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
     AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical,
-    PathProgress, Projectile, Speed, Target, Tower, TowerKind,
+    PathProgress, Projectile, ShopTooltip, Speed, Target, Tower, TowerKind,
 };
 use crate::constants::GRID_SIZE;
 use crate::effects::spawn_floating_text;
@@ -16,6 +17,17 @@ use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize, FireDamage, GameOver,
     Money, Shop, WaterDamage,
 };
+
+#[derive(SystemParam)]
+pub struct TowerTooltipStats<'w> {
+    attack_speed: Res<'w, AttackSpeed>,
+    critical_chance: Res<'w, CriticalChance>,
+    explosion_size: Res<'w, ExplosionSize>,
+    earth_damage: Res<'w, EarthDamage>,
+    fire_damage: Res<'w, FireDamage>,
+    air_damage: Res<'w, AirDamage>,
+    water_damage: Res<'w, WaterDamage>,
+}
 
 pub fn place_tower(
     mut commands: Commands,
@@ -94,6 +106,86 @@ pub fn place_tower(
             Sprite::from_color(tower_kind.barrel_color(), tower_kind.barrel_size()),
             Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
         ));
+}
+
+pub fn update_tower_tooltip(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    towers: Query<(&TowerKind, &DamageFormula, &Transform), With<Tower>>,
+    stats: TowerTooltipStats,
+    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+) {
+    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+        return;
+    };
+
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Ok((camera, camera_transform)) = camera.single() else {
+        return;
+    };
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+    let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
+        return;
+    };
+
+    let hovered_tower = towers
+        .iter()
+        .filter_map(|(kind, damage_formula, transform)| {
+            let tower_position = transform.translation.truncate();
+            let half_size = kind.base_size() * 0.5;
+            let inside_tower = (world_position.x - tower_position.x).abs() <= half_size.x
+                && (world_position.y - tower_position.y).abs() <= half_size.y;
+
+            inside_tower.then_some((kind, damage_formula, transform.translation.z))
+        })
+        .max_by(|a, b| a.2.total_cmp(&b.2));
+
+    let Some((kind, damage_formula, _)) = hovered_tower else {
+        return;
+    };
+
+    tooltip_text.0 = tower_tooltip(*kind, damage_formula, &stats);
+    *tooltip_visibility = Visibility::Visible;
+}
+
+fn tower_tooltip(
+    kind: TowerKind,
+    damage_formula: &DamageFormula,
+    stats: &TowerTooltipStats,
+) -> String {
+    let regular_damage = damage_formula.calculate_damage(
+        &stats.earth_damage,
+        &stats.fire_damage,
+        &stats.air_damage,
+        &stats.water_damage,
+        false,
+    );
+    let critical_damage = damage_formula.calculate_damage(
+        &stats.earth_damage,
+        &stats.fire_damage,
+        &stats.air_damage,
+        &stats.water_damage,
+        true,
+    );
+    let effective_cooldown = kind.cooldown() / stats.attack_speed.value.max(0.1);
+
+    format!(
+        "{}\nDamage: {} ({} crit)\nFormula: {}\nRange: {:.0}\nCooldown: {:.2}s\nCrit: {:.0}%\nProjectile: {:.0}/s\nSplash: {:.0}\nTurn speed: {:.1}",
+        kind.name(),
+        regular_damage,
+        critical_damage,
+        damage_formula,
+        kind.range(),
+        effective_cooldown,
+        stats.critical_chance.value * 100.0,
+        kind.projectile_speed(),
+        kind.explosion_radius() + stats.explosion_size.value,
+        kind.angular_speed(),
+    )
 }
 
 pub fn progress_cooldown(

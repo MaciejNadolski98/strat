@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use std::fmt;
 
-use crate::{constants::MAX_HEALTH_GROWTH, resources::{AirDamage, EarthDamage, FireDamage, WaterDamage}};
+use crate::{
+    constants::MAX_HEALTH_GROWTH,
+    resources::{AirDamage, EarthDamage, FireDamage, WaterDamage},
+};
 
 #[derive(Component)]
 pub struct Tower;
