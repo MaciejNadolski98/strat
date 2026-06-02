@@ -11,6 +11,9 @@ pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
 pub const HUD_BUILD_LIMIT: f32 = WINDOW_HEIGHT * 0.5 - 90.0;
 pub const SHOP_BUILD_LIMIT: f32 = -WINDOW_HEIGHT * 0.5 + 96.0;
 
+pub const MAX_HEALTH_GROWTH: f32 = 0.2;
+pub const PRICE_GROWTH: f32 = 0.2;
+
 pub const PATH: [Vec2; 8] = [
     Vec2::new(-504.0, 216.0),
     Vec2::new(-264.0, 216.0),

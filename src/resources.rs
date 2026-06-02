@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::TowerKind;
-use crate::constants::{SHOP_REROLL_COST, TOWER_COST};
+use crate::constants::{PRICE_GROWTH, SHOP_REROLL_COST, TOWER_COST};
 
 #[derive(Resource)]
 pub struct Money {
@@ -217,6 +217,11 @@ impl StatUpgradeKind {
     }
 }
 
+fn scale_price(base_price: i32, wave: u32) -> i32 {
+    let wave_growth = (1.0 + PRICE_GROWTH).powi(wave.saturating_sub(1) as i32);
+    (base_price as f32 * wave_growth).round() as i32
+}
+
 #[derive(Clone, Copy)]
 pub enum ShopItem {
     Tower(TowerKind),
@@ -253,10 +258,10 @@ impl ShopItem {
         }
     }
 
-    pub fn cost(self) -> i32 {
+    pub fn cost(self, wave: u32) -> i32 {
         match self {
-            Self::Tower(_) => TOWER_COST,
-            Self::StatUpgrade(kind) => kind.cost(),
+            Self::Tower(_) => scale_price(TOWER_COST, wave),
+            Self::StatUpgrade(kind) => scale_price(kind.cost(), wave),
         }
     }
 }
@@ -268,11 +273,11 @@ pub struct ShopOffer {
 }
 
 impl ShopOffer {
-    pub fn random() -> Self {
+    pub fn random(wave: u32) -> Self {
         let item = ShopItem::random();
         Self {
             item,
-            cost: item.cost(),
+            cost: item.cost(wave),
         }
     }
 }
@@ -285,25 +290,30 @@ pub struct Shop {
 }
 
 impl Shop {
-    pub fn new() -> Self {
+    pub fn new(wave: u32) -> Self {
         Self {
             offers: [
-                Some(ShopOffer::random()),
-                Some(ShopOffer::random()),
-                Some(ShopOffer::random()),
+                Some(ShopOffer::random(wave)),
+                Some(ShopOffer::random(wave)),
+                Some(ShopOffer::random(wave)),
             ],
             selected: 0,
-            reroll_cost: SHOP_REROLL_COST,
+            reroll_cost: scale_price(SHOP_REROLL_COST, wave),
         }
     }
 
-    pub fn reroll(&mut self) {
+    pub fn reroll(&mut self, wave: u32) {
         self.offers = [
-            Some(ShopOffer::random()),
-            Some(ShopOffer::random()),
-            Some(ShopOffer::random()),
+            Some(ShopOffer::random(wave)),
+            Some(ShopOffer::random(wave)),
+            Some(ShopOffer::random(wave)),
         ];
+        self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
         self.selected = self.selected.min(self.offers.len() - 1);
+    }
+
+    pub fn update_prices_for_wave(&mut self, wave: u32) {
+        self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
     }
 
     pub fn selected_offer(&self) -> Option<ShopOffer> {

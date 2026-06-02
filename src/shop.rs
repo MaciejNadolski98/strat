@@ -10,6 +10,7 @@ use crate::effects::spawn_floating_text;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, MaxHp, Money, PassiveIncome, Regeneration, Shop, StatUpgradeKind, WaterDamage,
+    WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -33,11 +34,14 @@ pub fn update_shop_input(
     mut shop: ResMut<Shop>,
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
+    wave_number: Res<WaveNumber>,
     mut stats: PlayerStatsMut,
 ) {
     if game_over.value {
         return;
     }
+
+    shop.update_prices_for_wave(wave_number.value);
 
     if keyboard.just_pressed(KeyCode::Digit1) {
         shop.selected = 0;
@@ -50,7 +54,7 @@ pub fn update_shop_input(
     if keyboard.just_pressed(KeyCode::KeyE) && money.amount >= shop.reroll_cost {
         let cost = shop.reroll_cost;
         money.amount -= cost;
-        shop.reroll();
+        shop.reroll(wave_number.value);
         spawn_floating_text(
             &mut commands,
             format!("-${cost}"),

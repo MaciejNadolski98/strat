@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::fmt;
 
-use crate::resources::{AirDamage, EarthDamage, FireDamage, WaterDamage};
+use crate::{constants::MAX_HEALTH_GROWTH, resources::{AirDamage, EarthDamage, FireDamage, WaterDamage}};
 
 #[derive(Component)]
 pub struct Tower;
@@ -215,7 +215,7 @@ impl EnemyKind {
             Self::Brute => 130.0,
             Self::Armored => 102.0,
         };
-        let wave_growth = 1.12_f32.powi(wave.saturating_sub(1) as i32);
+        let wave_growth = (1.0 + MAX_HEALTH_GROWTH).powi(wave.saturating_sub(1) as i32);
 
         base_health * wave_growth
     }

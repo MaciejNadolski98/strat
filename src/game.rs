@@ -70,6 +70,6 @@ pub fn restart_game(
     remaining.count = enemies_in_wave(1);
     spawn_timer.reset();
     next_wave_timer.timer.reset();
-    *shop = Shop::new();
+    *shop = Shop::new(1);
     paused.value = false;
 }

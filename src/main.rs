@@ -63,7 +63,7 @@ fn main() {
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
         })
-        .insert_resource(Shop::new())
+        .insert_resource(Shop::new(1))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Simple Tower Defense".to_string(),
