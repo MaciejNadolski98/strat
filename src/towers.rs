@@ -87,7 +87,7 @@ pub fn place_tower(
                 ),
             },
             AngularSpeed {
-                value: tower_kind.rotational_speed(),
+                value: tower_kind.angular_speed(),
             },
         ))
         .with_child((

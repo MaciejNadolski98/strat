@@ -99,8 +99,8 @@ impl TowerKind {
                 crit_multiplier: 2.0,
                 earth_multiplier: 0.0,
                 fire_multiplier: 0.0,
-                air_multiplier: 0.5,
-                water_multiplier: 0.5,
+                air_multiplier: 0.75,
+                water_multiplier: 0.75,
             },
             Self::Cannon => DamageFormula {
                 flat: 34,
@@ -145,7 +145,7 @@ impl TowerKind {
         }
     }
 
-    pub fn rotational_speed(self) -> f32 {
+    pub fn angular_speed(self) -> f32 {
         match self {
             Self::Ballista => 1.5,
             Self::Cannon => 1.0,
