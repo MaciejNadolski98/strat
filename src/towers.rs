@@ -6,8 +6,9 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical,
-    PathProgress, Projectile, ShopTooltip, Speed, Target, Tower, TowerKind,
+    AngularSpeed, Damage, DamageDealt, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
+    IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target, Tower,
+    TowerKind,
 };
 use crate::constants::GRID_SIZE;
 use crate::effects::spawn_floating_text;
@@ -91,6 +92,7 @@ pub fn place_tower(
             Transform::from_translation(grid_position.extend(2.0)),
             Tower,
             tower_kind,
+            DamageDealt { amount: 0.0 },
             tower_kind.damage_formula(),
             FireCooldown {
                 timer: Timer::new(
@@ -206,6 +208,7 @@ pub fn aim_towers(
     mut commands: Commands,
     mut towers: Query<
         (
+            Entity,
             &mut Transform,
             &TowerKind,
             &DamageFormula,
@@ -228,8 +231,14 @@ pub fn aim_towers(
         return;
     }
 
-    for (mut tower_transform, tower_kind, damage_formula, mut cooldown, rotation_speed) in
-        &mut towers
+    for (
+        tower_entity,
+        mut tower_transform,
+        tower_kind,
+        damage_formula,
+        mut cooldown,
+        rotation_speed,
+    ) in &mut towers
     {
         let tower_position = tower_transform.translation.truncate();
         let Some((target, target_position)) = enemies
@@ -283,6 +292,9 @@ pub fn aim_towers(
                 ),
                 Transform::from_translation(tower_position.extend(4.0)),
                 Target { entity: target },
+                SourceTower {
+                    entity: tower_entity,
+                },
                 Speed {
                     value: tower_kind.projectile_speed(),
                 },

@@ -3,11 +3,10 @@ use bevy::prelude::*;
 use crate::components::{
     Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
 };
-use crate::constants::{PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::effects::spawn_floating_text;
+use crate::constants::PATH;
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, Money, NextWaveTimer, PassiveIncome,
-    Regeneration, SpawnTimer, WaveNumber,
+    CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NextWaveTimer, Regeneration, SpawnTimer,
+    WaveNumber,
 };
 use crate::waves::{FINAL_WAVE, enemies_in_wave, wave};
 
@@ -20,11 +19,9 @@ pub fn spawn_enemies(
     mut next_wave_timer: ResMut<NextWaveTimer>,
     game_over: Res<GameOver>,
     mut game_won: ResMut<GameWon>,
-    mut money: ResMut<Money>,
     mut hp: ResMut<CurrentHp>,
     max_hp: Res<MaxHp>,
     regeneration: Res<Regeneration>,
-    passive_income: Res<PassiveIncome>,
     enemies: Query<(), With<Enemy>>,
 ) {
     if game_over.value || game_won.value {
@@ -44,14 +41,7 @@ pub fn spawn_enemies(
                 remaining.count = enemies_in_wave(wave_number.value);
                 spawn_timer.reset();
                 next_wave_timer.timer.reset();
-                apply_wave_start_stats(
-                    &mut commands,
-                    &mut money,
-                    &mut hp,
-                    &max_hp,
-                    &regeneration,
-                    &passive_income,
-                );
+                apply_wave_start_stats(&mut hp, &max_hp, &regeneration);
             }
         }
         return;
@@ -222,26 +212,8 @@ fn spawn_health_bar(commands: &mut Commands, enemy: Entity, enemy_size: Vec2) {
     });
 }
 
-fn apply_wave_start_stats(
-    commands: &mut Commands,
-    money: &mut Money,
-    hp: &mut CurrentHp,
-    max_hp: &MaxHp,
-    regeneration: &Regeneration,
-    passive_income: &PassiveIncome,
-) {
+fn apply_wave_start_stats(hp: &mut CurrentHp, max_hp: &MaxHp, regeneration: &Regeneration) {
     if regeneration.amount > 0 {
         hp.amount = (hp.amount + regeneration.amount).min(max_hp.amount);
-    }
-
-    if passive_income.amount > 0 {
-        money.amount += passive_income.amount;
-        spawn_floating_text(
-            commands,
-            format!("+${}", passive_income.amount),
-            Vec2::new(-WINDOW_WIDTH * 0.5 + 150.0, WINDOW_HEIGHT * 0.5 - 104.0),
-            Color::srgb(1.0, 0.86, 0.20),
-            22.0,
-        );
     }
 }

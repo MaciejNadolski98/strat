@@ -179,7 +179,7 @@ impl StatUpgradeKind {
             Self::MaxHp => "+5 max HP",
             Self::Regeneration => "+1 HP at wave start",
             Self::AttackSpeed => "+12% tower attack speed",
-            Self::PassiveIncome => "+$1 at wave start",
+            Self::PassiveIncome => "+$1 per kill",
             Self::CriticalChance => "+4% critical chance",
             Self::ExplosionSize => "+12 splash size",
             Self::EarthDamage => "+4 earth damage",

@@ -1,7 +1,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::HudText;
+use crate::components::{DamageDealt, HudText, Tower, TowerKind};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, Paused, Regeneration, WaterDamage,
@@ -30,7 +30,11 @@ pub struct HudStats<'w> {
     paused: Res<'w, Paused>,
 }
 
-pub fn update_hud(stats: HudStats, mut hud: Query<&mut Text, With<HudText>>) {
+pub fn update_hud(
+    stats: HudStats,
+    mut hud: Query<&mut Text, With<HudText>>,
+    towers: Query<(&TowerKind, &DamageDealt), With<Tower>>,
+) {
     let Ok(mut text) = hud.single_mut() else {
         return;
     };
@@ -45,8 +49,8 @@ pub fn update_hud(stats: HudStats, mut hud: Query<&mut Text, With<HudText>>) {
         "Left click: place selected shop item   Space: pause"
     };
 
-    text.0 = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}\nAtk speed: {:.2}x   Income: ${}/s   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+    let mut hud_text = format!(
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}\nAtk speed: {:.2}x   Income: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.amount,
@@ -64,4 +68,31 @@ pub fn update_hud(stats: HudStats, mut hud: Query<&mut Text, With<HudText>>) {
         stats.water_damage.value,
         status
     );
+
+    if stats.game_over.value || stats.game_won.value {
+        hud_text.push_str(&tower_damage_summary(&towers));
+    }
+
+    text.0 = hud_text;
+}
+
+fn tower_damage_summary(towers: &Query<(&TowerKind, &DamageDealt), With<Tower>>) -> String {
+    let mut entries = towers
+        .iter()
+        .enumerate()
+        .map(|(index, (kind, damage_dealt))| (index + 1, kind.name(), damage_dealt.amount))
+        .collect::<Vec<_>>();
+
+    if entries.is_empty() {
+        return "\nTower damage: none".to_string();
+    }
+
+    entries.sort_by(|a, b| b.2.total_cmp(&a.2));
+
+    let mut summary = "\nTower damage:".to_string();
+    for (rank, (_, name, amount)) in entries.iter().enumerate() {
+        summary.push_str(&format!("\n#{} {name}: {:.0}", rank + 1, amount));
+    }
+
+    summary
 }

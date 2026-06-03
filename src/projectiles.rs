@@ -1,16 +1,18 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    Damage, Enemy, ExplosionRadius, Health, IsCritical, Projectile, Reward, Speed, Target,
+    Damage, DamageDealt, Enemy, ExplosionRadius, Health, IsCritical, Projectile, Reward,
+    SourceTower, Speed, Target, Tower,
 };
 use crate::effects::spawn_floating_text;
-use crate::resources::{KillCount, Money};
+use crate::resources::{KillCount, Money, PassiveIncome};
 
 pub fn move_projectiles(
     mut commands: Commands,
     time: Res<Time>,
     mut money: ResMut<Money>,
     mut kills: ResMut<KillCount>,
+    passive_income: Res<PassiveIncome>,
     mut projectiles: Query<
         (
             Entity,
@@ -20,10 +22,12 @@ pub fn move_projectiles(
             &Damage,
             &IsCritical,
             &ExplosionRadius,
+            &SourceTower,
         ),
         (With<Projectile>, Without<Enemy>),
     >,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward), With<Enemy>>,
+    mut towers: Query<&mut DamageDealt, With<Tower>>,
 ) {
     for (
         projectile_entity,
@@ -33,6 +37,7 @@ pub fn move_projectiles(
         damage,
         is_critical,
         explosion_radius,
+        source_tower,
     ) in &mut projectiles
     {
         let Ok((_, enemy_transform, health, _)) = enemies.get(target.entity) else {
@@ -53,11 +58,13 @@ pub fn move_projectiles(
         if to_enemy.length() <= step + 10.0 {
             let impact_position = enemy_position;
             let mut killed = Vec::new();
+            let mut total_damage_dealt = 0.0;
 
             if let Ok((entity, _, mut health, reward)) = enemies.get_mut(target.entity) {
                 let hp_lost = damage.amount.min(health.current).max(0.0);
                 health.current -= damage.amount;
                 if hp_lost > 0.0 {
+                    total_damage_dealt += hp_lost;
                     spawn_damage_text(&mut commands, impact_position, hp_lost, is_critical.value);
                 }
                 if health.current <= 0.0 {
@@ -77,6 +84,7 @@ pub fn move_projectiles(
                         let hp_lost = splash_damage.min(health.current).max(0.0);
                         health.current -= splash_damage;
                         if hp_lost > 0.0 {
+                            total_damage_dealt += hp_lost;
                             spawn_damage_text(
                                 &mut commands,
                                 transform.translation.truncate(),
@@ -93,10 +101,17 @@ pub fn move_projectiles(
 
             commands.entity(projectile_entity).despawn();
 
+            if total_damage_dealt > 0.0 {
+                if let Ok(mut damage_dealt) = towers.get_mut(source_tower.entity) {
+                    damage_dealt.amount += total_damage_dealt;
+                }
+            }
+
             for (entity, reward, position) in killed {
-                money.amount += reward;
+                let kill_yield = reward + passive_income.amount;
+                money.amount += kill_yield;
                 kills.amount += 1;
-                spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), reward);
+                spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), kill_yield);
                 commands.entity(entity).despawn();
             }
         } else {

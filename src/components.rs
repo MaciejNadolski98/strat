@@ -309,7 +309,17 @@ pub struct Target {
 }
 
 #[derive(Component)]
+pub struct SourceTower {
+    pub entity: Entity,
+}
+
+#[derive(Component)]
 pub struct Damage {
+    pub amount: f32,
+}
+
+#[derive(Component)]
+pub struct DamageDealt {
     pub amount: f32,
 }
 
