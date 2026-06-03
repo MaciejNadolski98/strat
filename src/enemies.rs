@@ -8,7 +8,7 @@ use crate::resources::{
     CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NextWaveTimer, Regeneration, SpawnTimer,
     WaveNumber,
 };
-use crate::waves::{FINAL_WAVE, enemies_in_wave, wave};
+use crate::waves::{RunMode, enemies_in_wave, wave};
 
 pub fn spawn_enemies(
     mut commands: Commands,
@@ -22,6 +22,7 @@ pub fn spawn_enemies(
     mut hp: ResMut<CurrentHp>,
     max_hp: Res<MaxHp>,
     regeneration: Res<Regeneration>,
+    run_mode: Res<RunMode>,
     enemies: Query<(), With<Enemy>>,
 ) {
     if game_over.value || game_won.value {
@@ -30,7 +31,7 @@ pub fn spawn_enemies(
 
     if remaining.count == 0 {
         if enemies.is_empty() {
-            if wave_number.value >= FINAL_WAVE {
+            if wave_number.value >= run_mode.final_wave() {
                 game_won.value = true;
                 return;
             }

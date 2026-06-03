@@ -7,7 +7,7 @@ use crate::resources::{
     GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, Paused, Regeneration, WaterDamage,
     WaveNumber,
 };
-use crate::waves::FINAL_WAVE;
+use crate::waves::RunMode;
 
 #[derive(SystemParam)]
 pub struct HudStats<'w> {
@@ -28,6 +28,7 @@ pub struct HudStats<'w> {
     game_over: Res<'w, GameOver>,
     game_won: Res<'w, GameWon>,
     paused: Res<'w, Paused>,
+    run_mode: Res<'w, RunMode>,
 }
 
 pub fn update_hud(
@@ -50,14 +51,15 @@ pub fn update_hud(
     };
 
     let mut hud_text = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}\nAtk speed: {:.2}x   Income: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}\nAtk speed: {:.2}x   Income: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.amount,
         stats.regeneration.amount,
         stats.wave_number.value,
-        FINAL_WAVE,
+        stats.run_mode.final_wave(),
         stats.kills.amount,
+        stats.run_mode.label(),
         stats.attack_speed.value,
         stats.passive_income.amount,
         stats.critical_chance.value * 100.0,

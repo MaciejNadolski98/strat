@@ -28,11 +28,14 @@ use resources::{
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
 use towers::{aim_towers, place_tower, progress_cooldown, update_tower_tooltip};
-use waves::enemies_in_wave;
+use waves::{RunMode, enemies_in_wave};
 
 fn main() {
+    let run_mode = RunMode::from_args(std::env::args());
+
     App::new()
         .insert_resource(ClearColor(Color::srgb(0.07, 0.09, 0.11)))
+        .insert_resource(run_mode)
         .insert_resource(Money {
             amount: STARTING_MONEY,
         })
