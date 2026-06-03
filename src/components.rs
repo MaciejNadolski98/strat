@@ -88,10 +88,10 @@ impl TowerKind {
 
     pub fn cooldown(self) -> f32 {
         match self {
-            Self::Ballista => 1.0,
+            Self::Ballista => 0.73,
             Self::Cannon => 1.45,
-            Self::Sprayer => 0.55,
-            Self::Sniper => 1.85,
+            Self::Sprayer => 0.32,
+            Self::Sniper => 1.75,
         }
     }
 
@@ -107,7 +107,7 @@ impl TowerKind {
             },
             Self::Cannon => DamageFormula {
                 flat: 34,
-                crit_multiplier: 2.0,
+                crit_multiplier: 1.5,
                 earth_multiplier: 1.0,
                 fire_multiplier: 0.0,
                 air_multiplier: 0.0,
@@ -123,7 +123,7 @@ impl TowerKind {
             },
             Self::Sniper => DamageFormula {
                 flat: 55,
-                crit_multiplier: 2.0,
+                crit_multiplier: 5.0,
                 earth_multiplier: 0.0,
                 fire_multiplier: 0.0,
                 air_multiplier: 0.0,
@@ -150,9 +150,9 @@ impl TowerKind {
 
     pub fn angular_speed(self) -> f32 {
         match self {
-            Self::Ballista => 1.5,
+            Self::Ballista => 1.6,
             Self::Cannon => 1.0,
-            Self::Sprayer => 2.4,
+            Self::Sprayer => 4.2,
             Self::Sniper => 0.9,
         }
     }
