@@ -5,8 +5,8 @@ use crate::components::{
 };
 use crate::constants::PATH;
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NextWaveTimer, Regeneration, SpawnTimer,
-    WaveNumber,
+    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NextWaveTimer,
+    Regeneration, SpawnTimer, WaveNumber,
 };
 use crate::waves::{RunMode, enemies_in_wave, wave};
 
@@ -23,6 +23,7 @@ pub fn spawn_enemies(
     max_hp: Res<MaxHp>,
     regeneration: Res<Regeneration>,
     run_mode: Res<RunMode>,
+    mut active_spell_effects: ResMut<ActiveSpellEffects>,
     enemies: Query<(), With<Enemy>>,
 ) {
     if game_over.value || game_won.value {
@@ -31,6 +32,8 @@ pub fn spawn_enemies(
 
     if remaining.count == 0 {
         if enemies.is_empty() {
+            active_spell_effects.reset_for_wave();
+
             if wave_number.value >= run_mode.final_wave() {
                 game_won.value = true;
                 return;
@@ -98,6 +101,7 @@ pub fn move_enemies(
     time: Res<Time>,
     mut hp: ResMut<CurrentHp>,
     mut game_over: ResMut<GameOver>,
+    active_spell_effects: Res<ActiveSpellEffects>,
     mut enemies: Query<
         (
             Entity,
@@ -122,7 +126,7 @@ pub fn move_enemies(
         let target = PATH[waypoint.index];
         let position = transform.translation.truncate();
         let to_target = target - position;
-        let step = speed.value * time.delta_secs();
+        let step = speed.value * active_spell_effects.enemy_speed_multiplier * time.delta_secs();
         progress.distance += step;
 
         if to_target.length() <= step {

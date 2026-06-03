@@ -1,12 +1,31 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::components::{Enemy, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, GameWon, KillCount, MaxHp, Money, NextWaveTimer, Paused,
-    Shop, SpawnTimer, WaveNumber,
+    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, KillCount, MaxHp, Money,
+    NextWaveTimer, Paused, Shop, SpawnTimer, SpellShop, WaveNumber,
 };
 use crate::waves::enemies_in_wave;
+
+#[derive(SystemParam)]
+pub struct RestartState<'w> {
+    money: ResMut<'w, Money>,
+    hp: ResMut<'w, CurrentHp>,
+    max_hp: Res<'w, MaxHp>,
+    kills: ResMut<'w, KillCount>,
+    game_over: ResMut<'w, GameOver>,
+    game_won: ResMut<'w, GameWon>,
+    wave_number: ResMut<'w, WaveNumber>,
+    remaining: ResMut<'w, EnemiesRemaining>,
+    spawn_timer: ResMut<'w, SpawnTimer>,
+    next_wave_timer: ResMut<'w, NextWaveTimer>,
+    shop: ResMut<'w, Shop>,
+    spell_shop: ResMut<'w, SpellShop>,
+    active_spell_effects: ResMut<'w, ActiveSpellEffects>,
+    paused: ResMut<'w, Paused>,
+}
 
 pub fn toggle_pause(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -28,18 +47,7 @@ pub fn game_is_running(paused: Res<Paused>, game_won: Res<GameWon>) -> bool {
 pub fn restart_game(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut money: ResMut<Money>,
-    mut hp: ResMut<CurrentHp>,
-    max_hp: Res<MaxHp>,
-    mut kills: ResMut<KillCount>,
-    mut game_over: ResMut<GameOver>,
-    mut game_won: ResMut<GameWon>,
-    mut wave_number: ResMut<WaveNumber>,
-    mut remaining: ResMut<EnemiesRemaining>,
-    mut spawn_timer: ResMut<SpawnTimer>,
-    mut next_wave_timer: ResMut<NextWaveTimer>,
-    mut shop: ResMut<Shop>,
-    mut paused: ResMut<Paused>,
+    mut state: RestartState,
     mut cleanup: ParamSet<(
         Query<Entity, With<Tower>>,
         Query<Entity, With<Enemy>>,
@@ -60,16 +68,18 @@ pub fn restart_game(
         commands.entity(entity).despawn();
     }
 
-    money.amount = STARTING_MONEY;
-    hp.amount = max_hp.amount;
-    kills.amount = 0;
-    game_over.value = false;
-    game_won.value = false;
+    state.money.amount = STARTING_MONEY;
+    state.hp.amount = state.max_hp.amount;
+    state.kills.amount = 0;
+    state.game_over.value = false;
+    state.game_won.value = false;
 
-    wave_number.value = 1;
-    remaining.count = enemies_in_wave(1);
-    spawn_timer.reset();
-    next_wave_timer.timer.reset();
-    *shop = Shop::new(1);
-    paused.value = false;
+    state.wave_number.value = 1;
+    state.remaining.count = enemies_in_wave(1);
+    state.spawn_timer.reset();
+    state.next_wave_timer.timer.reset();
+    *state.shop = Shop::new(1);
+    *state.spell_shop = SpellShop::new();
+    state.active_spell_effects.reset_for_wave();
+    state.paused.value = false;
 }

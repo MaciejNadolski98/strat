@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::{
     HudText, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText, ShopTooltip,
+    SpellSlot, SpellSlotIcon, SpellSlotLabel,
 };
 use crate::constants::{GRID_SIZE, PATH, PATH_HALF_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::snap_axis;
@@ -87,6 +88,7 @@ pub fn setup(mut commands: Commands) {
     ));
 
     spawn_shop_slots(&mut commands);
+    spawn_spell_slots(&mut commands);
 }
 
 fn spawn_grid(commands: &mut Commands) {
@@ -171,6 +173,40 @@ fn spawn_shop_slots(commands: &mut Commands) {
             TextShadow::default(),
             Transform::from_translation(Vec3::new(x, y - 28.0, 9.0)),
             ShopSlotLabel { index },
+        ));
+    }
+}
+
+fn spawn_spell_slots(commands: &mut Commands) {
+    let x = WINDOW_WIDTH * 0.5 - 58.0;
+    let start_y = 84.0;
+    let spacing = 92.0;
+
+    for index in 0..3 {
+        let y = start_y - index as f32 * spacing;
+        commands.spawn((
+            Sprite::from_color(Color::srgb(0.12, 0.13, 0.14), Vec2::new(92.0, 76.0)),
+            Transform::from_translation(Vec3::new(x, y, 6.0)),
+            SpellSlot { index },
+        ));
+
+        commands.spawn((
+            Sprite::from_color(Color::srgb(0.20, 0.22, 0.24), Vec2::new(38.0, 38.0)),
+            Transform::from_translation(Vec3::new(x, y + 10.0, 7.0)),
+            Visibility::Hidden,
+            SpellSlotIcon { index },
+        ));
+
+        commands.spawn((
+            Text2d::new(""),
+            TextFont {
+                font_size: 14.0,
+                ..default()
+            },
+            TextColor(Color::srgb(0.88, 0.88, 0.80)),
+            TextShadow::default(),
+            Transform::from_translation(Vec3::new(x, y - 28.0, 9.0)),
+            SpellSlotLabel { index },
         ));
     }
 }

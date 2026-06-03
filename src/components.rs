@@ -45,6 +45,21 @@ pub struct ShopSlotLabel {
 }
 
 #[derive(Component)]
+pub struct SpellSlot {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct SpellSlotIcon {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct SpellSlotLabel {
+    pub index: usize,
+}
+
+#[derive(Component)]
 pub struct FloatingText {
     pub lifetime: Timer,
     pub velocity: Vec3,
@@ -277,6 +292,13 @@ pub struct Health {
 }
 
 #[derive(Component)]
+pub struct Burning {
+    pub timer: Timer,
+    pub tick_timer: Timer,
+    pub damage_per_tick: f32,
+}
+
+#[derive(Component)]
 pub struct HealthBar {
     pub owner: Entity,
     pub width: f32,
@@ -344,19 +366,20 @@ pub struct DamageFormula {
 }
 
 impl DamageFormula {
-    pub fn calculate_damage(
+    pub fn calculate_damage_with_elemental_multiplier(
         &self,
         earth_damage: &EarthDamage,
         fire_damage: &FireDamage,
         air_damage: &AirDamage,
         water_damage: &WaterDamage,
         crit: bool,
+        elemental_multiplier: f32,
     ) -> u32 {
         let mut dmg = self.flat as f32;
-        dmg += self.earth_multiplier * earth_damage.value;
-        dmg += self.air_multiplier * air_damage.value;
-        dmg += self.fire_multiplier * fire_damage.value;
-        dmg += self.water_multiplier * water_damage.value;
+        dmg += self.earth_multiplier * earth_damage.value * elemental_multiplier;
+        dmg += self.air_multiplier * air_damage.value * elemental_multiplier;
+        dmg += self.fire_multiplier * fire_damage.value * elemental_multiplier;
+        dmg += self.water_multiplier * water_damage.value * elemental_multiplier;
         if crit {
             (dmg * self.crit_multiplier) as u32
         } else {

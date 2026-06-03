@@ -9,8 +9,8 @@ use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, MaxHp, Money, PassiveIncome, Regeneration, Shop, StatUpgradeKind, WaterDamage,
-    WaveNumber,
+    GameOver, MaxHp, Money, PassiveIncome, Regeneration, Shop, SpellKind, SpellShop,
+    StatUpgradeKind, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -35,6 +35,7 @@ pub fn update_shop_input(
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
     wave_number: Res<WaveNumber>,
+    mut spell_shop: ResMut<SpellShop>,
     mut stats: PlayerStatsMut,
 ) {
     if game_over.value {
@@ -68,23 +69,39 @@ pub fn update_shop_input(
         let Some(offer) = shop.selected_offer() else {
             return;
         };
-        let Some(upgrade) = offer.item.stat_upgrade_kind() else {
+        if money.amount < offer.cost {
             return;
         };
-        if money.amount < offer.cost {
+
+        if let Some(upgrade) = offer.item.stat_upgrade_kind() {
+            money.amount -= offer.cost;
+            shop.take_selected_offer();
+            apply_stat_upgrade(upgrade, &mut stats);
+            spawn_floating_text(
+                &mut commands,
+                format!("-${}", offer.cost),
+                Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
+                Color::srgb(1.0, 0.86, 0.20),
+                20.0,
+            );
             return;
         }
 
-        money.amount -= offer.cost;
-        shop.take_selected_offer();
-        apply_stat_upgrade(upgrade, &mut stats);
-        spawn_floating_text(
-            &mut commands,
-            format!("-${}", offer.cost),
-            Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
-            Color::srgb(1.0, 0.86, 0.20),
-            20.0,
-        );
+        if let Some(spell) = offer.item.spell_kind() {
+            if !spell_shop.store_spell(spell) {
+                return;
+            }
+
+            money.amount -= offer.cost;
+            shop.take_selected_offer();
+            spawn_floating_text(
+                &mut commands,
+                format!("-${}", offer.cost),
+                Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
+                Color::srgb(1.0, 0.86, 0.20),
+                20.0,
+            );
+        }
     }
 }
 
@@ -103,7 +120,7 @@ pub fn update_shop_text(
     };
 
     text.0 = format!(
-        "Shop     1-3: select     B: buy upgrade     E: reroll ${}",
+        "Shop     1-3: select     B: buy item     E: reroll ${}",
         shop.reroll_cost
     );
 
@@ -128,6 +145,9 @@ pub fn update_shop_text(
             sprite.color = kind.base_color();
             *visibility = Visibility::Visible;
         } else if let Some(kind) = offer.item.stat_upgrade_kind() {
+            sprite.color = kind.icon_color();
+            *visibility = Visibility::Visible;
+        } else if let Some(kind) = offer.item.spell_kind() {
             sprite.color = kind.icon_color();
             *visibility = Visibility::Visible;
         }
@@ -198,7 +218,10 @@ pub fn update_shop_tooltip(
             Some(kind) => tower_tooltip(kind, offer.cost),
             None => match offer.item.stat_upgrade_kind() {
                 Some(kind) => upgrade_tooltip(kind, offer.cost),
-                None => offer.item.name().to_string(),
+                None => match offer.item.spell_kind() {
+                    Some(kind) => spell_tooltip(kind, offer.cost),
+                    None => offer.item.name().to_string(),
+                },
             },
         };
         *tooltip_visibility = Visibility::Visible;
@@ -225,6 +248,15 @@ fn upgrade_tooltip(kind: StatUpgradeKind, cost: i32) -> String {
         kind.name(),
         cost,
         kind.effect_text()
+    )
+}
+
+fn spell_tooltip(kind: SpellKind, cost: i32) -> String {
+    format!(
+        "{}  ${}\nOne use spell\n{}\nBuys into the first free spell slot",
+        kind.name(),
+        cost,
+        kind.description()
     )
 }
 

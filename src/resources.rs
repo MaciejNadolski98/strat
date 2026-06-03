@@ -130,6 +130,101 @@ pub struct NextWaveTimer {
 }
 
 #[derive(Clone, Copy)]
+pub enum SpellKind {
+    Ignite,
+    ElementalSurge,
+    Slow,
+}
+
+impl SpellKind {
+    pub fn random() -> Self {
+        match rand::random::<u8>() % 3 {
+            0 => Self::Ignite,
+            1 => Self::ElementalSurge,
+            _ => Self::Slow,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Ignite => "Ignite",
+            Self::ElementalSurge => "Surge",
+            Self::Slow => "Slow",
+        }
+    }
+
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::Ignite => "Sets all enemies on fire",
+            Self::ElementalSurge => "Doubles elemental damage until wave end",
+            Self::Slow => "Slows all enemies until wave end",
+        }
+    }
+
+    pub fn cost(self) -> i32 {
+        match self {
+            Self::Ignite => 45,
+            Self::ElementalSurge => 60,
+            Self::Slow => 50,
+        }
+    }
+
+    pub fn icon_color(self) -> Color {
+        match self {
+            Self::Ignite => Color::srgb(0.92, 0.26, 0.12),
+            Self::ElementalSurge => Color::srgb(0.30, 0.62, 0.92),
+            Self::Slow => Color::srgb(0.42, 0.82, 0.92),
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct SpellShop {
+    pub slots: [Option<SpellKind>; 3],
+}
+
+impl SpellShop {
+    pub fn new() -> Self {
+        Self {
+            slots: [None, None, None],
+        }
+    }
+
+    pub fn store_spell(&mut self, spell: SpellKind) -> bool {
+        let Some(slot) = self.slots.iter_mut().find(|slot| slot.is_none()) else {
+            return false;
+        };
+        *slot = Some(spell);
+        true
+    }
+
+    pub fn take_spell(&mut self, index: usize) -> Option<SpellKind> {
+        let spell = self.slots.get_mut(index)?;
+        spell.take()
+    }
+}
+
+#[derive(Resource)]
+pub struct ActiveSpellEffects {
+    pub elemental_multiplier: f32,
+    pub enemy_speed_multiplier: f32,
+}
+
+impl ActiveSpellEffects {
+    pub fn new() -> Self {
+        Self {
+            elemental_multiplier: 1.0,
+            enemy_speed_multiplier: 1.0,
+        }
+    }
+
+    pub fn reset_for_wave(&mut self) {
+        self.elemental_multiplier = 1.0;
+        self.enemy_speed_multiplier = 1.0;
+    }
+}
+
+#[derive(Clone, Copy)]
 pub enum StatUpgradeKind {
     MaxHp,
     Regeneration,
@@ -226,14 +321,18 @@ fn scale_price(base_price: i32, wave: u32) -> i32 {
 pub enum ShopItem {
     Tower(TowerKind),
     StatUpgrade(StatUpgradeKind),
+    Spell(SpellKind),
 }
 
 impl ShopItem {
     pub fn random() -> Self {
-        if rand::random::<f32>() < 0.55 {
+        let roll = rand::random::<f32>();
+        if roll < 0.45 {
             Self::Tower(TowerKind::random())
-        } else {
+        } else if roll < 0.80 {
             Self::StatUpgrade(StatUpgradeKind::random())
+        } else {
+            Self::Spell(SpellKind::random())
         }
     }
 
@@ -241,20 +340,28 @@ impl ShopItem {
         match self {
             Self::Tower(kind) => kind.name(),
             Self::StatUpgrade(kind) => kind.name(),
+            Self::Spell(kind) => kind.name(),
         }
     }
 
     pub fn tower_kind(self) -> Option<TowerKind> {
         match self {
             Self::Tower(kind) => Some(kind),
-            Self::StatUpgrade(_) => None,
+            Self::StatUpgrade(_) | Self::Spell(_) => None,
         }
     }
 
     pub fn stat_upgrade_kind(self) -> Option<StatUpgradeKind> {
         match self {
-            Self::Tower(_) => None,
+            Self::Tower(_) | Self::Spell(_) => None,
             Self::StatUpgrade(kind) => Some(kind),
+        }
+    }
+
+    pub fn spell_kind(self) -> Option<SpellKind> {
+        match self {
+            Self::Tower(_) | Self::StatUpgrade(_) => None,
+            Self::Spell(kind) => Some(kind),
         }
     }
 
@@ -262,6 +369,7 @@ impl ShopItem {
         match self {
             Self::Tower(_) => scale_price(TOWER_COST, wave),
             Self::StatUpgrade(kind) => scale_price(kind.cost(), wave),
+            Self::Spell(kind) => scale_price(kind.cost(), wave),
         }
     }
 }

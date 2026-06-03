@@ -9,6 +9,7 @@ mod projectiles;
 mod resources;
 mod setup;
 mod shop;
+mod spells;
 mod towers;
 mod waves;
 
@@ -21,12 +22,16 @@ use game::{game_is_running, restart_game, toggle_pause};
 use hud::update_hud;
 use projectiles::move_projectiles;
 use resources::{
-    AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, EnemiesRemaining,
-    ExplosionSize, FireDamage, GameOver, GameWon, KillCount, MaxHp, Money, NextWaveTimer,
-    PassiveIncome, Paused, Regeneration, Shop, SpawnTimer, WaterDamage, WaveNumber,
+    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
+    EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, MaxHp, Money,
+    NextWaveTimer, PassiveIncome, Paused, Regeneration, Shop, SpawnTimer, SpellShop, WaterDamage,
+    WaveNumber,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
+use spells::{
+    update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
+};
 use towers::{aim_towers, place_tower, progress_cooldown, update_tower_tooltip};
 use waves::{RunMode, enemies_in_wave};
 
@@ -58,6 +63,7 @@ fn main() {
         .insert_resource(FireDamage { value: 0.0 })
         .insert_resource(AirDamage { value: 0.0 })
         .insert_resource(WaterDamage { value: 0.0 })
+        .insert_resource(ActiveSpellEffects::new())
         .insert_resource(WaveNumber { value: 1 })
         .insert_resource(EnemiesRemaining {
             count: enemies_in_wave(1),
@@ -67,6 +73,7 @@ fn main() {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
         })
         .insert_resource(Shop::new(1))
+        .insert_resource(SpellShop::new())
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Simple Tower Defense".to_string(),
@@ -83,9 +90,11 @@ fn main() {
             (
                 progress_cooldown,
                 update_shop_input,
+                update_spell_input,
                 place_tower,
                 spawn_enemies,
                 move_enemies,
+                update_burning_enemies,
                 aim_towers,
                 move_projectiles,
                 update_floating_text,
@@ -101,12 +110,21 @@ fn main() {
                 update_enemy_health_bars,
                 update_hud,
                 update_shop_text,
-                update_shop_tooltip,
-                update_tower_tooltip,
-                restart_game,
+                update_spell_slots,
             )
                 .chain()
                 .after(update_floating_text),
         )
+        .add_systems(
+            Update,
+            (
+                update_shop_tooltip,
+                update_spell_tooltip,
+                update_tower_tooltip,
+            )
+                .chain()
+                .after(update_spell_slots),
+        )
+        .add_systems(Update, restart_game)
         .run();
 }

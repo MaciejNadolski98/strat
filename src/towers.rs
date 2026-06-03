@@ -15,8 +15,8 @@ use crate::effects::spawn_floating_text;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
 use crate::resources::{
-    AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize, FireDamage, GameOver,
-    Money, Shop, WaterDamage,
+    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
+    FireDamage, GameOver, Money, Shop, WaterDamage,
 };
 
 #[derive(SystemParam)]
@@ -28,6 +28,7 @@ pub struct TowerTooltipStats<'w> {
     fire_damage: Res<'w, FireDamage>,
     air_damage: Res<'w, AirDamage>,
     water_damage: Res<'w, WaterDamage>,
+    active_spell_effects: Res<'w, ActiveSpellEffects>,
 }
 
 pub fn place_tower(
@@ -159,19 +160,22 @@ fn tower_tooltip(
     damage_formula: &DamageFormula,
     stats: &TowerTooltipStats,
 ) -> String {
-    let regular_damage = damage_formula.calculate_damage(
+    let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
+    let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
         &stats.earth_damage,
         &stats.fire_damage,
         &stats.air_damage,
         &stats.water_damage,
         false,
+        elemental_multiplier,
     );
-    let critical_damage = damage_formula.calculate_damage(
+    let critical_damage = damage_formula.calculate_damage_with_elemental_multiplier(
         &stats.earth_damage,
         &stats.fire_damage,
         &stats.air_damage,
         &stats.water_damage,
         true,
+        elemental_multiplier,
     );
     let effective_cooldown = kind.cooldown() / stats.attack_speed.value.max(0.1);
 
@@ -226,6 +230,7 @@ pub fn aim_towers(
     fire_damage: Res<FireDamage>,
     air_damage: Res<AirDamage>,
     water_damage: Res<WaterDamage>,
+    active_spell_effects: Res<ActiveSpellEffects>,
 ) {
     if game_over.value {
         return;
@@ -271,12 +276,13 @@ pub fn aim_towers(
 
         if ready_to_shoot && cooldown.timer.finished() {
             let is_critical = roll_critical_hit(critical_chance.value);
-            let damage = damage_formula.calculate_damage(
+            let damage = damage_formula.calculate_damage_with_elemental_multiplier(
                 &earth_damage,
                 &fire_damage,
                 &air_damage,
                 &water_damage,
                 is_critical,
+                active_spell_effects.elemental_multiplier,
             ) as f32;
 
             cooldown.timer.reset();
