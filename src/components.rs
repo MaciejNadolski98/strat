@@ -142,7 +142,7 @@ impl TowerKind {
                 earth_multiplier: 0.0,
                 fire_multiplier: 0.0,
                 air_multiplier: 0.0,
-                water_multiplier: 1.0,
+                water_multiplier: 1.9,
             },
         }
     }
@@ -215,6 +215,15 @@ impl TowerKind {
             Self::Ballista => 16.0,
         }
     }
+
+    pub fn cost(self) -> u32 {
+        match self {
+            Self::Sniper => 15,
+            Self::Ballista => 10,
+            Self::Sprayer => 18,
+            Self::Cannon => 16,
+        }
+    }
 }
 
 #[derive(Component, Clone, Copy)]
@@ -247,12 +256,12 @@ impl EnemyKind {
         }
     }
 
-    pub fn reward(self, wave: u32) -> i32 {
+    pub fn reward(self) -> i32 {
         match self {
-            Self::Grunt => 12 + wave as i32,
-            Self::Runner => 10 + wave as i32,
-            Self::Brute => 28 + wave as i32 * 2,
-            Self::Armored => 22 + wave as i32 * 2,
+            Self::Runner => 1,
+            Self::Grunt => 2,
+            Self::Armored => 4,
+            Self::Brute => 5,
         }
     }
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::TowerKind;
-use crate::constants::{PRICE_GROWTH, SHOP_REROLL_COST, TOWER_COST};
+use crate::constants::{PRICE_GROWTH, SHOP_REROLL_COST};
 
 #[derive(Resource)]
 pub struct Money {
@@ -161,11 +161,11 @@ impl SpellKind {
         }
     }
 
-    pub fn cost(self) -> i32 {
+    pub fn cost(self) -> u32 {
         match self {
-            Self::Ignite => 45,
-            Self::ElementalSurge => 60,
-            Self::Slow => 50,
+            Self::Ignite => 7,
+            Self::ElementalSurge => 15,
+            Self::Slow => 10,
         }
     }
 
@@ -284,15 +284,13 @@ impl StatUpgradeKind {
         }
     }
 
-    pub fn cost(self) -> i32 {
+    pub fn cost(self) -> u32 {
         match self {
-            Self::MaxHp => 35,
-            Self::Regeneration => 30,
-            Self::AttackSpeed => 45,
-            Self::PassiveIncome => 40,
-            Self::CriticalChance => 45,
-            Self::ExplosionSize => 35,
-            Self::EarthDamage | Self::FireDamage | Self::AirDamage | Self::WaterDamage => 35,
+            Self::Regeneration => 2,
+            Self::EarthDamage | Self::FireDamage | Self::AirDamage | Self::WaterDamage => 3,
+            Self::ExplosionSize => 4,
+            Self::MaxHp | Self::AttackSpeed | Self::CriticalChance => 5,
+            Self::PassiveIncome => 10,
         }
     }
 
@@ -312,7 +310,7 @@ impl StatUpgradeKind {
     }
 }
 
-fn scale_price(base_price: i32, wave: u32) -> i32 {
+fn scale_price(base_price: u32, wave: u32) -> i32 {
     let wave_growth = (1.0 + PRICE_GROWTH).powi(wave.saturating_sub(1) as i32);
     (base_price as f32 * wave_growth).round() as i32
 }
@@ -367,7 +365,7 @@ impl ShopItem {
 
     pub fn cost(self, wave: u32) -> i32 {
         match self {
-            Self::Tower(_) => scale_price(TOWER_COST, wave),
+            Self::Tower(kind) => scale_price(kind.cost(), wave),
             Self::StatUpgrade(kind) => scale_price(kind.cost(), wave),
             Self::Spell(kind) => scale_price(kind.cost(), wave),
         }

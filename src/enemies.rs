@@ -88,7 +88,7 @@ fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32) {
                 value: kind.speed(wave_number),
             },
             Reward {
-                amount: kind.reward(wave_number),
+                amount: kind.reward(),
             },
         ))
         .id();

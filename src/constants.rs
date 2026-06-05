@@ -2,9 +2,8 @@ use bevy::prelude::*;
 
 pub const WINDOW_WIDTH: f32 = 1000.0;
 pub const WINDOW_HEIGHT: f32 = 700.0;
-pub const TOWER_COST: i32 = 40;
-pub const SHOP_REROLL_COST: i32 = 15;
-pub const STARTING_MONEY: i32 = 120;
+pub const SHOP_REROLL_COST: u32 = 2;
+pub const STARTING_MONEY: i32 = 20;
 pub const PLAYER_BASE_MAX_HP: i32 = 20;
 pub const GRID_SIZE: f32 = 48.0;
 pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
