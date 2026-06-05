@@ -1,13 +1,14 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    HudText, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText, ShopTooltip,
-    SpellSlot, SpellSlotIcon, SpellSlotLabel,
+    HudText, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText,
+    ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel,
 };
-use crate::constants::{GRID_SIZE, PATH, PATH_HALF_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::pathing::snap_axis;
+use crate::constants::{GRID_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::pathing::{snap_axis, spawn_path_tile};
+use crate::resources::PathTiles;
 
-pub fn setup(mut commands: Commands) {
+pub fn setup(mut commands: Commands, path_tiles: Res<PathTiles>) {
     commands.spawn(Camera2d);
 
     commands.spawn((
@@ -20,17 +21,18 @@ pub fn setup(mut commands: Commands) {
 
     spawn_grid(&mut commands);
 
-    for segment in PATH.windows(2) {
-        spawn_path_segment(&mut commands, segment[0], segment[1]);
+    for tile in &path_tiles.tiles {
+        spawn_path_tile(&mut commands, *tile);
     }
 
     commands.spawn((
         Sprite::from_color(Color::srgb(0.35, 0.13, 0.12), Vec2::new(52.0, 52.0)),
-        Transform::from_translation(PATH[0].extend(0.0)),
+        Transform::from_translation(path_tiles.start().extend(0.0)),
     ));
     commands.spawn((
         Sprite::from_color(Color::srgb(0.12, 0.35, 0.36), Vec2::new(58.0, 58.0)),
-        Transform::from_translation(PATH[PATH.len() - 1].extend(0.0)),
+        Transform::from_translation(path_tiles.end().extend(0.0)),
+        PathEndMarker,
     ));
 
     commands.spawn((
@@ -115,25 +117,6 @@ fn spawn_grid(commands: &mut Commands) {
         ));
         y += GRID_SIZE;
     }
-}
-
-fn spawn_path_segment(commands: &mut Commands, start: Vec2, end: Vec2) {
-    let delta = end - start;
-    let midpoint = (start + end) * 0.5;
-    commands.spawn((
-        Sprite::from_color(
-            Color::srgb(0.43, 0.39, 0.31),
-            Vec2::new(
-                delta.length() + PATH_HALF_WIDTH * 2.0,
-                PATH_HALF_WIDTH * 2.0,
-            ),
-        ),
-        Transform {
-            translation: midpoint.extend(-2.0),
-            rotation: Quat::from_rotation_z(delta.y.atan2(delta.x)),
-            ..default()
-        },
-    ));
 }
 
 fn spawn_shop_slots(commands: &mut Commands) {

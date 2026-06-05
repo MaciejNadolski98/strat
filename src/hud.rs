@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use crate::components::{DamageDealt, HudText, Tower, TowerKind};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, Paused, Regeneration, WaterDamage,
-    WaveNumber,
+    GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, PathTiles, Paused, Regeneration,
+    WaterDamage, WaveNumber,
 };
 use crate::waves::RunMode;
 
@@ -29,6 +29,7 @@ pub struct HudStats<'w> {
     game_won: Res<'w, GameWon>,
     paused: Res<'w, Paused>,
     run_mode: Res<'w, RunMode>,
+    path_tiles: Res<'w, PathTiles>,
 }
 
 pub fn update_hud(
@@ -47,11 +48,11 @@ pub fn update_hud(
     } else if stats.paused.value {
         "Paused - press Space to resume"
     } else {
-        "Left click: place selected shop item   Space: pause"
+        "Left click: place selected shop item or extend path   Space: pause"
     };
 
     let mut hud_text = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}\nAtk speed: {:.2}x   Income: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}   Path tile: ${}\nAtk speed: {:.2}x   Income: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.amount,
@@ -60,6 +61,7 @@ pub fn update_hud(
         stats.run_mode.final_wave(),
         stats.kills.amount,
         stats.run_mode.label(),
+        stats.path_tiles.extension_cost(),
         stats.attack_speed.value,
         stats.passive_income.amount,
         stats.critical_chance.value * 100.0,

@@ -86,10 +86,10 @@ macro_rules! group {
 
 pub const WAVES: [Wave; WAVE_COUNT] = [
     Wave {
-        groups: &[group!(Grunt, 10, 1.0, 0.0)],
+        groups: &[group!(Grunt, 5, 2.5, 10.0)],
     },
     Wave {
-        groups: &[group!(Grunt, 10, 1.0, 0.0), group!(Runner, 4, 1.0, 2.0)],
+        groups: &[group!(Grunt, 10, 1.5, 0.0), group!(Runner, 4, 1.2, 2.0)],
     },
     Wave {
         groups: &[group!(Runner, 6, 1.2, 0.0), group!(Grunt, 10, 0.8, 3.0)],

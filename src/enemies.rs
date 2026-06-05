@@ -3,10 +3,9 @@ use bevy::prelude::*;
 use crate::components::{
     Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
 };
-use crate::constants::PATH;
 use crate::resources::{
     ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NextWaveTimer,
-    Regeneration, SpawnTimer, WaveNumber,
+    PathTiles, Regeneration, SpawnTimer, WaveNumber,
 };
 use crate::waves::{RunMode, enemies_in_wave, wave};
 
@@ -23,6 +22,7 @@ pub fn spawn_enemies(
     max_hp: Res<MaxHp>,
     regeneration: Res<Regeneration>,
     run_mode: Res<RunMode>,
+    path_tiles: Res<PathTiles>,
     mut active_spell_effects: ResMut<ActiveSpellEffects>,
     enemies: Query<(), With<Enemy>>,
 ) {
@@ -61,7 +61,7 @@ pub fn spawn_enemies(
     for (group_index, group) in current_wave.groups.iter().enumerate() {
         let mut spawned = spawn_timer.spawned_in_group(group_index);
         while spawned < group.count && spawn_timer.elapsed >= group.spawn_time(spawned) {
-            spawn_enemy(&mut commands, group.kind, wave_number.value);
+            spawn_enemy(&mut commands, group.kind, wave_number.value, &path_tiles);
             spawned += 1;
             remaining.count -= 1;
         }
@@ -69,13 +69,13 @@ pub fn spawn_enemies(
     }
 }
 
-fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32) {
+fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, path_tiles: &PathTiles) {
     let max_health = kind.max_health(wave_number);
     let size = kind.size();
     let enemy = commands
         .spawn((
             Sprite::from_color(enemy_color(kind, 1.0), size),
-            Transform::from_translation(PATH[0].extend(3.0)),
+            Transform::from_translation(path_tiles.start().extend(3.0)),
             Enemy,
             kind,
             Waypoint { index: 1 },
@@ -102,6 +102,7 @@ pub fn move_enemies(
     mut hp: ResMut<CurrentHp>,
     mut game_over: ResMut<GameOver>,
     active_spell_effects: Res<ActiveSpellEffects>,
+    path_tiles: Res<PathTiles>,
     mut enemies: Query<
         (
             Entity,
@@ -123,7 +124,14 @@ pub fn move_enemies(
             continue;
         }
 
-        let target = PATH[waypoint.index];
+        let Some(target) = path_tiles.tiles.get(waypoint.index).copied() else {
+            commands.entity(entity).despawn();
+            hp.amount -= 1;
+            if hp.amount <= 0 {
+                game_over.value = true;
+            }
+            continue;
+        };
         let position = transform.translation.truncate();
         let to_target = target - position;
         let step = speed.value * active_spell_effects.enemy_speed_multiplier * time.delta_secs();
@@ -132,7 +140,7 @@ pub fn move_enemies(
         if to_target.length() <= step {
             transform.translation = target.extend(3.0);
             waypoint.index += 1;
-            if waypoint.index >= PATH.len() {
+            if waypoint.index >= path_tiles.tiles.len() {
                 commands.entity(entity).despawn();
                 hp.amount -= 1;
                 if hp.amount <= 0 {

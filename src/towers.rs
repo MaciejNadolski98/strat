@@ -16,7 +16,7 @@ use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
 use crate::resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, Money, Shop, WaterDamage,
+    FireDamage, GameOver, Money, PathTiles, Shop, WaterDamage,
 };
 
 #[derive(SystemParam)]
@@ -40,6 +40,7 @@ pub fn place_tower(
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
     attack_speed: Res<AttackSpeed>,
+    path_tiles: Res<PathTiles>,
     mut shop: ResMut<Shop>,
 ) {
     let Some(offer) = shop.selected_offer() else {
@@ -68,7 +69,8 @@ pub fn place_tower(
     };
     let grid_position = snap_to_grid(world_position);
 
-    if !is_buildable_cell(grid_position)
+    if path_tiles.can_extend_to(grid_position)
+        || !is_buildable_cell(grid_position, &path_tiles)
         || towers
             .iter()
             .any(|tower| tower.translation.truncate().distance(grid_position) < GRID_SIZE * 0.5)

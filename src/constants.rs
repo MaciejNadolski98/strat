@@ -3,7 +3,9 @@ use bevy::prelude::*;
 pub const WINDOW_WIDTH: f32 = 1000.0;
 pub const WINDOW_HEIGHT: f32 = 700.0;
 pub const SHOP_REROLL_COST: u32 = 2;
-pub const STARTING_MONEY: i32 = 20;
+pub const PATH_EXTENSION_BASE_COST: i32 = 3;
+pub const PATH_EXTENSION_COST_STEP: i32 = 2;
+pub const STARTING_MONEY: i32 = 40;
 pub const PLAYER_BASE_MAX_HP: i32 = 20;
 pub const GRID_SIZE: f32 = 48.0;
 pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
@@ -13,13 +15,12 @@ pub const SHOP_BUILD_LIMIT: f32 = -WINDOW_HEIGHT * 0.5 + 96.0;
 pub const MAX_HEALTH_GROWTH: f32 = 0.2;
 pub const PRICE_GROWTH: f32 = 0.2;
 
-pub const PATH: [Vec2; 8] = [
-    Vec2::new(-504.0, 216.0),
+pub const INITIAL_PATH: [Vec2; 7] = [
+    Vec2::new(-456.0, 216.0),
+    Vec2::new(-408.0, 216.0),
+    Vec2::new(-360.0, 216.0),
+    Vec2::new(-312.0, 216.0),
     Vec2::new(-264.0, 216.0),
-    Vec2::new(-264.0, -120.0),
-    Vec2::new(-24.0, -120.0),
-    Vec2::new(-24.0, 120.0),
-    Vec2::new(264.0, 120.0),
-    Vec2::new(264.0, -168.0),
-    Vec2::new(504.0, -168.0),
+    Vec2::new(-216.0, 216.0),
+    Vec2::new(-168.0, 216.0),
 ];

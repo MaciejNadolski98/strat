@@ -16,6 +16,12 @@ pub struct Enemy;
 pub struct Projectile;
 
 #[derive(Component)]
+pub struct PathTile;
+
+#[derive(Component)]
+pub struct PathEndMarker;
+
+#[derive(Component)]
 pub struct HudText;
 
 #[derive(Component)]

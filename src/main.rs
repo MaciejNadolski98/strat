@@ -20,12 +20,13 @@ use effects::update_floating_text;
 use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
 use hud::update_hud;
+use pathing::update_path_input;
 use projectiles::move_projectiles;
 use resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, MaxHp, Money,
-    NextWaveTimer, PassiveIncome, Paused, Regeneration, Shop, SpawnTimer, SpellShop, WaterDamage,
-    WaveNumber,
+    NextWaveTimer, PassiveIncome, PathTiles, Paused, Regeneration, Shop, SpawnTimer, SpellShop,
+    WaterDamage, WaveNumber,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
@@ -72,6 +73,7 @@ fn main() {
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
         })
+        .insert_resource(PathTiles::new())
         .insert_resource(Shop::new(1))
         .insert_resource(SpellShop::new())
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -91,6 +93,7 @@ fn main() {
                 progress_cooldown,
                 update_shop_input,
                 update_spell_input,
+                update_path_input,
                 place_tower,
                 spawn_enemies,
                 move_enemies,
