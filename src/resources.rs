@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::TowerKind;
+use crate::components::{ALL_TOWER_KINDS, TowerKind};
 use crate::constants::{PRICE_GROWTH, SHOP_REROLL_COST};
 
 #[derive(Resource)]
@@ -323,11 +323,21 @@ pub enum ShopItem {
 }
 
 impl ShopItem {
-    pub fn random() -> Self {
+    pub fn random_without_towers(unavailable_towers: &[TowerKind]) -> Self {
         let roll = rand::random::<f32>();
         if roll < 0.45 {
-            Self::Tower(TowerKind::random())
-        } else if roll < 0.80 {
+            let available_towers: Vec<TowerKind> = ALL_TOWER_KINDS
+                .into_iter()
+                .filter(|kind| !unavailable_towers.contains(kind))
+                .collect();
+
+            if !available_towers.is_empty() {
+                let kind = available_towers[rand::random::<usize>() % available_towers.len()];
+                return Self::Tower(kind);
+            }
+        }
+
+        if roll < 0.80 {
             Self::StatUpgrade(StatUpgradeKind::random())
         } else {
             Self::Spell(SpellKind::random())
@@ -379,8 +389,8 @@ pub struct ShopOffer {
 }
 
 impl ShopOffer {
-    pub fn random(wave: u32) -> Self {
-        let item = ShopItem::random();
+    pub fn random_without_towers(wave: u32, unavailable_towers: &[TowerKind]) -> Self {
+        let item = ShopItem::random_without_towers(unavailable_towers);
         Self {
             item,
             cost: item.cost(wave),
@@ -393,27 +403,21 @@ pub struct Shop {
     pub offers: [Option<ShopOffer>; 3],
     pub selected: usize,
     pub reroll_cost: i32,
+    purchased_towers: Vec<TowerKind>,
 }
 
 impl Shop {
     pub fn new(wave: u32) -> Self {
         Self {
-            offers: [
-                Some(ShopOffer::random(wave)),
-                Some(ShopOffer::random(wave)),
-                Some(ShopOffer::random(wave)),
-            ],
+            offers: Self::generate_offers(wave, &[]),
             selected: 0,
             reroll_cost: scale_price(SHOP_REROLL_COST, wave),
+            purchased_towers: Vec::new(),
         }
     }
 
     pub fn reroll(&mut self, wave: u32) {
-        self.offers = [
-            Some(ShopOffer::random(wave)),
-            Some(ShopOffer::random(wave)),
-            Some(ShopOffer::random(wave)),
-        ];
+        self.offers = Self::generate_offers(wave, &self.purchased_towers);
         self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
         self.selected = self.selected.min(self.offers.len() - 1);
     }
@@ -429,6 +433,37 @@ impl Shop {
     pub fn take_selected_offer(&mut self) -> Option<ShopOffer> {
         let offer = self.offers[self.selected];
         self.offers[self.selected] = None;
+
+        if let Some(tower_kind) = offer.and_then(|offer| offer.item.tower_kind()) {
+            if !self.purchased_towers.contains(&tower_kind) {
+                self.purchased_towers.push(tower_kind);
+            }
+
+            for slot in &mut self.offers {
+                if slot
+                    .and_then(|offer| offer.item.tower_kind())
+                    .is_some_and(|kind| kind == tower_kind)
+                {
+                    *slot = None;
+                }
+            }
+        }
+
         offer
+    }
+
+    fn generate_offers(wave: u32, purchased_towers: &[TowerKind]) -> [Option<ShopOffer>; 3] {
+        let mut unavailable_towers = purchased_towers.to_vec();
+        let mut offers = [None; 3];
+
+        for offer in &mut offers {
+            let generated_offer = ShopOffer::random_without_towers(wave, &unavailable_towers);
+            if let Some(tower_kind) = generated_offer.item.tower_kind() {
+                unavailable_towers.push(tower_kind);
+            }
+            *offer = Some(generated_offer);
+        }
+
+        offers
     }
 }

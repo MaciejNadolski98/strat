@@ -65,7 +65,7 @@ pub struct FloatingText {
     pub velocity: Vec3,
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub enum TowerKind {
     Ballista,
     Cannon,
@@ -73,16 +73,14 @@ pub enum TowerKind {
     Sniper,
 }
 
-impl TowerKind {
-    pub fn random() -> Self {
-        match rand::random::<u8>() % 4 {
-            0 => Self::Ballista,
-            1 => Self::Cannon,
-            2 => Self::Sprayer,
-            _ => Self::Sniper,
-        }
-    }
+pub const ALL_TOWER_KINDS: [TowerKind; 4] = [
+    TowerKind::Ballista,
+    TowerKind::Cannon,
+    TowerKind::Sprayer,
+    TowerKind::Sniper,
+];
 
+impl TowerKind {
     pub fn name(self) -> &'static str {
         match self {
             Self::Ballista => "Ballista",
