@@ -203,7 +203,7 @@ impl SpellKind {
 
     pub fn description(self) -> &'static str {
         match self {
-            Self::Ignite => "Sets all enemies on fire",
+            Self::Ignite => "Sets all enemies on fire, scaling with fire damage",
             Self::ElementalSurge => "Doubles elemental damage until wave end",
             Self::Slow => "Slows all enemies until wave end",
         }

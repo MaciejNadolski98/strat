@@ -6,7 +6,8 @@ use crate::components::{
 };
 use crate::effects::spawn_floating_text;
 use crate::resources::{
-    ActiveSpellEffects, GameOver, GameWon, KillCount, Money, PassiveIncome, SpellKind, SpellShop,
+    ActiveSpellEffects, FireDamage, GameOver, GameWon, KillCount, Money, PassiveIncome, SpellKind,
+    SpellShop,
 };
 
 const BURN_DURATION: f32 = 6.0;
@@ -21,6 +22,7 @@ pub fn update_spell_input(
     mut active_effects: ResMut<ActiveSpellEffects>,
     game_over: Res<GameOver>,
     game_won: Res<GameWon>,
+    fire_damage: Res<FireDamage>,
     enemies: Query<Entity, With<Enemy>>,
 ) {
     if game_over.value || game_won.value {
@@ -43,7 +45,13 @@ pub fn update_spell_input(
     let Some(spell) = spell_shop.take_spell(slot) else {
         return;
     };
-    cast_spell(&mut commands, spell, &mut active_effects, &enemies);
+    cast_spell(
+        &mut commands,
+        spell,
+        &mut active_effects,
+        &fire_damage,
+        &enemies,
+    );
 }
 
 pub fn update_spell_slots(
@@ -184,15 +192,17 @@ fn cast_spell(
     commands: &mut Commands,
     spell: SpellKind,
     active_effects: &mut ActiveSpellEffects,
+    fire_damage: &FireDamage,
     enemies: &Query<Entity, With<Enemy>>,
 ) {
     match spell {
         SpellKind::Ignite => {
+            let damage_per_tick = BURN_DAMAGE_PER_TICK + fire_damage.value;
             for enemy in enemies {
                 commands.entity(enemy).insert(Burning {
                     timer: Timer::from_seconds(BURN_DURATION, TimerMode::Once),
                     tick_timer: Timer::from_seconds(BURN_TICK, TimerMode::Repeating),
-                    damage_per_tick: BURN_DAMAGE_PER_TICK,
+                    damage_per_tick,
                 });
             }
         }
