@@ -189,7 +189,7 @@ fn tower_tooltip(
         effective_cooldown,
         stats.critical_chance.value * 100.0,
         kind.projectile_speed(),
-        kind.explosion_radius() + stats.explosion_size.value,
+        kind.upgraded_explosion_radius(stats.explosion_size.value),
         kind.angular_speed(),
     )
 }
@@ -307,7 +307,7 @@ pub fn aim_towers(
                 Damage { amount: damage },
                 IsCritical { value: is_critical },
                 ExplosionRadius {
-                    value: explosion_size.value + tower_kind.explosion_radius(),
+                    value: tower_kind.upgraded_explosion_radius(explosion_size.value),
                 },
             ));
         }

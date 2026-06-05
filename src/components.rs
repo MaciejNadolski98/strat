@@ -161,6 +161,15 @@ impl TowerKind {
         }
     }
 
+    pub fn upgraded_explosion_radius(self, explosion_size: f32) -> f32 {
+        let base_radius = self.explosion_radius();
+        if base_radius > 0.0 {
+            base_radius + explosion_size
+        } else {
+            0.0
+        }
+    }
+
     pub fn angular_speed(self) -> f32 {
         match self {
             Self::Ballista => 1.6,
