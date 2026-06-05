@@ -5,7 +5,7 @@ use crate::components::{
     ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel,
 };
 use crate::constants::{GRID_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::pathing::{snap_axis, spawn_path_tile};
+use crate::pathing::{snap_axis, spawn_path_visuals};
 use crate::resources::PathTiles;
 
 pub fn setup(mut commands: Commands, path_tiles: Res<PathTiles>) {
@@ -21,9 +21,7 @@ pub fn setup(mut commands: Commands, path_tiles: Res<PathTiles>) {
 
     spawn_grid(&mut commands);
 
-    for tile in &path_tiles.tiles {
-        spawn_path_tile(&mut commands, *tile);
-    }
+    spawn_path_visuals(&mut commands, &path_tiles);
 
     commands.spawn((
         Sprite::from_color(Color::srgb(0.35, 0.13, 0.12), Vec2::new(52.0, 52.0)),

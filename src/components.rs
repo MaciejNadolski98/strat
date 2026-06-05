@@ -19,6 +19,9 @@ pub struct Projectile;
 pub struct PathTile;
 
 #[derive(Component)]
+pub struct PathEdge;
+
+#[derive(Component)]
 pub struct PathEndMarker;
 
 #[derive(Component)]

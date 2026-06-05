@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::components::{PathEndMarker, PathTile};
+use crate::components::{PathEdge, PathEndMarker, PathTile};
 use crate::constants::{
     GRID_SIZE, HUD_BUILD_LIMIT, PATH_HALF_WIDTH, SHOP_BUILD_LIMIT, WINDOW_WIDTH,
 };
@@ -21,6 +21,7 @@ pub fn update_path_input(
     mut money: ResMut<Money>,
     mut path_tiles: ResMut<PathTiles>,
     mut end_marker: Query<&mut Transform, With<PathEndMarker>>,
+    mut path_visuals: ParamSet<(Query<Entity, With<PathTile>>, Query<Entity, With<PathEdge>>)>,
 ) {
     if game_over.value || !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -51,7 +52,13 @@ pub fn update_path_input(
 
     money.amount -= cost;
     path_tiles.extend_to(grid_position);
-    spawn_path_tile(&mut commands, grid_position);
+    for entity in path_visuals.p0().iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in path_visuals.p1().iter() {
+        commands.entity(entity).despawn();
+    }
+    spawn_path_visuals(&mut commands, &path_tiles);
 
     if let Ok(mut marker_transform) = end_marker.single_mut() {
         marker_transform.translation = grid_position.extend(0.0);
@@ -66,15 +73,71 @@ pub fn update_path_input(
     );
 }
 
-pub fn spawn_path_tile(commands: &mut Commands, position: Vec2) {
+pub fn spawn_path_visuals(commands: &mut Commands, path_tiles: &PathTiles) {
+    for tile in &path_tiles.tiles {
+        spawn_path_tile(commands, *tile);
+    }
+
+    for (index, tile) in path_tiles.tiles.iter().enumerate() {
+        spawn_path_edges(commands, path_tiles, index, *tile);
+    }
+}
+
+fn spawn_path_tile(commands: &mut Commands, position: Vec2) {
     commands.spawn((
-        Sprite::from_color(
-            Color::srgb(0.43, 0.39, 0.31),
-            Vec2::splat(PATH_HALF_WIDTH * 2.0),
-        ),
+        Sprite::from_color(Color::srgb(0.43, 0.39, 0.31), Vec2::splat(GRID_SIZE)),
         Transform::from_translation(position.extend(-2.0)),
         PathTile,
     ));
+}
+
+fn spawn_path_edges(commands: &mut Commands, path_tiles: &PathTiles, index: usize, position: Vec2) {
+    let directions = [
+        (
+            Vec2::X,
+            Vec2::new(PATH_HALF_WIDTH, 0.0),
+            Vec2::new(4.0, GRID_SIZE + 4.0),
+        ),
+        (
+            Vec2::NEG_X,
+            Vec2::new(-PATH_HALF_WIDTH, 0.0),
+            Vec2::new(4.0, GRID_SIZE + 4.0),
+        ),
+        (
+            Vec2::Y,
+            Vec2::new(0.0, PATH_HALF_WIDTH),
+            Vec2::new(GRID_SIZE + 4.0, 4.0),
+        ),
+        (
+            Vec2::NEG_Y,
+            Vec2::new(0.0, -PATH_HALF_WIDTH),
+            Vec2::new(GRID_SIZE + 4.0, 4.0),
+        ),
+    ];
+
+    for (direction, offset, size) in directions {
+        if is_consecutive_path_neighbor(path_tiles, index, position + direction * GRID_SIZE) {
+            continue;
+        }
+
+        commands.spawn((
+            Sprite::from_color(Color::srgb(0.24, 0.21, 0.16), size),
+            Transform::from_translation((position + offset).extend(-1.0)),
+            PathEdge,
+        ));
+    }
+}
+
+fn is_consecutive_path_neighbor(path_tiles: &PathTiles, index: usize, position: Vec2) -> bool {
+    let previous = index
+        .checked_sub(1)
+        .and_then(|neighbor| path_tiles.tiles.get(neighbor));
+    let next = path_tiles.tiles.get(index + 1);
+
+    previous
+        .into_iter()
+        .chain(next)
+        .any(|tile| tile.distance_squared(position) < 1.0)
 }
 
 fn is_in_play_area(position: Vec2) -> bool {

@@ -1,9 +1,9 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::{Enemy, PathEndMarker, PathTile, Projectile, Tower};
+use crate::components::{Enemy, PathEdge, PathEndMarker, PathTile, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
-use crate::pathing::spawn_path_tile;
+use crate::pathing::spawn_path_visuals;
 use crate::resources::{
     ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, KillCount, MaxHp, Money,
     NextWaveTimer, PathTiles, Paused, Shop, SpawnTimer, SpellShop, WaveNumber,
@@ -55,6 +55,7 @@ pub fn restart_game(
         Query<Entity, With<Enemy>>,
         Query<Entity, With<Projectile>>,
         Query<Entity, With<PathTile>>,
+        Query<Entity, With<PathEdge>>,
     )>,
     mut end_marker: Query<&mut Transform, With<PathEndMarker>>,
 ) {
@@ -74,6 +75,9 @@ pub fn restart_game(
     for entity in cleanup.p3().iter() {
         commands.entity(entity).despawn();
     }
+    for entity in cleanup.p4().iter() {
+        commands.entity(entity).despawn();
+    }
 
     state.money.amount = STARTING_MONEY;
     state.hp.amount = state.max_hp.amount;
@@ -88,9 +92,7 @@ pub fn restart_game(
     *state.shop = Shop::new(1);
     *state.spell_shop = SpellShop::new();
     state.path_tiles.reset();
-    for tile in &state.path_tiles.tiles {
-        spawn_path_tile(&mut commands, *tile);
-    }
+    spawn_path_visuals(&mut commands, &state.path_tiles);
     if let Ok(mut marker_transform) = end_marker.single_mut() {
         marker_transform.translation = state.path_tiles.end().extend(0.0);
     }
