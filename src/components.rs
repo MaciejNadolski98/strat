@@ -74,6 +74,11 @@ pub struct FloatingText {
     pub velocity: Vec3,
 }
 
+#[derive(Component)]
+pub struct ExplosionEffect {
+    pub lifetime: Timer,
+}
+
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub enum TowerKind {
     Ballista,

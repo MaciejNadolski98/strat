@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use bevy::math::primitives::Circle;
 
-use crate::components::FloatingText;
+use crate::components::{ExplosionEffect, FloatingText};
 
 pub fn spawn_floating_text(
     commands: &mut Commands,
@@ -30,6 +31,23 @@ pub fn spawn_floating_text(
     ));
 }
 
+pub fn spawn_explosion_effect(
+    commands: &mut Commands,
+    position: Vec2,
+    radius: f32,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+) {
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::new(radius))),
+        MeshMaterial2d(materials.add(Color::srgba(0.45, 0.45, 0.45, 0.78))),
+        Transform::from_translation(position.extend(7.5)),
+        ExplosionEffect {
+            lifetime: Timer::from_seconds(0.38, TimerMode::Once),
+        },
+    ));
+}
+
 pub fn update_floating_text(
     mut commands: Commands,
     time: Res<Time>,
@@ -43,6 +61,30 @@ pub fn update_floating_text(
         text_color.0 = text_color.0.with_alpha(alpha);
 
         if floating.lifetime.finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub fn update_explosion_effects(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut explosions: Query<(
+        Entity,
+        &mut ExplosionEffect,
+        &MeshMaterial2d<ColorMaterial>,
+    )>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for (entity, mut explosion, material) in &mut explosions {
+        explosion.lifetime.tick(time.delta());
+        let progress = explosion.lifetime.fraction();
+
+        if let Some(material) = materials.get_mut(material) {
+            material.color = material.color.with_alpha(0.78 * (1.0 - progress));
+        }
+
+        if explosion.lifetime.finished() {
             commands.entity(entity).despawn();
         }
     }

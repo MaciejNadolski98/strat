@@ -4,7 +4,7 @@ use crate::components::{
     Damage, DamageDealt, Enemy, ExplosionRadius, Health, IsCritical, Projectile, Reward,
     SourceTower, Speed, Target, Tower,
 };
-use crate::effects::spawn_floating_text;
+use crate::effects::{spawn_explosion_effect, spawn_floating_text};
 use crate::resources::{KillCount, Money, PassiveIncome};
 
 pub fn move_projectiles(
@@ -28,6 +28,8 @@ pub fn move_projectiles(
     >,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward), With<Enemy>>,
     mut towers: Query<&mut DamageDealt, With<Tower>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     for (
         projectile_entity,
@@ -73,6 +75,13 @@ pub fn move_projectiles(
             }
 
             if explosion_radius.value > 0.0 {
+                spawn_explosion_effect(
+                    &mut commands,
+                    impact_position,
+                    explosion_radius.value,
+                    &mut meshes,
+                    &mut materials,
+                );
                 for (entity, transform, mut health, reward) in &mut enemies {
                     if entity == target.entity || health.current <= 0.0 {
                         continue;

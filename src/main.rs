@@ -16,7 +16,7 @@ mod waves;
 use bevy::prelude::*;
 
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
-use effects::update_floating_text;
+use effects::{update_explosion_effects, update_floating_text};
 use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
 use hud::update_hud;
@@ -100,6 +100,7 @@ fn main() {
                 update_burning_enemies,
                 aim_towers,
                 move_projectiles,
+                update_explosion_effects,
                 update_floating_text,
             )
                 .chain()
