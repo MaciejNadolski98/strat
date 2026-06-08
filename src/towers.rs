@@ -18,6 +18,7 @@ use crate::resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
     FireDamage, GameOver, Money, PathTiles, Shop, WaterDamage,
 };
+use crate::shop::PlayerStatsMut;
 
 #[derive(SystemParam)]
 pub struct TowerTooltipStats<'w> {
@@ -39,9 +40,9 @@ pub fn place_tower(
     towers: Query<&Transform, With<Tower>>,
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
-    attack_speed: Res<AttackSpeed>,
     path_tiles: Res<PathTiles>,
     mut shop: ResMut<Shop>,
+    mut stats: PlayerStatsMut,
 ) {
     let Some(offer) = shop.selected_offer() else {
         return;
@@ -80,6 +81,7 @@ pub fn place_tower(
 
     money.amount -= offer.cost;
     shop.take_selected_offer();
+    apply_tower_effects(tower_kind, &mut stats);
 
     spawn_floating_text(
         &mut commands,
@@ -99,7 +101,7 @@ pub fn place_tower(
             tower_kind.damage_formula(),
             FireCooldown {
                 timer: Timer::new(
-                    Duration::from_secs_f32(tower_kind.cooldown() / attack_speed.value.max(0.1)),
+                    Duration::from_secs_f32(tower_kind.cooldown() / stats.attack_speed_value().max(0.1)),
                     TimerMode::Once,
                 ),
             },
@@ -111,6 +113,12 @@ pub fn place_tower(
             Sprite::from_color(tower_kind.barrel_color(), tower_kind.barrel_size()),
             Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
         ));
+}
+
+fn apply_tower_effects(kind: TowerKind, stats: &mut PlayerStatsMut) {
+    for effect in kind.stat_effects() {
+        stats.apply_tower_effect(*effect);
+    }
 }
 
 pub fn update_tower_tooltip(
@@ -180,9 +188,19 @@ fn tower_tooltip(
         elemental_multiplier,
     );
     let effective_cooldown = kind.cooldown() / stats.attack_speed.value.max(0.1);
+    let stat_effects = kind.stat_effects();
+    let effect_text = if stat_effects.is_empty() {
+        "None".to_string()
+    } else {
+        stat_effects
+            .iter()
+            .map(|effect| effect.effect_text())
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
 
     format!(
-        "{}\nDamage: {} ({} crit)\nFormula: {}\nRange: {:.0}\nCooldown: {:.2}s\nCrit: {:.0}%\nProjectile: {:.0}/s\nSplash: {:.0}\nTurn speed: {:.1}",
+        "{}\nDamage: {} ({} crit)\nFormula: {}\nRange: {:.0}\nCooldown: {:.2}s\nCrit: {:.0}%\nProjectile: {:.0}/s\nSplash: {:.0}\nTurn speed: {:.1}\nStat effects:\n{}",
         kind.name(),
         regular_damage,
         critical_damage,
@@ -193,6 +211,7 @@ fn tower_tooltip(
         kind.projectile_speed(),
         kind.upgraded_explosion_radius(stats.explosion_size.value),
         kind.angular_speed(),
+        effect_text,
     )
 }
 

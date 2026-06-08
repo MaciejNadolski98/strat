@@ -273,7 +273,7 @@ impl ActiveSpellEffects {
 }
 
 #[derive(Clone, Copy)]
-pub enum StatUpgradeKind {
+pub enum PlayerStatKind {
     MaxHp,
     Regeneration,
     AttackSpeed,
@@ -286,22 +286,7 @@ pub enum StatUpgradeKind {
     WaterDamage,
 }
 
-impl StatUpgradeKind {
-    pub fn random() -> Self {
-        match rand::random::<u8>() % 10 {
-            0 => Self::MaxHp,
-            1 => Self::Regeneration,
-            2 => Self::AttackSpeed,
-            3 => Self::PassiveIncome,
-            4 => Self::CriticalChance,
-            5 => Self::ExplosionSize,
-            6 => Self::EarthDamage,
-            7 => Self::FireDamage,
-            8 => Self::AirDamage,
-            _ => Self::WaterDamage,
-        }
-    }
-
+impl PlayerStatKind {
     pub fn name(self) -> &'static str {
         match self {
             Self::MaxHp => "Max HP",
@@ -317,19 +302,174 @@ impl StatUpgradeKind {
         }
     }
 
-    pub fn effect_text(self) -> &'static str {
-        match self {
-            Self::MaxHp => "+5 max HP",
-            Self::Regeneration => "+1 HP at wave start",
-            Self::AttackSpeed => "+12% tower attack speed",
-            Self::PassiveIncome => "+$1 per kill",
-            Self::CriticalChance => "+4% critical chance",
-            Self::ExplosionSize => "+12 splash size",
-            Self::EarthDamage => "+4 earth damage",
-            Self::FireDamage => "+4 fire damage",
-            Self::AirDamage => "+4 air damage",
-            Self::WaterDamage => "+4 water damage",
+    fn is_percent(self) -> bool {
+        matches!(self, Self::AttackSpeed | Self::CriticalChance)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct TowerStatEffect {
+    pub kind: PlayerStatKind,
+    pub amount: f32,
+}
+
+impl TowerStatEffect {
+    pub const fn new(kind: PlayerStatKind, amount: f32) -> Self {
+        Self { kind, amount }
+    }
+
+    pub fn effect_text(self) -> String {
+        let amount = if self.kind.is_percent() {
+            self.amount.abs() * 100.0
+        } else {
+            self.amount.abs()
+        };
+        let sign = if self.amount >= 0.0 { "+" } else { "-" };
+        let amount_text = if (amount - amount.round()).abs() < 0.0001 {
+            format!("{}", amount.round() as i32)
+        } else {
+            format!("{amount:.1}")
+        };
+        let suffix = if self.kind.is_percent() { "%" } else { "" };
+
+        format!("{} {}{}{}", self.kind.name(), sign, amount_text, suffix)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum StatUpgradeKind {
+    MaxHp,
+    Regeneration,
+    AttackSpeed,
+    PassiveIncome,
+    CriticalChance,
+    ExplosionSize,
+    EarthDamage,
+    FireDamage,
+    AirDamage,
+    WaterDamage,
+    Vitality,
+    Offense,
+    ElementalFocus,
+    Siege,
+}
+
+const VITALITY_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0),
+    TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0),
+];
+
+const MAX_HP_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0)];
+
+const REGENERATION_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0)];
+
+const ATTACK_SPEED_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12)];
+
+const PASSIVE_INCOME_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0)];
+
+const CRITICAL_CHANCE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04)];
+
+const EXPLOSION_SIZE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0)];
+
+const EARTH_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0)];
+
+const FIRE_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::FireDamage, 4.0)];
+
+const AIR_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::AirDamage, 4.0)];
+
+const WATER_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
+    [TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0)];
+
+const OFFENSE_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
+    TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04),
+];
+
+const ELEMENTAL_FOCUS_UPGRADE_EFFECTS: [TowerStatEffect; 4] = [
+    TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
+    TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0),
+    TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
+    TowerStatEffect::new(PlayerStatKind::WaterDamage, 2.0),
+];
+
+const SIEGE_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
+    TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0),
+];
+
+impl StatUpgradeKind {
+    pub fn random() -> Self {
+        match rand::random::<u8>() % 14 {
+            0 => Self::MaxHp,
+            1 => Self::Regeneration,
+            2 => Self::AttackSpeed,
+            3 => Self::PassiveIncome,
+            4 => Self::CriticalChance,
+            5 => Self::ExplosionSize,
+            6 => Self::EarthDamage,
+            7 => Self::FireDamage,
+            8 => Self::AirDamage,
+            9 => Self::WaterDamage,
+            10 => Self::Vitality,
+            11 => Self::Offense,
+            12 => Self::ElementalFocus,
+            _ => Self::Siege,
         }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::MaxHp => "Max HP",
+            Self::Regeneration => "Regen",
+            Self::AttackSpeed => "Atk Speed",
+            Self::PassiveIncome => "Income",
+            Self::CriticalChance => "Crit",
+            Self::ExplosionSize => "Splash",
+            Self::EarthDamage => "Earth",
+            Self::FireDamage => "Fire",
+            Self::AirDamage => "Air",
+            Self::WaterDamage => "Water",
+            Self::Vitality => "Vitality",
+            Self::Offense => "Offense",
+            Self::ElementalFocus => "Elemental Focus",
+            Self::Siege => "Siege",
+        }
+    }
+
+    pub fn effects(self) -> &'static [TowerStatEffect] {
+        match self {
+            Self::MaxHp => &MAX_HP_UPGRADE_EFFECTS,
+            Self::Regeneration => &REGENERATION_UPGRADE_EFFECTS,
+            Self::AttackSpeed => &ATTACK_SPEED_UPGRADE_EFFECTS,
+            Self::PassiveIncome => &PASSIVE_INCOME_UPGRADE_EFFECTS,
+            Self::CriticalChance => &CRITICAL_CHANCE_UPGRADE_EFFECTS,
+            Self::ExplosionSize => &EXPLOSION_SIZE_UPGRADE_EFFECTS,
+            Self::EarthDamage => &EARTH_DAMAGE_UPGRADE_EFFECTS,
+            Self::FireDamage => &FIRE_DAMAGE_UPGRADE_EFFECTS,
+            Self::AirDamage => &AIR_DAMAGE_UPGRADE_EFFECTS,
+            Self::WaterDamage => &WATER_DAMAGE_UPGRADE_EFFECTS,
+            Self::Vitality => &VITALITY_UPGRADE_EFFECTS,
+            Self::Offense => &OFFENSE_UPGRADE_EFFECTS,
+            Self::ElementalFocus => &ELEMENTAL_FOCUS_UPGRADE_EFFECTS,
+            Self::Siege => &SIEGE_UPGRADE_EFFECTS,
+        }
+    }
+
+    pub fn effect_text(self) -> String {
+        self.effects()
+            .iter()
+            .map(|effect| effect.effect_text())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     pub fn cost(self) -> u32 {
@@ -339,6 +479,10 @@ impl StatUpgradeKind {
             Self::ExplosionSize => 4,
             Self::MaxHp | Self::AttackSpeed | Self::CriticalChance => 5,
             Self::PassiveIncome => 10,
+            Self::Vitality => 6,
+            Self::Offense => 7,
+            Self::ElementalFocus => 9,
+            Self::Siege => 8,
         }
     }
 
@@ -354,6 +498,10 @@ impl StatUpgradeKind {
             Self::FireDamage => Color::srgb(0.86, 0.24, 0.12),
             Self::AirDamage => Color::srgb(0.58, 0.72, 0.92),
             Self::WaterDamage => Color::srgb(0.18, 0.42, 0.78),
+            Self::Vitality => Color::srgb(0.72, 0.34, 0.34),
+            Self::Offense => Color::srgb(0.82, 0.70, 0.24),
+            Self::ElementalFocus => Color::srgb(0.34, 0.60, 0.84),
+            Self::Siege => Color::srgb(0.74, 0.46, 0.20),
         }
     }
 }

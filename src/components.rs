@@ -3,7 +3,7 @@ use std::fmt;
 
 use crate::{
     constants::MAX_HEALTH_GROWTH,
-    resources::{AirDamage, EarthDamage, FireDamage, WaterDamage},
+    resources::{AirDamage, EarthDamage, FireDamage, PlayerStatKind, TowerStatEffect, WaterDamage},
 };
 
 #[derive(Component)]
@@ -87,6 +87,26 @@ pub const ALL_TOWER_KINDS: [TowerKind; 4] = [
     TowerKind::Cannon,
     TowerKind::Sprayer,
     TowerKind::Sniper,
+];
+
+const BALLISTA_STAT_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
+    TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
+];
+
+const CANNON_STAT_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
+    TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
+];
+
+const SPRAYER_STAT_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
+    TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0),
+];
+
+const SNIPER_STAT_EFFECTS: [TowerStatEffect; 2] = [
+    TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
+    TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
 ];
 
 impl TowerKind {
@@ -238,6 +258,15 @@ impl TowerKind {
             Self::Ballista => 10,
             Self::Sprayer => 18,
             Self::Cannon => 16,
+        }
+    }
+
+    pub fn stat_effects(self) -> &'static [TowerStatEffect] {
+        match self {
+            Self::Ballista => &BALLISTA_STAT_EFFECTS,
+            Self::Cannon => &CANNON_STAT_EFFECTS,
+            Self::Sprayer => &SPRAYER_STAT_EFFECTS,
+            Self::Sniper => &SNIPER_STAT_EFFECTS,
         }
     }
 }

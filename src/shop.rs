@@ -9,8 +9,8 @@ use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, MaxHp, Money, PassiveIncome, Regeneration, Shop, SpellKind, SpellShop,
-    StatUpgradeKind, WaterDamage, WaveNumber,
+    GameOver, MaxHp, Money, PassiveIncome, PlayerStatKind, Regeneration, Shop, SpellKind,
+    SpellShop, StatUpgradeKind, TowerStatEffect, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -26,6 +26,52 @@ pub struct PlayerStatsMut<'w> {
     fire_damage: ResMut<'w, FireDamage>,
     air_damage: ResMut<'w, AirDamage>,
     water_damage: ResMut<'w, WaterDamage>,
+}
+
+impl<'w> PlayerStatsMut<'w> {
+    pub fn attack_speed_value(&self) -> f32 {
+        self.attack_speed.value
+    }
+
+    pub fn apply_tower_effect(&mut self, effect: TowerStatEffect) {
+        let delta = effect.amount;
+        match effect.kind {
+            PlayerStatKind::MaxHp => {
+                let change = delta.round() as i32;
+                self.max_hp.amount = (self.max_hp.amount + change).max(1);
+                self.current_hp.amount =
+                    (self.current_hp.amount + change).clamp(0, self.max_hp.amount);
+            }
+            PlayerStatKind::Regeneration => {
+                self.regeneration.amount = (self.regeneration.amount + delta.round() as i32).max(0);
+            }
+            PlayerStatKind::AttackSpeed => {
+                self.attack_speed.value = (self.attack_speed.value + delta).max(0.1);
+            }
+            PlayerStatKind::PassiveIncome => {
+                self.passive_income.amount =
+                    (self.passive_income.amount + delta.round() as i32).max(0);
+            }
+            PlayerStatKind::CriticalChance => {
+                self.critical_chance.value = (self.critical_chance.value + delta).clamp(0.0, 1.0);
+            }
+            PlayerStatKind::ExplosionSize => {
+                self.explosion_size.value = (self.explosion_size.value + delta).max(0.0);
+            }
+            PlayerStatKind::EarthDamage => {
+                self.earth_damage.value = (self.earth_damage.value + delta).max(0.0);
+            }
+            PlayerStatKind::FireDamage => {
+                self.fire_damage.value = (self.fire_damage.value + delta).max(0.0);
+            }
+            PlayerStatKind::AirDamage => {
+                self.air_damage.value = (self.air_damage.value + delta).max(0.0);
+            }
+            PlayerStatKind::WaterDamage => {
+                self.water_damage.value = (self.water_damage.value + delta).max(0.0);
+            }
+        }
+    }
 }
 
 pub fn update_shop_input(
@@ -231,14 +277,25 @@ pub fn update_shop_tooltip(
 
 fn tower_tooltip(kind: TowerKind, cost: i32) -> String {
     let damage = kind.damage_formula();
+    let stat_effects = kind.stat_effects();
+    let effect_text = if stat_effects.is_empty() {
+        "None".to_string()
+    } else {
+        stat_effects
+            .iter()
+            .map(|effect| effect.effect_text())
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
     format!(
-        "{}  ${}\nDamage: {}\nRange: {:.0}\nCooldown: {:.2}s\nSplash: {:.0}",
+        "{}  ${}\nDamage: {}\nRange: {:.0}\nCooldown: {:.2}s\nSplash: {:.0}\nOn buy:\n{}",
         kind.name(),
         cost,
         damage,
         kind.range(),
         kind.cooldown(),
         kind.explosion_radius(),
+        effect_text,
     )
 }
 
@@ -261,37 +318,7 @@ fn spell_tooltip(kind: SpellKind, cost: i32) -> String {
 }
 
 fn apply_stat_upgrade(kind: StatUpgradeKind, stats: &mut PlayerStatsMut) {
-    match kind {
-        StatUpgradeKind::MaxHp => {
-            stats.max_hp.amount += 5;
-            stats.current_hp.amount += 5;
-        }
-        StatUpgradeKind::Regeneration => {
-            stats.regeneration.amount += 1;
-        }
-        StatUpgradeKind::AttackSpeed => {
-            stats.attack_speed.value += 0.12;
-        }
-        StatUpgradeKind::PassiveIncome => {
-            stats.passive_income.amount += 1;
-        }
-        StatUpgradeKind::CriticalChance => {
-            stats.critical_chance.value = (stats.critical_chance.value + 0.04).min(1.0);
-        }
-        StatUpgradeKind::ExplosionSize => {
-            stats.explosion_size.value += 12.0;
-        }
-        StatUpgradeKind::EarthDamage => {
-            stats.earth_damage.value += 4.0;
-        }
-        StatUpgradeKind::FireDamage => {
-            stats.fire_damage.value += 4.0;
-        }
-        StatUpgradeKind::AirDamage => {
-            stats.air_damage.value += 4.0;
-        }
-        StatUpgradeKind::WaterDamage => {
-            stats.water_damage.value += 4.0;
-        }
+    for effect in kind.effects() {
+        stats.apply_tower_effect(*effect);
     }
 }
