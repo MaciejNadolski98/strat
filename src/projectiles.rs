@@ -89,7 +89,7 @@ pub fn move_projectiles(
 
                     let distance = transform.translation.truncate().distance(impact_position);
                     if distance <= explosion_radius.value {
-                        let splash_damage = damage.amount * 0.5;
+                        let splash_damage = damage.amount;
                         let hp_lost = splash_damage.min(health.current).max(0.0);
                         health.current -= splash_damage;
                         if hp_lost > 0.0 {

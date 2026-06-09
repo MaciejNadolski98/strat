@@ -375,7 +375,7 @@ const CRITICAL_CHANCE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
     [TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04)];
 
 const EXPLOSION_SIZE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0)];
+    [TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)];
 
 const EARTH_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
     [TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0)];
@@ -402,8 +402,8 @@ const ELEMENTAL_FOCUS_UPGRADE_EFFECTS: [TowerStatEffect; 4] = [
 ];
 
 const SIEGE_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
-    TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0),
+    TowerStatEffect::new(PlayerStatKind::ExplosionSize, 3.0),
+    TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
 ];
 
 impl StatUpgradeKind {
