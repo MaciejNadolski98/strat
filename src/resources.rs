@@ -383,77 +383,94 @@ pub struct StatUpgradeDefinition {
     pub icon_color: Color,
 }
 
-const MAX_HP_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
-    name: "Max HP",
-    effects: &[TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0)],
+const ITEM_POTATO: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Potato",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::MaxHp, 4.0),
+        TowerStatEffect::new(PlayerStatKind::EarthDamage, 1.0),
+        TowerStatEffect::new(PlayerStatKind::WaterDamage, -1.0),
+    ],
     cost: 5,
     icon_color: Color::srgb(0.74, 0.18, 0.18),
 };
 
-const REGENERATION_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
-    name: "Regen",
-    effects: &[TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0)],
+const ITEM_MEDS: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Meds",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::Regeneration, 2.0),
+        TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.1),
+        TowerStatEffect::new(PlayerStatKind::MaxHp, -10.0),
+    ],
     cost: 2,
     icon_color: Color::srgb(0.22, 0.62, 0.30),
 };
 
-const ATTACK_SPEED_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
-    name: "Atk Speed",
-    effects: &[TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12)],
+const ITEM_COFFEE: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Coffee",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
+        TowerStatEffect::new(PlayerStatKind::MaxHp, -1.0)
+    ],
     cost: 5,
     icon_color: Color::srgb(0.86, 0.72, 0.24),
 };
 
-const PASSIVE_INCOME_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_PASSIVE_INCOME: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Income",
     effects: &[TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0)],
     cost: 10,
     icon_color: Color::srgb(0.95, 0.78, 0.24),
 };
 
-const CRITICAL_CHANCE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_CRITICAL_CHANCE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Crit",
     effects: &[TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04)],
     cost: 5,
     icon_color: Color::srgb(0.70, 0.22, 0.22),
 };
 
-const EXPLOSION_SIZE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_EXPLOSION_SIZE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Splash",
     effects: &[TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)],
     cost: 4,
     icon_color: Color::srgb(0.82, 0.44, 0.18),
 };
 
-const EARTH_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_EARTH_DAMAGE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Earth",
     effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0)],
     cost: 3,
     icon_color: Color::srgb(0.46, 0.34, 0.22),
 };
 
-const FIRE_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_FIRE_DAMAGE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Fire",
-    effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 4.0)],
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::FireDamage, 4.0),
+        TowerStatEffect::new(PlayerStatKind::WaterDamage, -4.0)
+    ],
     cost: 3,
     icon_color: Color::srgb(0.86, 0.24, 0.12),
 };
 
-const AIR_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_AIR_DAMAGE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Air",
     effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 4.0)],
     cost: 3,
     icon_color: Color::srgb(0.58, 0.72, 0.92),
 };
 
-const WATER_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_WATER_DAMAGE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Water",
-    effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0)],
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
+        TowerStatEffect::new(PlayerStatKind::FireDamage, -4.0),
+    ],
     cost: 3,
     icon_color: Color::srgb(0.18, 0.42, 0.78),
 };
 
-const VITALITY_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_VITALITY: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Vitality",
     effects: &[
         TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0),
@@ -463,7 +480,7 @@ const VITALITY_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition
     icon_color: Color::srgb(0.72, 0.34, 0.34),
 };
 
-const OFFENSE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_OFFENSE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Offense",
     effects: &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
@@ -473,7 +490,7 @@ const OFFENSE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition 
     icon_color: Color::srgb(0.82, 0.70, 0.24),
 };
 
-const ELEMENTAL_FOCUS_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_ELEMENTAL_FOCUS: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Elemental Focus",
     effects: &[
         TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
@@ -485,7 +502,7 @@ const ELEMENTAL_FOCUS_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDef
     icon_color: Color::srgb(0.34, 0.60, 0.84),
 };
 
-const SIEGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+const ITEM_SIEGE: StatUpgradeDefinition = StatUpgradeDefinition {
     name: "Siege",
     effects: &[
         TowerStatEffect::new(PlayerStatKind::ExplosionSize, 3.0),
@@ -517,20 +534,20 @@ impl StatUpgradeKind {
 
     pub fn definition(self) -> &'static StatUpgradeDefinition {
         match self {
-            Self::MaxHp => &MAX_HP_UPGRADE_DEFINITION,
-            Self::Regeneration => &REGENERATION_UPGRADE_DEFINITION,
-            Self::AttackSpeed => &ATTACK_SPEED_UPGRADE_DEFINITION,
-            Self::PassiveIncome => &PASSIVE_INCOME_UPGRADE_DEFINITION,
-            Self::CriticalChance => &CRITICAL_CHANCE_UPGRADE_DEFINITION,
-            Self::ExplosionSize => &EXPLOSION_SIZE_UPGRADE_DEFINITION,
-            Self::EarthDamage => &EARTH_DAMAGE_UPGRADE_DEFINITION,
-            Self::FireDamage => &FIRE_DAMAGE_UPGRADE_DEFINITION,
-            Self::AirDamage => &AIR_DAMAGE_UPGRADE_DEFINITION,
-            Self::WaterDamage => &WATER_DAMAGE_UPGRADE_DEFINITION,
-            Self::Vitality => &VITALITY_UPGRADE_DEFINITION,
-            Self::Offense => &OFFENSE_UPGRADE_DEFINITION,
-            Self::ElementalFocus => &ELEMENTAL_FOCUS_UPGRADE_DEFINITION,
-            Self::Siege => &SIEGE_UPGRADE_DEFINITION,
+            Self::MaxHp => &ITEM_POTATO,
+            Self::Regeneration => &ITEM_MEDS,
+            Self::AttackSpeed => &ITEM_COFFEE,
+            Self::PassiveIncome => &ITEM_PASSIVE_INCOME,
+            Self::CriticalChance => &ITEM_CRITICAL_CHANCE,
+            Self::ExplosionSize => &ITEM_EXPLOSION_SIZE,
+            Self::EarthDamage => &ITEM_EARTH_DAMAGE,
+            Self::FireDamage => &ITEM_FIRE_DAMAGE,
+            Self::AirDamage => &ITEM_AIR_DAMAGE,
+            Self::WaterDamage => &ITEM_WATER_DAMAGE,
+            Self::Vitality => &ITEM_VITALITY,
+            Self::Offense => &ITEM_OFFENSE,
+            Self::ElementalFocus => &ITEM_ELEMENTAL_FOCUS,
+            Self::Siege => &ITEM_SIEGE,
         }
     }
 
