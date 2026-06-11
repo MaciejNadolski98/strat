@@ -94,109 +94,168 @@ pub const ALL_TOWER_KINDS: [TowerKind; 4] = [
     TowerKind::Sniper,
 ];
 
-const BALLISTA_STAT_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
-    TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
-];
+#[derive(Clone, Copy)]
+pub struct TowerDefinition {
+    pub name: &'static str,
+    pub range: f32,
+    pub cooldown: f32,
+    pub damage_formula: DamageFormula,
+    pub projectile_speed: f32,
+    pub explosion_radius: f32,
+    pub angular_speed: f32,
+    pub base_color: Color,
+    pub barrel_color: Color,
+    pub base_size: Vec2,
+    pub barrel_size: Vec2,
+    pub barrel_offset: f32,
+    pub cost: u32,
+    pub stat_effects: &'static [TowerStatEffect],
+}
 
-const CANNON_STAT_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
-    TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
-];
+const BALLISTA_DEFINITION: TowerDefinition = TowerDefinition {
+    name: "Ballista",
+    range: 185.0,
+    cooldown: 0.73,
+    damage_formula: DamageFormula {
+        flat: 24,
+        crit_multiplier: 2.0,
+        earth_multiplier: 0.0,
+        fire_multiplier: 0.0,
+        air_multiplier: 0.75,
+        water_multiplier: 0.75,
+    },
+    projectile_speed: 430.0,
+    explosion_radius: 0.0,
+    angular_speed: 1.6,
+    base_color: Color::srgb(0.22, 0.42, 0.74),
+    barrel_color: Color::srgb(0.67, 0.83, 0.96),
+    base_size: Vec2::new(36.0, 36.0),
+    barrel_size: Vec2::new(12.0, 38.0),
+    barrel_offset: 16.0,
+    cost: 10,
+    stat_effects: &[
+        TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
+        TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
+    ],
+};
 
-const SPRAYER_STAT_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
-    TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0),
-];
+const CANNON_DEFINITION: TowerDefinition = TowerDefinition {
+    name: "Cannon",
+    range: 150.0,
+    cooldown: 1.45,
+    damage_formula: DamageFormula {
+        flat: 34,
+        crit_multiplier: 1.5,
+        earth_multiplier: 1.0,
+        fire_multiplier: 0.0,
+        air_multiplier: 0.0,
+        water_multiplier: 0.0,
+    },
+    projectile_speed: 320.0,
+    explosion_radius: 64.0,
+    angular_speed: 1.0,
+    base_color: Color::srgb(0.42, 0.36, 0.30),
+    barrel_color: Color::srgb(0.74, 0.66, 0.54),
+    base_size: Vec2::new(40.0, 40.0),
+    barrel_size: Vec2::new(18.0, 30.0),
+    barrel_offset: 13.0,
+    cost: 16,
+    stat_effects: &[
+        TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
+        TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
+    ],
+};
 
-const SNIPER_STAT_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
-    TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
-];
+const SPRAYER_DEFINITION: TowerDefinition = TowerDefinition {
+    name: "Sprayer",
+    range: 125.0,
+    cooldown: 0.32,
+    damage_formula: DamageFormula {
+        flat: 11,
+        crit_multiplier: 2.0,
+        earth_multiplier: 0.0,
+        fire_multiplier: 0.0,
+        air_multiplier: 0.0,
+        water_multiplier: 1.0,
+    },
+    projectile_speed: 520.0,
+    explosion_radius: 0.0,
+    angular_speed: 4.2,
+    base_color: Color::srgb(0.20, 0.52, 0.46),
+    barrel_color: Color::srgb(0.62, 0.92, 0.78),
+    base_size: Vec2::new(32.0, 32.0),
+    barrel_size: Vec2::new(10.0, 28.0),
+    barrel_offset: 12.0,
+    cost: 18,
+    stat_effects: &[
+        TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
+        TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0),
+    ],
+};
+
+const SNIPER_DEFINITION: TowerDefinition = TowerDefinition {
+    name: "Sniper",
+    range: 260.0,
+    cooldown: 1.75,
+    damage_formula: DamageFormula {
+        flat: 55,
+        crit_multiplier: 5.0,
+        earth_multiplier: 0.0,
+        fire_multiplier: 0.0,
+        air_multiplier: 0.0,
+        water_multiplier: 1.9,
+    },
+    projectile_speed: 720.0,
+    explosion_radius: 0.0,
+    angular_speed: 0.9,
+    base_color: Color::srgb(0.34, 0.28, 0.56),
+    barrel_color: Color::srgb(0.82, 0.76, 0.98),
+    base_size: Vec2::new(36.0, 36.0),
+    barrel_size: Vec2::new(8.0, 48.0),
+    barrel_offset: 20.0,
+    cost: 15,
+    stat_effects: &[
+        TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
+        TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
+    ],
+};
 
 impl TowerKind {
-    pub fn name(self) -> &'static str {
+    pub fn definition(self) -> &'static TowerDefinition {
         match self {
-            Self::Ballista => "Ballista",
-            Self::Cannon => "Cannon",
-            Self::Sprayer => "Sprayer",
-            Self::Sniper => "Sniper",
+            Self::Ballista => &BALLISTA_DEFINITION,
+            Self::Cannon => &CANNON_DEFINITION,
+            Self::Sprayer => &SPRAYER_DEFINITION,
+            Self::Sniper => &SNIPER_DEFINITION,
         }
+    }
+
+    pub fn name(self) -> &'static str {
+        self.definition().name
     }
 
     pub fn range(self) -> f32 {
-        match self {
-            Self::Ballista => 185.0,
-            Self::Cannon => 150.0,
-            Self::Sprayer => 125.0,
-            Self::Sniper => 260.0,
-        }
+        self.definition().range
     }
 
     pub fn cooldown(self) -> f32 {
-        match self {
-            Self::Ballista => 0.73,
-            Self::Cannon => 1.45,
-            Self::Sprayer => 0.32,
-            Self::Sniper => 1.75,
-        }
+        self.definition().cooldown
     }
 
     pub fn damage_formula(self) -> DamageFormula {
-        match self {
-            Self::Ballista => DamageFormula {
-                flat: 24,
-                crit_multiplier: 2.0,
-                earth_multiplier: 0.0,
-                fire_multiplier: 0.0,
-                air_multiplier: 0.75,
-                water_multiplier: 0.75,
-            },
-            Self::Cannon => DamageFormula {
-                flat: 34,
-                crit_multiplier: 1.5,
-                earth_multiplier: 1.0,
-                fire_multiplier: 0.0,
-                air_multiplier: 0.0,
-                water_multiplier: 0.0,
-            },
-            Self::Sprayer => DamageFormula {
-                flat: 11,
-                crit_multiplier: 2.0,
-                earth_multiplier: 0.0,
-                fire_multiplier: 0.0,
-                air_multiplier: 0.0,
-                water_multiplier: 1.0,
-            },
-            Self::Sniper => DamageFormula {
-                flat: 55,
-                crit_multiplier: 5.0,
-                earth_multiplier: 0.0,
-                fire_multiplier: 0.0,
-                air_multiplier: 0.0,
-                water_multiplier: 1.9,
-            },
-        }
+        self.definition().damage_formula
     }
 
     pub fn projectile_speed(self) -> f32 {
-        match self {
-            Self::Ballista => 430.0,
-            Self::Cannon => 320.0,
-            Self::Sprayer => 520.0,
-            Self::Sniper => 720.0,
-        }
+        self.definition().projectile_speed
     }
 
     pub fn explosion_radius(self) -> f32 {
-        match self {
-            Self::Cannon => 64.0,
-            _ => 0.0,
-        }
+        self.definition().explosion_radius
     }
 
     pub fn upgraded_explosion_radius(self, explosion_size: f32) -> f32 {
-        let base_radius = self.explosion_radius();
+        let base_radius = self.definition().explosion_radius;
         if base_radius > 0.0 {
             base_radius + explosion_size
         } else {
@@ -205,74 +264,35 @@ impl TowerKind {
     }
 
     pub fn angular_speed(self) -> f32 {
-        match self {
-            Self::Ballista => 1.6,
-            Self::Cannon => 1.0,
-            Self::Sprayer => 4.2,
-            Self::Sniper => 0.9,
-        }
+        self.definition().angular_speed
     }
 
     pub fn base_color(self) -> Color {
-        match self {
-            Self::Ballista => Color::srgb(0.22, 0.42, 0.74),
-            Self::Cannon => Color::srgb(0.42, 0.36, 0.30),
-            Self::Sprayer => Color::srgb(0.20, 0.52, 0.46),
-            Self::Sniper => Color::srgb(0.34, 0.28, 0.56),
-        }
+        self.definition().base_color
     }
 
     pub fn barrel_color(self) -> Color {
-        match self {
-            Self::Ballista => Color::srgb(0.67, 0.83, 0.96),
-            Self::Cannon => Color::srgb(0.74, 0.66, 0.54),
-            Self::Sprayer => Color::srgb(0.62, 0.92, 0.78),
-            Self::Sniper => Color::srgb(0.82, 0.76, 0.98),
-        }
+        self.definition().barrel_color
     }
 
     pub fn base_size(self) -> Vec2 {
-        match self {
-            Self::Cannon => Vec2::new(40.0, 40.0),
-            Self::Sprayer => Vec2::new(32.0, 32.0),
-            _ => Vec2::new(36.0, 36.0),
-        }
+        self.definition().base_size
     }
 
     pub fn barrel_size(self) -> Vec2 {
-        match self {
-            Self::Ballista => Vec2::new(12.0, 38.0),
-            Self::Cannon => Vec2::new(18.0, 30.0),
-            Self::Sprayer => Vec2::new(10.0, 28.0),
-            Self::Sniper => Vec2::new(8.0, 48.0),
-        }
+        self.definition().barrel_size
     }
 
     pub fn barrel_offset(self) -> f32 {
-        match self {
-            Self::Sniper => 20.0,
-            Self::Cannon => 13.0,
-            Self::Sprayer => 12.0,
-            Self::Ballista => 16.0,
-        }
+        self.definition().barrel_offset
     }
 
     pub fn cost(self) -> u32 {
-        match self {
-            Self::Sniper => 15,
-            Self::Ballista => 10,
-            Self::Sprayer => 18,
-            Self::Cannon => 16,
-        }
+        self.definition().cost
     }
 
     pub fn stat_effects(self) -> &'static [TowerStatEffect] {
-        match self {
-            Self::Ballista => &BALLISTA_STAT_EFFECTS,
-            Self::Cannon => &CANNON_STAT_EFFECTS,
-            Self::Sprayer => &SPRAYER_STAT_EFFECTS,
-            Self::Sniper => &SNIPER_STAT_EFFECTS,
-        }
+        self.definition().stat_effects
     }
 }
 

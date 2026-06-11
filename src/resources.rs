@@ -184,6 +184,35 @@ pub enum SpellKind {
     Slow,
 }
 
+#[derive(Clone, Copy)]
+pub struct SpellDefinition {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub cost: u32,
+    pub icon_color: Color,
+}
+
+const IGNITE_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
+    name: "Ignite",
+    description: "Sets all enemies on fire, scaling with fire damage",
+    cost: 7,
+    icon_color: Color::srgb(0.92, 0.26, 0.12),
+};
+
+const ELEMENTAL_SURGE_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
+    name: "Surge",
+    description: "Doubles elemental damage until wave end",
+    cost: 15,
+    icon_color: Color::srgb(0.30, 0.62, 0.92),
+};
+
+const SLOW_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
+    name: "Slow",
+    description: "Slows all enemies until wave end",
+    cost: 10,
+    icon_color: Color::srgb(0.42, 0.82, 0.92),
+};
+
 impl SpellKind {
     pub fn random() -> Self {
         match rand::random::<u8>() % 3 {
@@ -193,36 +222,28 @@ impl SpellKind {
         }
     }
 
-    pub fn name(self) -> &'static str {
+    pub fn definition(self) -> &'static SpellDefinition {
         match self {
-            Self::Ignite => "Ignite",
-            Self::ElementalSurge => "Surge",
-            Self::Slow => "Slow",
+            Self::Ignite => &IGNITE_SPELL_DEFINITION,
+            Self::ElementalSurge => &ELEMENTAL_SURGE_SPELL_DEFINITION,
+            Self::Slow => &SLOW_SPELL_DEFINITION,
         }
+    }
+
+    pub fn name(self) -> &'static str {
+        self.definition().name
     }
 
     pub fn description(self) -> &'static str {
-        match self {
-            Self::Ignite => "Sets all enemies on fire, scaling with fire damage",
-            Self::ElementalSurge => "Doubles elemental damage until wave end",
-            Self::Slow => "Slows all enemies until wave end",
-        }
+        self.definition().description
     }
 
     pub fn cost(self) -> u32 {
-        match self {
-            Self::Ignite => 7,
-            Self::ElementalSurge => 15,
-            Self::Slow => 10,
-        }
+        self.definition().cost
     }
 
     pub fn icon_color(self) -> Color {
-        match self {
-            Self::Ignite => Color::srgb(0.92, 0.26, 0.12),
-            Self::ElementalSurge => Color::srgb(0.30, 0.62, 0.92),
-            Self::Slow => Color::srgb(0.42, 0.82, 0.92),
-        }
+        self.definition().icon_color
     }
 }
 
@@ -354,57 +375,125 @@ pub enum StatUpgradeKind {
     Siege,
 }
 
-const VITALITY_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0),
-    TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0),
-];
+#[derive(Clone, Copy)]
+pub struct StatUpgradeDefinition {
+    pub name: &'static str,
+    pub effects: &'static [TowerStatEffect],
+    pub cost: u32,
+    pub icon_color: Color,
+}
 
-const MAX_HP_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0)];
+const MAX_HP_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Max HP",
+    effects: &[TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0)],
+    cost: 5,
+    icon_color: Color::srgb(0.74, 0.18, 0.18),
+};
 
-const REGENERATION_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0)];
+const REGENERATION_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Regen",
+    effects: &[TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0)],
+    cost: 2,
+    icon_color: Color::srgb(0.22, 0.62, 0.30),
+};
 
-const ATTACK_SPEED_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12)];
+const ATTACK_SPEED_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Atk Speed",
+    effects: &[TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12)],
+    cost: 5,
+    icon_color: Color::srgb(0.86, 0.72, 0.24),
+};
 
-const PASSIVE_INCOME_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0)];
+const PASSIVE_INCOME_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Income",
+    effects: &[TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0)],
+    cost: 10,
+    icon_color: Color::srgb(0.95, 0.78, 0.24),
+};
 
-const CRITICAL_CHANCE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04)];
+const CRITICAL_CHANCE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Crit",
+    effects: &[TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04)],
+    cost: 5,
+    icon_color: Color::srgb(0.70, 0.22, 0.22),
+};
 
-const EXPLOSION_SIZE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)];
+const EXPLOSION_SIZE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Splash",
+    effects: &[TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)],
+    cost: 4,
+    icon_color: Color::srgb(0.82, 0.44, 0.18),
+};
 
-const EARTH_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0)];
+const EARTH_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Earth",
+    effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0)],
+    cost: 3,
+    icon_color: Color::srgb(0.46, 0.34, 0.22),
+};
 
-const FIRE_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::FireDamage, 4.0)];
+const FIRE_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Fire",
+    effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 4.0)],
+    cost: 3,
+    icon_color: Color::srgb(0.86, 0.24, 0.12),
+};
 
-const AIR_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::AirDamage, 4.0)];
+const AIR_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Air",
+    effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 4.0)],
+    cost: 3,
+    icon_color: Color::srgb(0.58, 0.72, 0.92),
+};
 
-const WATER_DAMAGE_UPGRADE_EFFECTS: [TowerStatEffect; 1] =
-    [TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0)];
+const WATER_DAMAGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Water",
+    effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0)],
+    cost: 3,
+    icon_color: Color::srgb(0.18, 0.42, 0.78),
+};
 
-const OFFENSE_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
-    TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04),
-];
+const VITALITY_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Vitality",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0),
+        TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0),
+    ],
+    cost: 6,
+    icon_color: Color::srgb(0.72, 0.34, 0.34),
+};
 
-const ELEMENTAL_FOCUS_UPGRADE_EFFECTS: [TowerStatEffect; 4] = [
-    TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
-    TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0),
-    TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
-    TowerStatEffect::new(PlayerStatKind::WaterDamage, 2.0),
-];
+const OFFENSE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Offense",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
+        TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04),
+    ],
+    cost: 7,
+    icon_color: Color::srgb(0.82, 0.70, 0.24),
+};
 
-const SIEGE_UPGRADE_EFFECTS: [TowerStatEffect; 2] = [
-    TowerStatEffect::new(PlayerStatKind::ExplosionSize, 3.0),
-    TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
-];
+const ELEMENTAL_FOCUS_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Elemental Focus",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
+        TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0),
+        TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
+        TowerStatEffect::new(PlayerStatKind::WaterDamage, 2.0),
+    ],
+    cost: 9,
+    icon_color: Color::srgb(0.34, 0.60, 0.84),
+};
+
+const SIEGE_UPGRADE_DEFINITION: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "Siege",
+    effects: &[
+        TowerStatEffect::new(PlayerStatKind::ExplosionSize, 3.0),
+        TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
+    ],
+    cost: 8,
+    icon_color: Color::srgb(0.74, 0.46, 0.20),
+};
 
 impl StatUpgradeKind {
     pub fn random() -> Self {
@@ -426,42 +515,31 @@ impl StatUpgradeKind {
         }
     }
 
-    pub fn name(self) -> &'static str {
+    pub fn definition(self) -> &'static StatUpgradeDefinition {
         match self {
-            Self::MaxHp => "Max HP",
-            Self::Regeneration => "Regen",
-            Self::AttackSpeed => "Atk Speed",
-            Self::PassiveIncome => "Income",
-            Self::CriticalChance => "Crit",
-            Self::ExplosionSize => "Splash",
-            Self::EarthDamage => "Earth",
-            Self::FireDamage => "Fire",
-            Self::AirDamage => "Air",
-            Self::WaterDamage => "Water",
-            Self::Vitality => "Vitality",
-            Self::Offense => "Offense",
-            Self::ElementalFocus => "Elemental Focus",
-            Self::Siege => "Siege",
+            Self::MaxHp => &MAX_HP_UPGRADE_DEFINITION,
+            Self::Regeneration => &REGENERATION_UPGRADE_DEFINITION,
+            Self::AttackSpeed => &ATTACK_SPEED_UPGRADE_DEFINITION,
+            Self::PassiveIncome => &PASSIVE_INCOME_UPGRADE_DEFINITION,
+            Self::CriticalChance => &CRITICAL_CHANCE_UPGRADE_DEFINITION,
+            Self::ExplosionSize => &EXPLOSION_SIZE_UPGRADE_DEFINITION,
+            Self::EarthDamage => &EARTH_DAMAGE_UPGRADE_DEFINITION,
+            Self::FireDamage => &FIRE_DAMAGE_UPGRADE_DEFINITION,
+            Self::AirDamage => &AIR_DAMAGE_UPGRADE_DEFINITION,
+            Self::WaterDamage => &WATER_DAMAGE_UPGRADE_DEFINITION,
+            Self::Vitality => &VITALITY_UPGRADE_DEFINITION,
+            Self::Offense => &OFFENSE_UPGRADE_DEFINITION,
+            Self::ElementalFocus => &ELEMENTAL_FOCUS_UPGRADE_DEFINITION,
+            Self::Siege => &SIEGE_UPGRADE_DEFINITION,
         }
     }
 
+    pub fn name(self) -> &'static str {
+        self.definition().name
+    }
+
     pub fn effects(self) -> &'static [TowerStatEffect] {
-        match self {
-            Self::MaxHp => &MAX_HP_UPGRADE_EFFECTS,
-            Self::Regeneration => &REGENERATION_UPGRADE_EFFECTS,
-            Self::AttackSpeed => &ATTACK_SPEED_UPGRADE_EFFECTS,
-            Self::PassiveIncome => &PASSIVE_INCOME_UPGRADE_EFFECTS,
-            Self::CriticalChance => &CRITICAL_CHANCE_UPGRADE_EFFECTS,
-            Self::ExplosionSize => &EXPLOSION_SIZE_UPGRADE_EFFECTS,
-            Self::EarthDamage => &EARTH_DAMAGE_UPGRADE_EFFECTS,
-            Self::FireDamage => &FIRE_DAMAGE_UPGRADE_EFFECTS,
-            Self::AirDamage => &AIR_DAMAGE_UPGRADE_EFFECTS,
-            Self::WaterDamage => &WATER_DAMAGE_UPGRADE_EFFECTS,
-            Self::Vitality => &VITALITY_UPGRADE_EFFECTS,
-            Self::Offense => &OFFENSE_UPGRADE_EFFECTS,
-            Self::ElementalFocus => &ELEMENTAL_FOCUS_UPGRADE_EFFECTS,
-            Self::Siege => &SIEGE_UPGRADE_EFFECTS,
-        }
+        self.definition().effects
     }
 
     pub fn effect_text(self) -> String {
@@ -473,36 +551,11 @@ impl StatUpgradeKind {
     }
 
     pub fn cost(self) -> u32 {
-        match self {
-            Self::Regeneration => 2,
-            Self::EarthDamage | Self::FireDamage | Self::AirDamage | Self::WaterDamage => 3,
-            Self::ExplosionSize => 4,
-            Self::MaxHp | Self::AttackSpeed | Self::CriticalChance => 5,
-            Self::PassiveIncome => 10,
-            Self::Vitality => 6,
-            Self::Offense => 7,
-            Self::ElementalFocus => 9,
-            Self::Siege => 8,
-        }
+        self.definition().cost
     }
 
     pub fn icon_color(self) -> Color {
-        match self {
-            Self::MaxHp => Color::srgb(0.74, 0.18, 0.18),
-            Self::Regeneration => Color::srgb(0.22, 0.62, 0.30),
-            Self::AttackSpeed => Color::srgb(0.86, 0.72, 0.24),
-            Self::PassiveIncome => Color::srgb(0.95, 0.78, 0.24),
-            Self::CriticalChance => Color::srgb(0.70, 0.22, 0.22),
-            Self::ExplosionSize => Color::srgb(0.82, 0.44, 0.18),
-            Self::EarthDamage => Color::srgb(0.46, 0.34, 0.22),
-            Self::FireDamage => Color::srgb(0.86, 0.24, 0.12),
-            Self::AirDamage => Color::srgb(0.58, 0.72, 0.92),
-            Self::WaterDamage => Color::srgb(0.18, 0.42, 0.78),
-            Self::Vitality => Color::srgb(0.72, 0.34, 0.34),
-            Self::Offense => Color::srgb(0.82, 0.70, 0.24),
-            Self::ElementalFocus => Color::srgb(0.34, 0.60, 0.84),
-            Self::Siege => Color::srgb(0.74, 0.46, 0.20),
-        }
+        self.definition().icon_color
     }
 }
 
