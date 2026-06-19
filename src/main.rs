@@ -4,12 +4,14 @@ mod effects;
 mod enemies;
 mod game;
 mod hud;
+mod item_definitions;
 mod pathing;
 mod projectiles;
 mod resources;
 mod setup;
 mod shop;
 mod spells;
+mod tower_definitions;
 mod towers;
 mod waves;
 
