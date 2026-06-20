@@ -1,12 +1,13 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::{DamageDealt, HudText, Tower, TowerKind};
+use crate::components::{DamageDealt, HudText, Tower};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, PathTiles, Paused, Regeneration,
     TowerDraft, TowerDraftPhase, WaterDamage, WaveNumber,
 };
+use crate::tower_definitions::TowerKind;
 use crate::waves::RunMode;
 
 #[derive(SystemParam)]

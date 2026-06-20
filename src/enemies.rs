@@ -4,8 +4,7 @@ use crate::components::{
     Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
 };
 use crate::resources::{
-    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, PathTiles,
-    Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
+    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NewRoundEvent, PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
 };
 use crate::waves::{RunMode, wave};
 
@@ -25,6 +24,7 @@ pub fn spawn_enemies(
     mut active_spell_effects: ResMut<ActiveSpellEffects>,
     mut draft: ResMut<TowerDraft>,
     enemies: Query<(), With<Enemy>>,
+    mut new_round_events: EventWriter<NewRoundEvent>,
 ) {
     if game_over.value || game_won.value {
         return;
@@ -32,6 +32,7 @@ pub fn spawn_enemies(
 
     if remaining.count == 0 {
         if enemies.is_empty() && draft.phase == TowerDraftPhase::WaveRunning {
+            new_round_events.write(NewRoundEvent);
             active_spell_effects.reset_for_wave();
 
             if wave_number.value >= run_mode.final_wave() {

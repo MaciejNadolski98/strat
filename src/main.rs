@@ -4,7 +4,6 @@ mod draft;
 mod effects;
 mod enemies;
 mod game;
-mod golem;
 mod hud;
 mod item_definitions;
 mod pathing;
@@ -24,7 +23,7 @@ use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower
 use effects::{update_explosion_effects, update_floating_text};
 use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
-use golem::GolemPlugin;
+use tower_definitions::TowerDefinitionPlugins;
 use hud::update_hud;
 use pathing::update_path_input;
 use projectiles::move_projectiles;
@@ -44,6 +43,8 @@ use towers::{
     update_tower_tooltip,
 };
 use waves::RunMode;
+
+use crate::resources::{NewRoundEvent, ShootEvent};
 
 fn main() {
     let run_mode = RunMode::from_args(std::env::args());
@@ -85,6 +86,8 @@ fn main() {
         .insert_resource(Shop::new(1))
         .insert_resource(SpellShop::new())
         .add_event::<EnemyKilledEvent>()
+        .add_event::<ShootEvent>()
+        .add_event::<NewRoundEvent>()
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -95,7 +98,7 @@ fn main() {
                 }),
                 ..default()
             }),
-            GolemPlugin,
+            TowerDefinitionPlugins,
         ))
         .add_systems(Startup, setup)
         .add_systems(Update, toggle_pause)

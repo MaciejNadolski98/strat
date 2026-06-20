@@ -3,8 +3,7 @@ use std::fmt;
 
 use crate::{
     constants::MAX_HEALTH_GROWTH,
-    resources::{AirDamage, EarthDamage, FireDamage, TowerStatEffect, WaterDamage},
-    tower_definitions::*,
+    resources::{AirDamage, EarthDamage, FireDamage, WaterDamage},
 };
 
 #[derive(Component)]
@@ -118,92 +117,6 @@ pub struct DraftSlotLabel {
 #[derive(Component)]
 pub struct DraftHeaderText;
 
-#[derive(Component, Clone, Copy, PartialEq, Eq)]
-pub enum TowerKind {
-    Ballista,
-    Cannon,
-    Sprayer,
-    Sniper,
-    Golem,
-}
-
-impl TowerKind {
-    pub fn definition(self) -> &'static TowerDefinition {
-        match self {
-            Self::Ballista => &TOWER_BALLISTA,
-            Self::Cannon => &TOWER_CANNON,
-            Self::Sprayer => &TOWER_SPRAYER,
-            Self::Sniper => &TOWER_SNIPER,
-            Self::Golem => &TOWER_GOLEM,
-        }
-    }
-
-    pub fn name(self) -> &'static str {
-        self.definition().name
-    }
-
-    pub fn range(self) -> f32 {
-        self.definition().range
-    }
-
-    pub fn cooldown(self) -> f32 {
-        self.definition().cooldown
-    }
-
-    pub fn damage_formula(self) -> DamageFormula {
-        self.definition().damage_formula
-    }
-
-    pub fn projectile_speed(self) -> f32 {
-        self.definition().projectile_speed
-    }
-
-    pub fn upgraded_explosion_radius(self, explosion_size: f32) -> f32 {
-        let base_radius = self.definition().explosion_radius;
-        if base_radius > 0.0 {
-            base_radius + explosion_size
-        } else {
-            0.0
-        }
-    }
-
-    pub fn angular_speed(self) -> f32 {
-        self.definition().angular_speed
-    }
-
-    pub fn base_color(self) -> Color {
-        self.definition().base_color
-    }
-
-    pub fn barrel_color(self) -> Color {
-        self.definition().barrel_color
-    }
-
-    pub fn base_size(self) -> Vec2 {
-        self.definition().base_size
-    }
-
-    pub fn barrel_size(self) -> Vec2 {
-        self.definition().barrel_size
-    }
-
-    pub fn barrel_offset(self) -> f32 {
-        self.definition().barrel_offset
-    }
-
-    pub fn stat_effects(self) -> &'static [TowerStatEffect] {
-        self.definition().stat_effects
-    }
-
-    pub fn body_sprite(self, alpha: f32) -> Sprite {
-        Sprite::from_color(self.base_color().with_alpha(alpha), self.base_size())
-    }
-
-    pub fn barrel_sprite(self, alpha: f32) -> Sprite {
-        Sprite::from_color(self.barrel_color().with_alpha(alpha), self.barrel_size())
-    }
-}
-
 #[derive(Component, Clone, Copy)]
 pub enum EnemyKind {
     Grunt,
@@ -264,6 +177,7 @@ impl EnemyKind {
 
 #[derive(Component)]
 pub struct FireCooldown {
+    pub base_cooldown: f32,
     pub timer: Timer,
 }
 

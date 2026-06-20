@@ -8,14 +8,14 @@ use bevy::window::PrimaryWindow;
 use crate::components::{
     AngularSpeed, Damage, DamageFormula, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health,
     IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target, Tower,
-    TowerKind, TowerRangeIndicator,
+    TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
-    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, TowerDraft, TowerDraftPhase, WaterDamage,
+    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize, FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage
 };
 use crate::shop::PlayerStatsMut;
+use crate::tower_definitions::TowerKind;
 
 #[derive(SystemParam)]
 pub struct TowerTooltipStats<'w> {
@@ -131,14 +131,15 @@ pub fn tower_tooltip(
 }
 
 pub fn progress_cooldown(
-    mut towers: Query<(&TowerKind, &mut FireCooldown), With<Tower>>,
+    mut towers: Query<&mut FireCooldown, With<Tower>>,
     time: Res<Time>,
     attack_speed: Res<AttackSpeed>,
 ) {
     let delta = time.delta();
-    for (kind, mut cooldown) in &mut towers {
+    for mut cooldown in &mut towers {
+        let base_cooldown = cooldown.base_cooldown;
         cooldown.timer.set_duration(Duration::from_secs_f32(
-            kind.cooldown() / attack_speed.value.max(0.1),
+            base_cooldown / attack_speed.value.max(0.1),
         ));
         cooldown.timer.tick(delta);
     }
@@ -167,6 +168,7 @@ pub fn aim_towers(
     air_damage: Res<AirDamage>,
     water_damage: Res<WaterDamage>,
     active_spell_effects: Res<ActiveSpellEffects>,
+    mut shoot_events: EventWriter<ShootEvent>,
 ) {
     if game_over.value {
         return;
@@ -222,6 +224,7 @@ pub fn aim_towers(
             ) as f32;
 
             cooldown.timer.reset();
+            shoot_events.write(ShootEvent { source_tower: tower_entity });
             commands.spawn((
                 Projectile,
                 Sprite::from_color(

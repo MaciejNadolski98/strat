@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, DamageDealt, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
+    AngularSpeed, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
     DraftSlotIcon, DraftSlotLabel, FireCooldown, Tower, TowerPhantom, TowerPhantomBarrel,
     TowerRangeIndicator,
 };
@@ -166,9 +166,9 @@ pub fn place_draft_tower(
             Transform::from_translation(grid_position.extend(2.0)),
             Tower,
             tower_kind,
-            DamageDealt { amount: 0.0 },
             tower_kind.damage_formula(),
             FireCooldown {
+                base_cooldown: tower_kind.cooldown(),
                 timer: Timer::new(
                     Duration::from_secs_f32(
                         tower_kind.cooldown() / stats.attack_speed_value().max(0.1),

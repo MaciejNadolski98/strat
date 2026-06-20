@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 
-use crate::components::TowerKind;
 use crate::constants::{
     GRID_SIZE, INITIAL_PATH, PATH_EXTENSION_BASE_COST, PATH_EXTENSION_COST_STEP, PRICE_GROWTH,
     SHOP_REROLL_COST,
 };
 use crate::item_definitions::*;
-use crate::tower_definitions::ALL_TOWER_KINDS;
+use crate::tower_definitions::{ALL_TOWER_KINDS, TowerKind};
 
 #[derive(Resource)]
 pub struct Money {
@@ -547,6 +546,14 @@ impl ShopOffer {
 pub struct EnemyKilledEvent {
     pub source_tower: Entity,
 }
+
+#[derive(Event)]
+pub struct ShootEvent {
+    pub source_tower: Entity,
+}
+
+#[derive(Event)]
+pub struct NewRoundEvent;
 
 #[derive(Resource)]
 pub struct Shop {
