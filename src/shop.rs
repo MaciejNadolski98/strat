@@ -182,18 +182,15 @@ pub fn update_shop_text(
     };
 
     text.0 = format!(
-        "Shop     1-3: select     B: buy item     E: reroll ${}",
+        "Shop     click: buy item     E: reroll ${}",
         shop.reroll_cost
     );
 
     for (slot, mut sprite) in &mut slots.p0() {
-        let is_selected = slot.index == shop.selected;
-        let is_empty = shop.offers[slot.index].is_none();
-        sprite.color = match (is_selected, is_empty) {
-            (true, false) => Color::srgb(0.32, 0.34, 0.24),
-            (true, true) => Color::srgb(0.26, 0.25, 0.20),
-            (false, false) => Color::srgb(0.15, 0.17, 0.16),
-            (false, true) => Color::srgb(0.09, 0.10, 0.10),
+        sprite.color = if shop.offers[slot.index].is_none() {
+            Color::srgb(0.09, 0.10, 0.10)
+        } else {
+            Color::srgb(0.15, 0.17, 0.16)
         };
     }
 

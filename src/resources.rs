@@ -546,7 +546,6 @@ impl ShopOffer {
 #[derive(Resource)]
 pub struct Shop {
     pub offers: [Option<ShopOffer>; 3],
-    pub selected: usize,
     pub reroll_cost: i32,
 }
 
@@ -554,7 +553,6 @@ impl Shop {
     pub fn new(wave: u32) -> Self {
         Self {
             offers: Self::generate_offers(wave),
-            selected: 0,
             reroll_cost: scale_price(SHOP_REROLL_COST, wave),
         }
     }
@@ -562,7 +560,6 @@ impl Shop {
     pub fn reroll(&mut self, wave: u32) {
         self.offers = Self::generate_offers(wave);
         self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
-        self.selected = self.selected.min(self.offers.len() - 1);
     }
 
     pub fn update_prices_for_wave(&mut self, wave: u32) {
