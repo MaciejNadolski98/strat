@@ -2,11 +2,12 @@ use crate::{components::{DamageFormula, TowerKind}, resources::{PlayerStatKind, 
 use bevy::prelude::*;
 
 
-pub const ALL_TOWER_KINDS: [TowerKind; 4] = [
+pub const ALL_TOWER_KINDS: [TowerKind; 5] = [
     TowerKind::Ballista,
     TowerKind::Cannon,
     TowerKind::Sprayer,
     TowerKind::Sniper,
+    TowerKind::Golem,
 ];
 
 #[derive(Clone, Copy)]
@@ -128,4 +129,27 @@ pub const TOWER_SNIPER: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
         TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
     ],
+};
+
+pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
+    name: "Golem",
+    range: 160.0,
+    cooldown: 1.1,
+    damage_formula: DamageFormula {
+        flat: 20,
+        crit_multiplier: 1.8,
+        earth_multiplier: 0.5,
+        fire_multiplier: 0.0,
+        air_multiplier: 0.0,
+        water_multiplier: 0.0,
+    },
+    projectile_speed: 350.0,
+    explosion_radius: 0.0,
+    angular_speed: 1.2,
+    base_color: Color::srgb(0.40, 0.34, 0.22),
+    barrel_color: Color::srgb(0.66, 0.56, 0.36),
+    base_size: Vec2::new(38.0, 38.0),
+    barrel_size: Vec2::new(14.0, 34.0),
+    barrel_offset: 15.0,
+    stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
 };

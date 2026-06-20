@@ -5,7 +5,7 @@ use crate::components::{
     SourceTower, Speed, Target, Tower,
 };
 use crate::effects::{spawn_explosion_effect, spawn_floating_text};
-use crate::resources::{KillCount, Money, PassiveIncome};
+use crate::resources::{EnemyKilledEvent, KillCount, Money, PassiveIncome};
 
 pub fn move_projectiles(
     mut commands: Commands,
@@ -13,6 +13,7 @@ pub fn move_projectiles(
     mut money: ResMut<Money>,
     mut kills: ResMut<KillCount>,
     passive_income: Res<PassiveIncome>,
+    mut kill_events: EventWriter<EnemyKilledEvent>,
     mut projectiles: Query<
         (
             Entity,
@@ -122,6 +123,7 @@ pub fn move_projectiles(
                 kills.amount += 1;
                 spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), kill_yield);
                 commands.entity(entity).despawn();
+                kill_events.write(EnemyKilledEvent { source_tower: source_tower.entity });
             }
         } else {
             projectile_transform.translation += (to_enemy.normalize() * step).extend(0.0);

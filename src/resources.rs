@@ -543,6 +543,11 @@ impl ShopOffer {
     }
 }
 
+#[derive(Event)]
+pub struct EnemyKilledEvent {
+    pub source_tower: Entity,
+}
+
 #[derive(Resource)]
 pub struct Shop {
     pub offers: [Option<ShopOffer>; 3],

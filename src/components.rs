@@ -82,6 +82,11 @@ pub struct ExplosionEffect {
 pub struct TowerRangeIndicator;
 
 #[derive(Component)]
+pub struct TowerKillCount {
+    pub kills: u32,
+}
+
+#[derive(Component)]
 pub struct TowerPhantom;
 
 #[derive(Component)]
@@ -119,6 +124,7 @@ pub enum TowerKind {
     Cannon,
     Sprayer,
     Sniper,
+    Golem,
 }
 
 impl TowerKind {
@@ -128,6 +134,7 @@ impl TowerKind {
             Self::Cannon => &TOWER_CANNON,
             Self::Sprayer => &TOWER_SPRAYER,
             Self::Sniper => &TOWER_SNIPER,
+            Self::Golem => &TOWER_GOLEM,
         }
     }
 

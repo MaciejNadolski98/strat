@@ -4,6 +4,7 @@ mod draft;
 mod effects;
 mod enemies;
 mod game;
+mod golem;
 mod hud;
 mod item_definitions;
 mod pathing;
@@ -23,14 +24,15 @@ use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower
 use effects::{update_explosion_effects, update_floating_text};
 use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
+use golem::GolemPlugin;
 use hud::update_hud;
 use pathing::update_path_input;
 use projectiles::move_projectiles;
 use resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
-    EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, MaxHp, Money,
-    NextWaveTimer, PassiveIncome, PathTiles, Paused, Regeneration, Shop, SpawnTimer, SpellShop,
-    TowerDraft, WaterDamage, WaveNumber,
+    EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
+    MaxHp, Money, NextWaveTimer, PassiveIncome, PathTiles, Paused, Regeneration, Shop, SpawnTimer,
+    SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
@@ -82,15 +84,19 @@ fn main() {
         .insert_resource(PathTiles::new())
         .insert_resource(Shop::new(1))
         .insert_resource(SpellShop::new())
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Simple Tower Defense".to_string(),
-                resolution: (WINDOW_WIDTH, WINDOW_HEIGHT).into(),
-                resizable: false,
+        .add_event::<EnemyKilledEvent>()
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Simple Tower Defense".to_string(),
+                    resolution: (WINDOW_WIDTH, WINDOW_HEIGHT).into(),
+                    resizable: false,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
+            GolemPlugin,
+        ))
         .add_systems(Startup, setup)
         .add_systems(Update, toggle_pause)
         .add_systems(
