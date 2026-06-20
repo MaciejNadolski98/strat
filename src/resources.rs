@@ -445,13 +445,12 @@ impl StatUpgradeKind {
 pub enum TowerDraftPhase {
     WaveRunning,
     Picking,
-    Placing,
+    Placing(TowerKind),
 }
 
 #[derive(Resource)]
 pub struct TowerDraft {
     pub offers: [TowerKind; 3],
-    pub selected: usize,
     pub phase: TowerDraftPhase,
 }
 
@@ -459,19 +458,13 @@ impl TowerDraft {
     pub fn new() -> Self {
         Self {
             offers: Self::generate_offers(),
-            selected: 0,
             phase: TowerDraftPhase::Picking,
         }
     }
 
     pub fn activate(&mut self) {
         self.offers = Self::generate_offers();
-        self.selected = 0;
         self.phase = TowerDraftPhase::Picking;
-    }
-
-    pub fn selected_kind(&self) -> TowerKind {
-        self.offers[self.selected]
     }
 
     fn generate_offers() -> [TowerKind; 3] {

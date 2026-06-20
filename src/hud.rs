@@ -48,7 +48,7 @@ pub fn update_hud(
         "Game over - press R to restart"
     } else if stats.paused.value {
         "Paused - press Space to resume"
-    } else if stats.draft.phase == TowerDraftPhase::Placing {
+    } else if matches!(stats.draft.phase, TowerDraftPhase::Placing(_)) {
         "Left click on the map to place your tower"
     } else {
         "Left click: extend path    B: buy shop item    E: reroll shop    Space: pause"

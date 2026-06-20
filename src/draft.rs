@@ -17,7 +17,6 @@ use crate::towers::apply_tower_effects;
 use crate::waves::enemies_in_wave;
 
 pub fn update_draft_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
@@ -29,21 +28,6 @@ pub fn update_draft_input(
         return;
     }
 
-    if draft.phase == TowerDraftPhase::Picking {
-        if keyboard.just_pressed(KeyCode::Digit1) {
-            draft.selected = 0;
-        } else if keyboard.just_pressed(KeyCode::Digit2) {
-            draft.selected = 1;
-        } else if keyboard.just_pressed(KeyCode::Digit3) {
-            draft.selected = 2;
-        }
-
-        if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::NumpadEnter) {
-            draft.phase = TowerDraftPhase::Placing;
-            return;
-        }
-    }
-
     if mouse.just_pressed(MouseButton::Left) {
         let Ok(window) = windows.single() else { return; };
         let Ok((cam, cam_transform)) = camera.single() else { return; };
@@ -53,8 +37,7 @@ pub fn update_draft_input(
         for (slot, transform) in &draft_slots {
             let pos = transform.translation.truncate();
             if (world_pos.x - pos.x).abs() <= 65.0 && (world_pos.y - pos.y).abs() <= 70.0 {
-                draft.selected = slot.index;
-                draft.phase = TowerDraftPhase::Placing;
+                draft.phase = TowerDraftPhase::Placing(draft.offers[slot.index]);
                 return;
             }
         }
@@ -67,13 +50,13 @@ pub fn update_draft_ui(
     mut queries: ParamSet<(
         Query<&mut Visibility, With<DraftPanel>>,
         Query<(&mut Text2d, &mut Visibility), With<DraftHeaderText>>,
-        Query<(&DraftSlot, &mut Sprite, &mut Visibility)>,
+        Query<(&mut Sprite, &mut Visibility), With<DraftSlot>>,
         Query<(&DraftSlotIcon, &mut Sprite, &mut Visibility)>,
         Query<(&DraftSlotBarrel, &mut Sprite, &mut Visibility)>,
         Query<(&DraftSlotLabel, &mut Text2d, &mut Visibility)>,
     )>,
 ) {
-    let is_visible = matches!(draft.phase, TowerDraftPhase::Picking | TowerDraftPhase::Placing);
+    let is_visible = draft.phase == TowerDraftPhase::Picking;
 
     if let Ok(mut visibility) = queries.p0().single_mut() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
@@ -90,14 +73,10 @@ pub fn update_draft_ui(
         }
     }
 
-    for (slot, mut sprite, mut visibility) in &mut queries.p2() {
+    for (mut sprite, mut visibility) in &mut queries.p2() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
-            sprite.color = if slot.index == draft.selected {
-                Color::srgb(0.32, 0.34, 0.24)
-            } else {
-                Color::srgb(0.15, 0.17, 0.16)
-            };
+            sprite.color = Color::srgb(0.15, 0.17, 0.16)
         }
     }
 
@@ -137,7 +116,7 @@ pub fn place_draft_tower(
     mut spawn_timer: ResMut<SpawnTimer>,
     mut stats: PlayerStatsMut,
 ) {
-    if game_over.value || draft.phase != TowerDraftPhase::Placing {
+    if game_over.value || !matches!(draft.phase, TowerDraftPhase::Placing(_)) {
         return;
     }
     if !mouse.just_pressed(MouseButton::Left) {
@@ -166,7 +145,7 @@ pub fn place_draft_tower(
         return;
     }
 
-    let tower_kind = draft.selected_kind();
+    let TowerDraftPhase::Placing(tower_kind) = draft.phase else { return; };
     apply_tower_effects(tower_kind, &mut stats);
 
     commands
