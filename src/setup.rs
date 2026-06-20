@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use crate::components::{
     DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel,
     HudText, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText,
-    ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerRangeIndicator,
+    ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerPhantom, TowerPhantomBarrel,
+    TowerRangeIndicator,
 };
 use crate::constants::{GRID_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::{snap_axis, spawn_path_visuals};
@@ -100,6 +101,20 @@ pub fn setup(
         Transform::from_translation(Vec3::new(0.0, 0.0, 1.5)),
         Visibility::Hidden,
         TowerRangeIndicator,
+    ));
+
+    commands.spawn((
+        Sprite::from_color(Color::srgba(0.0, 0.0, 0.0, 0.0), Vec2::new(40.0, 40.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 3.0)),
+        Visibility::Hidden,
+        TowerPhantom,
+    ));
+
+    commands.spawn((
+        Sprite::from_color(Color::srgba(0.0, 0.0, 0.0, 0.0), Vec2::new(9.0, 32.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 4.0)),
+        Visibility::Hidden,
+        TowerPhantomBarrel,
     ));
 
     spawn_shop_slots(&mut commands);

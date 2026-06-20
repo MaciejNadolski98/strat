@@ -5,7 +5,8 @@ use bevy::window::PrimaryWindow;
 
 use crate::components::{
     AngularSpeed, DamageDealt, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
-    DraftSlotIcon, DraftSlotLabel, FireCooldown, Tower,
+    DraftSlotIcon, DraftSlotLabel, FireCooldown, Tower, TowerPhantom, TowerPhantomBarrel,
+    TowerRangeIndicator,
 };
 use crate::constants::GRID_SIZE;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
@@ -24,7 +25,7 @@ pub fn update_draft_input(
     mut draft: ResMut<TowerDraft>,
     game_over: Res<GameOver>,
 ) {
-    if game_over.value || draft.phase == TowerDraftPhase::WaveRunning {
+    if game_over.value || draft.phase != TowerDraftPhase::Picking {
         return;
     }
 
@@ -150,7 +151,7 @@ pub fn place_draft_tower(
 
     commands
         .spawn((
-            Sprite::from_color(tower_kind.base_color(), tower_kind.base_size()),
+            tower_kind.body_sprite(1.0),
             Transform::from_translation(grid_position.extend(2.0)),
             Tower,
             tower_kind,
@@ -169,11 +170,84 @@ pub fn place_draft_tower(
             },
         ))
         .with_child((
-            Sprite::from_color(tower_kind.barrel_color(), tower_kind.barrel_size()),
+            tower_kind.barrel_sprite(1.0),
             Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
         ));
 
     draft.phase = TowerDraftPhase::WaveRunning;
     remaining.count = enemies_in_wave(wave_number.value);
     spawn_timer.reset();
+}
+
+pub fn update_tower_phantom(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    towers: Query<&Transform, With<Tower>>,
+    path_tiles: Res<PathTiles>,
+    draft: Res<TowerDraft>,
+    mut phantom: Query<
+        (&mut Transform, &mut Sprite, &mut Visibility),
+        (With<TowerPhantom>, Without<Tower>, Without<TowerPhantomBarrel>),
+    >,
+    mut barrel: Query<
+        (&mut Transform, &mut Sprite, &mut Visibility),
+        (With<TowerPhantomBarrel>, Without<Tower>, Without<TowerPhantom>),
+    >,
+    mut indicator: Query<
+        (&mut Transform, &mut Visibility),
+        (
+            With<TowerRangeIndicator>,
+            Without<Tower>,
+            Without<TowerPhantom>,
+            Without<TowerPhantomBarrel>,
+        ),
+    >,
+) {
+    let Ok((mut p_transform, mut p_sprite, mut p_visibility)) = phantom.single_mut() else {
+        return;
+    };
+    let Ok((mut b_transform, mut b_sprite, mut b_visibility)) = barrel.single_mut() else {
+        return;
+    };
+    let Ok((mut i_transform, mut i_visibility)) = indicator.single_mut() else {
+        return;
+    };
+
+    *p_visibility = Visibility::Hidden;
+    *b_visibility = Visibility::Hidden;
+    *i_visibility = Visibility::Hidden;
+
+    let TowerDraftPhase::Placing(kind) = draft.phase else {
+        return;
+    };
+
+    let Ok(window) = windows.single() else { return; };
+    let Ok((cam, cam_transform)) = camera.single() else { return; };
+    let Some(cursor_pos) = window.cursor_position() else { return; };
+    let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+
+    let grid_pos = snap_to_grid(world_pos);
+
+    if path_tiles.can_extend_to(grid_pos)
+        || !is_buildable_cell(grid_pos, &path_tiles)
+        || towers
+            .iter()
+            .any(|t| t.translation.truncate().distance(grid_pos) < GRID_SIZE * 0.5)
+    {
+        return;
+    }
+
+    const ALPHA: f32 = 0.55;
+
+    *p_sprite = kind.body_sprite(ALPHA);
+    p_transform.translation = grid_pos.extend(3.0);
+    *p_visibility = Visibility::Visible;
+
+    *b_sprite = kind.barrel_sprite(ALPHA);
+    b_transform.translation = Vec3::new(grid_pos.x, grid_pos.y + kind.barrel_offset(), 4.0);
+    *b_visibility = Visibility::Visible;
+
+    i_transform.translation = grid_pos.extend(1.5);
+    i_transform.scale = Vec3::splat(kind.range());
+    *i_visibility = Visibility::Visible;
 }

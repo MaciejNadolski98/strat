@@ -19,7 +19,7 @@ mod waves;
 use bevy::prelude::*;
 
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
-use draft::{place_draft_tower, update_draft_input, update_draft_ui};
+use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text};
 use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
@@ -130,6 +130,7 @@ fn main() {
                 update_spell_tooltip,
                 update_tower_tooltip,
                 update_tower_range_indicator,
+                update_tower_phantom,
                 update_draft_ui,
             )
                 .chain()

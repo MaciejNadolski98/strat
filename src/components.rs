@@ -82,6 +82,12 @@ pub struct ExplosionEffect {
 pub struct TowerRangeIndicator;
 
 #[derive(Component)]
+pub struct TowerPhantom;
+
+#[derive(Component)]
+pub struct TowerPhantomBarrel;
+
+#[derive(Component)]
 pub struct DraftPanel;
 
 #[derive(Component)]
@@ -180,6 +186,14 @@ impl TowerKind {
 
     pub fn stat_effects(self) -> &'static [TowerStatEffect] {
         self.definition().stat_effects
+    }
+
+    pub fn body_sprite(self, alpha: f32) -> Sprite {
+        Sprite::from_color(self.base_color().with_alpha(alpha), self.base_size())
+    }
+
+    pub fn barrel_sprite(self, alpha: f32) -> Sprite {
+        Sprite::from_color(self.barrel_color().with_alpha(alpha), self.barrel_size())
     }
 }
 
