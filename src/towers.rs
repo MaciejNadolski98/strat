@@ -8,7 +8,7 @@ use bevy::window::PrimaryWindow;
 use crate::components::{
     AngularSpeed, Damage, DamageDealt, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
     IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target, Tower,
-    TowerKind,
+    TowerKind, TowerRangeIndicator,
 };
 use crate::constants::GRID_SIZE;
 use crate::effects::spawn_floating_text;
@@ -337,4 +337,52 @@ pub fn aim_towers(
 
 fn roll_critical_hit(critical_chance: f32) -> bool {
     rand::random::<f32>() < critical_chance.clamp(0.0, 1.0)
+}
+
+pub fn update_tower_range_indicator(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    towers: Query<(&TowerKind, &Transform), With<Tower>>,
+    mut indicator: Query<
+        (&mut Transform, &mut Visibility),
+        (With<TowerRangeIndicator>, Without<Tower>),
+    >,
+) {
+    let Ok((mut indicator_transform, mut indicator_visibility)) = indicator.single_mut() else {
+        return;
+    };
+
+    *indicator_visibility = Visibility::Hidden;
+
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Ok((camera, camera_transform)) = camera.single() else {
+        return;
+    };
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+    let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
+        return;
+    };
+
+    let hovered_tower = towers
+        .iter()
+        .filter_map(|(kind, transform)| {
+            let tower_position = transform.translation.truncate();
+            let half_size = kind.base_size() * 0.5;
+            let inside_tower = (world_position.x - tower_position.x).abs() <= half_size.x
+                && (world_position.y - tower_position.y).abs() <= half_size.y;
+            inside_tower.then_some((kind, transform))
+        })
+        .max_by(|a, b| a.1.translation.z.total_cmp(&b.1.translation.z));
+
+    let Some((kind, tower_transform)) = hovered_tower else {
+        return;
+    };
+
+    indicator_transform.translation = tower_transform.translation.truncate().extend(1.5);
+    indicator_transform.scale = Vec3::splat(kind.range());
+    *indicator_visibility = Visibility::Visible;
 }

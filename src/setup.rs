@@ -1,14 +1,20 @@
+use bevy::math::primitives::Circle;
 use bevy::prelude::*;
 
 use crate::components::{
     HudText, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText,
-    ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel,
+    ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerRangeIndicator,
 };
 use crate::constants::{GRID_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::{snap_axis, spawn_path_visuals};
 use crate::resources::PathTiles;
 
-pub fn setup(mut commands: Commands, path_tiles: Res<PathTiles>) {
+pub fn setup(
+    mut commands: Commands,
+    path_tiles: Res<PathTiles>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands.spawn(Camera2d);
 
     commands.spawn((
@@ -85,6 +91,14 @@ pub fn setup(mut commands: Commands, path_tiles: Res<PathTiles>) {
         },
         Visibility::Hidden,
         ShopTooltip,
+    ));
+
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::new(1.0))),
+        MeshMaterial2d(materials.add(Color::srgba(0.85, 0.90, 0.88, 0.10))),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.5)),
+        Visibility::Hidden,
+        TowerRangeIndicator,
     ));
 
     spawn_shop_slots(&mut commands);

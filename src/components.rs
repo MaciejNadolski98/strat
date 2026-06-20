@@ -80,6 +80,9 @@ pub struct ExplosionEffect {
     pub lifetime: Timer,
 }
 
+#[derive(Component)]
+pub struct TowerRangeIndicator;
+
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub enum TowerKind {
     Ballista,
