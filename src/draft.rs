@@ -48,16 +48,24 @@ pub fn update_draft_input(
 pub fn update_draft_ui(
     draft: Res<TowerDraft>,
     wave_number: Res<WaveNumber>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
     mut queries: ParamSet<(
         Query<&mut Visibility, With<DraftPanel>>,
         Query<(&mut Text2d, &mut Visibility), With<DraftHeaderText>>,
-        Query<(&mut Sprite, &mut Visibility), With<DraftSlot>>,
+        Query<(&DraftSlot, &Transform, &mut Sprite, &mut Visibility)>,
         Query<(&DraftSlotIcon, &mut Sprite, &mut Visibility)>,
         Query<(&DraftSlotBarrel, &mut Sprite, &mut Visibility)>,
         Query<(&DraftSlotLabel, &mut Text2d, &mut Visibility)>,
     )>,
 ) {
     let is_visible = draft.phase == TowerDraftPhase::Picking;
+
+    let cursor_world = (|| -> Option<Vec2> {
+        let window = windows.single().ok()?;
+        let (cam, cam_t) = camera.single().ok()?;
+        cam.viewport_to_world_2d(cam_t, window.cursor_position()?).ok()
+    })();
 
     if let Ok(mut visibility) = queries.p0().single_mut() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
@@ -74,10 +82,18 @@ pub fn update_draft_ui(
         }
     }
 
-    for (mut sprite, mut visibility) in &mut queries.p2() {
+    for (_, transform, mut sprite, mut visibility) in &mut queries.p2() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
-            sprite.color = Color::srgb(0.15, 0.17, 0.16)
+            let pos = transform.translation.truncate();
+            let is_hovered = cursor_world
+                .map(|wp| (wp.x - pos.x).abs() <= 65.0 && (wp.y - pos.y).abs() <= 70.0)
+                .unwrap_or(false);
+            sprite.color = if is_hovered {
+                Color::srgb(0.28, 0.32, 0.22)
+            } else {
+                Color::srgb(0.15, 0.17, 0.16)
+            };
         }
     }
 
@@ -210,11 +226,12 @@ pub fn update_tower_phantom(
 
     *p_visibility = Visibility::Hidden;
     *b_visibility = Visibility::Hidden;
-    *i_visibility = Visibility::Hidden;
 
     let TowerDraftPhase::Placing(kind) = draft.phase else {
         return;
     };
+
+    *i_visibility = Visibility::Hidden;
 
     let Ok(window) = windows.single() else { return; };
     let Ok((cam, cam_transform)) = camera.single() else { return; };

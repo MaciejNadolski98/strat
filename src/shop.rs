@@ -169,9 +169,12 @@ pub fn update_shop_input(
 
 pub fn update_shop_text(
     shop: Res<Shop>,
+    money: Res<Money>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
     mut text: Query<&mut Text, With<ShopText>>,
     mut slots: ParamSet<(
-        Query<(&ShopSlot, &mut Sprite)>,
+        Query<(&ShopSlot, &Transform, &mut Sprite)>,
         Query<(&ShopSlotIcon, &mut Sprite, &mut Visibility)>,
         Query<(&ShopSlotBarrel, &mut Sprite, &mut Visibility)>,
         Query<(&ShopSlotLabel, &mut Text2d)>,
@@ -186,11 +189,26 @@ pub fn update_shop_text(
         shop.reroll_cost
     );
 
-    for (slot, mut sprite) in &mut slots.p0() {
-        sprite.color = if shop.offers[slot.index].is_none() {
-            Color::srgb(0.09, 0.10, 0.10)
-        } else {
-            Color::srgb(0.15, 0.17, 0.16)
+    let cursor_world = (|| -> Option<Vec2> {
+        let window = windows.single().ok()?;
+        let (cam, cam_t) = camera.single().ok()?;
+        cam.viewport_to_world_2d(cam_t, window.cursor_position()?).ok()
+    })();
+
+    for (slot, transform, mut sprite) in &mut slots.p0() {
+        let offer = shop.offers[slot.index];
+        let is_empty = offer.is_none();
+        let pos = transform.translation.truncate();
+        let is_hovered = cursor_world
+            .map(|wp| (wp.x - pos.x).abs() <= 48.0 && (wp.y - pos.y).abs() <= 36.0)
+            .unwrap_or(false);
+        let can_afford = offer.map(|o| money.amount >= o.cost).unwrap_or(false);
+
+        sprite.color = match (is_empty, is_hovered, can_afford) {
+            (true, _, _) => Color::srgb(0.09, 0.10, 0.10),
+            (false, true, true) => Color::srgb(0.30, 0.36, 0.24),
+            (false, true, false) => Color::srgb(0.22, 0.13, 0.12),
+            (false, false, _) => Color::srgb(0.15, 0.17, 0.16),
         };
     }
 
