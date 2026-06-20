@@ -37,7 +37,10 @@ use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
 use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
 };
-use towers::{aim_towers, progress_cooldown, update_tower_range_indicator, update_tower_tooltip};
+use towers::{
+    aim_towers, progress_cooldown, update_draft_tooltip, update_tower_range_indicator,
+    update_tower_tooltip,
+};
 use waves::RunMode;
 
 fn main() {
@@ -129,6 +132,7 @@ fn main() {
                 update_shop_tooltip,
                 update_spell_tooltip,
                 update_tower_tooltip,
+                update_draft_tooltip,
                 update_tower_range_indicator,
                 update_tower_phantom,
                 update_draft_ui,

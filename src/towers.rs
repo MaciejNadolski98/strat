@@ -6,14 +6,14 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
+    AngularSpeed, Damage, DamageFormula, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health,
     IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target, Tower,
     TowerKind, TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, WaterDamage,
+    FireDamage, GameOver, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
 
@@ -80,7 +80,7 @@ pub fn update_tower_tooltip(
     *tooltip_visibility = Visibility::Visible;
 }
 
-fn tower_tooltip(
+pub fn tower_tooltip(
     kind: TowerKind,
     damage_formula: &DamageFormula,
     stats: &TowerTooltipStats,
@@ -300,4 +300,41 @@ pub fn update_tower_range_indicator(
     indicator_transform.translation = tower_transform.translation.truncate().extend(1.5);
     indicator_transform.scale = Vec3::splat(kind.range());
     *indicator_visibility = Visibility::Visible;
+}
+
+pub fn update_draft_tooltip(
+    draft: Res<TowerDraft>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    slots: Query<(&DraftSlot, &Transform)>,
+    stats: TowerTooltipStats,
+    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+) {
+    if draft.phase != TowerDraftPhase::Picking {
+        return;
+    }
+
+    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+        return;
+    };
+    *tooltip_visibility = Visibility::Hidden;
+
+    let Some(cursor_world) = (|| -> Option<Vec2> {
+        let window = windows.single().ok()?;
+        let (cam, cam_t) = camera.single().ok()?;
+        cam.viewport_to_world_2d(cam_t, window.cursor_position()?).ok()
+    })() else {
+        return;
+    };
+
+    for (slot, transform) in &slots {
+        let pos = transform.translation.truncate();
+        if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
+            let kind = draft.offers[slot.index];
+            let damage_formula = kind.damage_formula();
+            tooltip_text.0 = tower_tooltip(kind, &damage_formula, &stats);
+            *tooltip_visibility = Visibility::Visible;
+            return;
+        }
+    }
 }
