@@ -131,11 +131,6 @@ pub fn place_draft_tower(
         return;
     };
 
-    // Ignore clicks inside the draft panel area (slot selection clicks handled by update_draft_input)
-    if world_position.x.abs() <= 245.0 && (world_position.y - 30.0).abs() <= 105.0 {
-        return;
-    }
-
     let grid_position = snap_to_grid(world_position);
     if path_tiles.can_extend_to(grid_position)
         || !is_buildable_cell(grid_position, &path_tiles)

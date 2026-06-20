@@ -94,11 +94,11 @@ fn main() {
             Update,
             (
                 progress_cooldown,
+                place_draft_tower,
                 update_draft_input,
                 update_shop_input,
                 update_spell_input,
                 update_path_input,
-                place_draft_tower,
                 spawn_enemies,
                 move_enemies,
                 update_burning_enemies,
