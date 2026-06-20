@@ -78,6 +78,10 @@ impl<'w> PlayerStatsMut<'w> {
 pub fn update_shop_input(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    shop_slots: Query<(&ShopSlot, &Transform)>,
     mut shop: ResMut<Shop>,
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
@@ -92,38 +96,35 @@ pub fn update_shop_input(
 
     shop.update_prices_for_wave(wave_number.value);
 
-    if keyboard.just_pressed(KeyCode::Digit1) {
-        shop.selected = 0;
-    } else if keyboard.just_pressed(KeyCode::Digit2) {
-        shop.selected = 1;
-    } else if keyboard.just_pressed(KeyCode::Digit3) {
-        shop.selected = 2;
+    let mut selected = None;
+
+    if mouse.just_pressed(MouseButton::Left) {
+        if let (Ok(window), Ok((cam, cam_transform))) = (windows.single(), camera.single()) {
+            if let Some(cursor_pos) = window.cursor_position() {
+                if let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) {
+                    for (slot, transform) in &shop_slots {
+                        let pos = transform.translation.truncate();
+                        if (world_pos.x - pos.x).abs() <= 48.0
+                            && (world_pos.y - pos.y).abs() <= 36.0
+                        {
+                            selected = Some(slot.index);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    if keyboard.just_pressed(KeyCode::KeyE) && money.amount >= shop.reroll_cost {
-        let cost = shop.reroll_cost;
-        money.amount -= cost;
-        shop.reroll(wave_number.value);
-        spawn_floating_text(
-            &mut commands,
-            format!("-${cost}"),
-            Vec2::new(-WINDOW_WIDTH * 0.5 + 280.0, -WINDOW_HEIGHT * 0.5 + 72.0),
-            Color::srgb(1.0, 0.86, 0.20),
-            20.0,
-        );
-    }
-
-    if keyboard.just_pressed(KeyCode::KeyB) {
-        let Some(offer) = shop.selected_offer() else {
-            return;
-        };
+    if let Some(selected) = selected {
+        let Some(offer) = shop.offers[selected] else { return };
         if money.amount < offer.cost {
             return;
         };
 
         if let Some(upgrade) = offer.item.stat_upgrade_kind() {
             money.amount -= offer.cost;
-            shop.take_selected_offer();
+            shop.take_offer(selected);
             apply_stat_upgrade(upgrade, &mut stats);
             spawn_floating_text(
                 &mut commands,
@@ -141,7 +142,7 @@ pub fn update_shop_input(
             }
 
             money.amount -= offer.cost;
-            shop.take_selected_offer();
+            shop.take_offer(selected);
             spawn_floating_text(
                 &mut commands,
                 format!("-${}", offer.cost),
@@ -150,6 +151,19 @@ pub fn update_shop_input(
                 20.0,
             );
         }
+    }
+
+    if keyboard.just_pressed(KeyCode::KeyE) && money.amount >= shop.reroll_cost {
+        let cost = shop.reroll_cost;
+        money.amount -= cost;
+        shop.reroll(wave_number.value);
+        spawn_floating_text(
+            &mut commands,
+            format!("-${cost}"),
+            Vec2::new(-WINDOW_WIDTH * 0.5 + 280.0, -WINDOW_HEIGHT * 0.5 + 72.0),
+            Color::srgb(1.0, 0.86, 0.20),
+            20.0,
+        );
     }
 }
 

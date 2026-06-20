@@ -18,23 +18,46 @@ use crate::waves::enemies_in_wave;
 
 pub fn update_draft_input(
     keyboard: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    draft_slots: Query<(&DraftSlot, &Transform)>,
     mut draft: ResMut<TowerDraft>,
     game_over: Res<GameOver>,
 ) {
-    if game_over.value || draft.phase != TowerDraftPhase::Picking {
+    if game_over.value || draft.phase == TowerDraftPhase::WaveRunning {
         return;
     }
 
-    if keyboard.just_pressed(KeyCode::Digit1) {
-        draft.selected = 0;
-    } else if keyboard.just_pressed(KeyCode::Digit2) {
-        draft.selected = 1;
-    } else if keyboard.just_pressed(KeyCode::Digit3) {
-        draft.selected = 2;
+    if draft.phase == TowerDraftPhase::Picking {
+        if keyboard.just_pressed(KeyCode::Digit1) {
+            draft.selected = 0;
+        } else if keyboard.just_pressed(KeyCode::Digit2) {
+            draft.selected = 1;
+        } else if keyboard.just_pressed(KeyCode::Digit3) {
+            draft.selected = 2;
+        }
+
+        if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::NumpadEnter) {
+            draft.phase = TowerDraftPhase::Placing;
+            return;
+        }
     }
 
-    if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::NumpadEnter) {
-        draft.phase = TowerDraftPhase::Placing;
+    if mouse.just_pressed(MouseButton::Left) {
+        let Ok(window) = windows.single() else { return; };
+        let Ok((cam, cam_transform)) = camera.single() else { return; };
+        let Some(cursor_pos) = window.cursor_position() else { return; };
+        let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+
+        for (slot, transform) in &draft_slots {
+            let pos = transform.translation.truncate();
+            if (world_pos.x - pos.x).abs() <= 65.0 && (world_pos.y - pos.y).abs() <= 70.0 {
+                draft.selected = slot.index;
+                draft.phase = TowerDraftPhase::Placing;
+                return;
+            }
+        }
     }
 }
 
@@ -60,10 +83,7 @@ pub fn update_draft_ui(
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
             text.0 = if draft.phase == TowerDraftPhase::Picking {
-                format!(
-                    "Wave {} — Pick a tower    1  2  3 to select    Enter to confirm",
-                    wave_number.value
-                )
+                format!("Wave {} — Click a tower to pick it", wave_number.value)
             } else {
                 "Click on the map to place your tower".to_string()
             };
@@ -73,7 +93,7 @@ pub fn update_draft_ui(
     for (slot, mut sprite, mut visibility) in &mut queries.p2() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
-            sprite.color = if slot.index == draft.selected && draft.phase == TowerDraftPhase::Picking {
+            sprite.color = if slot.index == draft.selected {
                 Color::srgb(0.32, 0.34, 0.24)
             } else {
                 Color::srgb(0.15, 0.17, 0.16)
@@ -130,6 +150,11 @@ pub fn place_draft_tower(
     let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
         return;
     };
+
+    // Ignore clicks inside the draft panel area (slot selection clicks handled by update_draft_input)
+    if world_position.x.abs() <= 245.0 && (world_position.y - 30.0).abs() <= 105.0 {
+        return;
+    }
 
     let grid_position = snap_to_grid(world_position);
     if path_tiles.can_extend_to(grid_position)

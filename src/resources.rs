@@ -576,13 +576,9 @@ impl Shop {
         self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
     }
 
-    pub fn selected_offer(&self) -> Option<ShopOffer> {
-        self.offers[self.selected]
-    }
-
-    pub fn take_selected_offer(&mut self) -> Option<ShopOffer> {
-        let offer = self.offers[self.selected];
-        self.offers[self.selected] = None;
+    pub fn take_offer(&mut self, selected: usize) -> Option<ShopOffer> {
+        let offer = self.offers[selected];
+        self.offers[selected] = None;
         offer
     }
 
