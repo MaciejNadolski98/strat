@@ -4,10 +4,10 @@ use crate::components::{
     Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
 };
 use crate::resources::{
-    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NextWaveTimer,
-    PathTiles, Regeneration, SpawnTimer, WaveNumber,
+    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, PathTiles,
+    Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
 };
-use crate::waves::{RunMode, enemies_in_wave, wave};
+use crate::waves::{RunMode, wave};
 
 pub fn spawn_enemies(
     mut commands: Commands,
@@ -15,7 +15,6 @@ pub fn spawn_enemies(
     mut wave_number: ResMut<WaveNumber>,
     mut remaining: ResMut<EnemiesRemaining>,
     mut spawn_timer: ResMut<SpawnTimer>,
-    mut next_wave_timer: ResMut<NextWaveTimer>,
     game_over: Res<GameOver>,
     mut game_won: ResMut<GameWon>,
     mut hp: ResMut<CurrentHp>,
@@ -24,6 +23,7 @@ pub fn spawn_enemies(
     run_mode: Res<RunMode>,
     path_tiles: Res<PathTiles>,
     mut active_spell_effects: ResMut<ActiveSpellEffects>,
+    mut draft: ResMut<TowerDraft>,
     enemies: Query<(), With<Enemy>>,
 ) {
     if game_over.value || game_won.value {
@@ -31,7 +31,7 @@ pub fn spawn_enemies(
     }
 
     if remaining.count == 0 {
-        if enemies.is_empty() {
+        if enemies.is_empty() && draft.phase == TowerDraftPhase::WaveRunning {
             active_spell_effects.reset_for_wave();
 
             if wave_number.value >= run_mode.final_wave() {
@@ -39,14 +39,11 @@ pub fn spawn_enemies(
                 return;
             }
 
-            next_wave_timer.timer.tick(time.delta());
-            if next_wave_timer.timer.just_finished() {
-                wave_number.value += 1;
-                remaining.count = enemies_in_wave(wave_number.value);
-                spawn_timer.reset();
-                next_wave_timer.timer.reset();
-                apply_wave_start_stats(&mut hp, &max_hp, &regeneration);
+            wave_number.value += 1;
+            if regeneration.amount > 0 {
+                hp.amount = (hp.amount + regeneration.amount).min(max_hp.amount);
             }
+            draft.activate();
         }
         return;
     }
@@ -225,8 +222,3 @@ fn spawn_health_bar(commands: &mut Commands, enemy: Entity, enemy_size: Vec2) {
     });
 }
 
-fn apply_wave_start_stats(hp: &mut CurrentHp, max_hp: &MaxHp, regeneration: &Regeneration) {
-    if regeneration.amount > 0 {
-        hp.amount = (hp.amount + regeneration.amount).min(max_hp.amount);
-    }
-}

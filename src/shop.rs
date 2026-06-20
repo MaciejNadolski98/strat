@@ -3,14 +3,15 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText, ShopTooltip, TowerKind,
+    ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText, ShopTooltip,
 };
 use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, MaxHp, Money, PassiveIncome, PlayerStatKind, Regeneration, Shop, SpellKind,
-    SpellShop, StatUpgradeKind, TowerStatEffect, WaterDamage, WaveNumber,
+    SpellShop, StatUpgradeKind, TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage,
+    WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -81,10 +82,11 @@ pub fn update_shop_input(
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
     wave_number: Res<WaveNumber>,
+    draft: Res<TowerDraft>,
     mut spell_shop: ResMut<SpellShop>,
     mut stats: PlayerStatsMut,
 ) {
-    if game_over.value {
+    if game_over.value || draft.phase == TowerDraftPhase::Picking {
         return;
     }
 
@@ -187,30 +189,19 @@ pub fn update_shop_text(
             continue;
         };
 
-        if let Some(kind) = offer.item.tower_kind() {
-            sprite.color = kind.base_color();
-            *visibility = Visibility::Visible;
-        } else if let Some(kind) = offer.item.stat_upgrade_kind() {
+        if let Some(kind) = offer.item.stat_upgrade_kind() {
             sprite.color = kind.icon_color();
             *visibility = Visibility::Visible;
         } else if let Some(kind) = offer.item.spell_kind() {
             sprite.color = kind.icon_color();
             *visibility = Visibility::Visible;
-        }
-    }
-
-    for (barrel, mut sprite, mut visibility) in &mut slots.p2() {
-        let Some(offer) = shop.offers[barrel.index] else {
-            *visibility = Visibility::Hidden;
-            continue;
-        };
-
-        if let Some(kind) = offer.item.tower_kind() {
-            sprite.color = kind.barrel_color();
-            *visibility = Visibility::Visible;
         } else {
             *visibility = Visibility::Hidden;
         }
+    }
+
+    for (_, _, mut visibility) in &mut slots.p2() {
+        *visibility = Visibility::Hidden;
     }
 
     for (label, mut text) in &mut slots.p3() {
@@ -260,14 +251,11 @@ pub fn update_shop_tooltip(
             return;
         };
 
-        tooltip_text.0 = match offer.item.tower_kind() {
-            Some(kind) => tower_tooltip(kind, offer.cost),
-            None => match offer.item.stat_upgrade_kind() {
-                Some(kind) => upgrade_tooltip(kind, offer.cost),
-                None => match offer.item.spell_kind() {
-                    Some(kind) => spell_tooltip(kind, offer.cost),
-                    None => offer.item.name().to_string(),
-                },
+        tooltip_text.0 = match offer.item.stat_upgrade_kind() {
+            Some(kind) => upgrade_tooltip(kind, offer.cost),
+            None => match offer.item.spell_kind() {
+                Some(kind) => spell_tooltip(kind, offer.cost),
+                None => offer.item.name().to_string(),
             },
         };
         *tooltip_visibility = Visibility::Visible;
@@ -275,29 +263,6 @@ pub fn update_shop_tooltip(
     }
 }
 
-fn tower_tooltip(kind: TowerKind, cost: i32) -> String {
-    let damage = kind.damage_formula();
-    let stat_effects = kind.stat_effects();
-    let effect_text = if stat_effects.is_empty() {
-        "None".to_string()
-    } else {
-        stat_effects
-            .iter()
-            .map(|effect| effect.effect_text())
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
-    format!(
-        "{}  ${}\nDamage: {}\nRange: {:.0}\nCooldown: {:.2}s\nSplash: {:.0}\nOn buy:\n{}",
-        kind.name(),
-        cost,
-        damage,
-        kind.range(),
-        kind.cooldown(),
-        kind.explosion_radius(),
-        effect_text,
-    )
-}
 
 fn upgrade_tooltip(kind: StatUpgradeKind, cost: i32) -> String {
     format!(

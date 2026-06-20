@@ -45,9 +45,7 @@ pub struct ShopSlotIcon {
 }
 
 #[derive(Component)]
-pub struct ShopSlotBarrel {
-    pub index: usize,
-}
+pub struct ShopSlotBarrel;
 
 #[derive(Component)]
 pub struct ShopSlotLabel {
@@ -82,6 +80,32 @@ pub struct ExplosionEffect {
 
 #[derive(Component)]
 pub struct TowerRangeIndicator;
+
+#[derive(Component)]
+pub struct DraftPanel;
+
+#[derive(Component)]
+pub struct DraftSlot {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct DraftSlotIcon {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct DraftSlotBarrel {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct DraftSlotLabel {
+    pub index: usize,
+}
+
+#[derive(Component)]
+pub struct DraftHeaderText;
 
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 pub enum TowerKind {
@@ -121,10 +145,6 @@ impl TowerKind {
         self.definition().projectile_speed
     }
 
-    pub fn explosion_radius(self) -> f32 {
-        self.definition().explosion_radius
-    }
-
     pub fn upgraded_explosion_radius(self, explosion_size: f32) -> f32 {
         let base_radius = self.definition().explosion_radius;
         if base_radius > 0.0 {
@@ -156,10 +176,6 @@ impl TowerKind {
 
     pub fn barrel_offset(self) -> f32 {
         self.definition().barrel_offset
-    }
-
-    pub fn cost(self) -> u32 {
-        self.definition().cost
     }
 
     pub fn stat_effects(self) -> &'static [TowerStatEffect] {

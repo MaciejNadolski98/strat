@@ -6,17 +6,14 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, Damage, DamageDealt, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
+    AngularSpeed, Damage, DamageFormula, Enemy, ExplosionRadius, FireCooldown, Health,
     IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target, Tower,
     TowerKind, TowerRangeIndicator,
 };
-use crate::constants::GRID_SIZE;
-use crate::effects::spawn_floating_text;
-use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::projectiles::projectile_color;
 use crate::resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, Money, PathTiles, Shop, WaterDamage,
+    FireDamage, GameOver, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
 
@@ -32,90 +29,8 @@ pub struct TowerTooltipStats<'w> {
     active_spell_effects: Res<'w, ActiveSpellEffects>,
 }
 
-pub fn place_tower(
-    mut commands: Commands,
-    mouse: Res<ButtonInput<MouseButton>>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    camera: Query<(&Camera, &GlobalTransform)>,
-    towers: Query<&Transform, With<Tower>>,
-    mut money: ResMut<Money>,
-    game_over: Res<GameOver>,
-    path_tiles: Res<PathTiles>,
-    mut shop: ResMut<Shop>,
-    mut stats: PlayerStatsMut,
-) {
-    let Some(offer) = shop.selected_offer() else {
-        return;
-    };
 
-    if game_over.value || !mouse.just_pressed(MouseButton::Left) || money.amount < offer.cost {
-        return;
-    }
-
-    let Some(tower_kind) = offer.item.tower_kind() else {
-        return;
-    };
-
-    let Ok(window) = windows.single() else {
-        return;
-    };
-    let Ok((camera, camera_transform)) = camera.single() else {
-        return;
-    };
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-    let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
-        return;
-    };
-    let grid_position = snap_to_grid(world_position);
-
-    if path_tiles.can_extend_to(grid_position)
-        || !is_buildable_cell(grid_position, &path_tiles)
-        || towers
-            .iter()
-            .any(|tower| tower.translation.truncate().distance(grid_position) < GRID_SIZE * 0.5)
-    {
-        return;
-    }
-
-    money.amount -= offer.cost;
-    shop.take_selected_offer();
-    apply_tower_effects(tower_kind, &mut stats);
-
-    spawn_floating_text(
-        &mut commands,
-        format!("-${}", offer.cost),
-        grid_position + Vec2::new(-30.0, 32.0),
-        Color::srgb(1.0, 0.86, 0.20),
-        20.0,
-    );
-
-    commands
-        .spawn((
-            Sprite::from_color(tower_kind.base_color(), tower_kind.base_size()),
-            Transform::from_translation(grid_position.extend(2.0)),
-            Tower,
-            tower_kind,
-            DamageDealt { amount: 0.0 },
-            tower_kind.damage_formula(),
-            FireCooldown {
-                timer: Timer::new(
-                    Duration::from_secs_f32(tower_kind.cooldown() / stats.attack_speed_value().max(0.1)),
-                    TimerMode::Once,
-                ),
-            },
-            AngularSpeed {
-                value: tower_kind.angular_speed(),
-            },
-        ))
-        .with_child((
-            Sprite::from_color(tower_kind.barrel_color(), tower_kind.barrel_size()),
-            Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
-        ));
-}
-
-fn apply_tower_effects(kind: TowerKind, stats: &mut PlayerStatsMut) {
+pub fn apply_tower_effects(kind: TowerKind, stats: &mut PlayerStatsMut) {
     for effect in kind.stat_effects() {
         stats.apply_tower_effect(*effect);
     }

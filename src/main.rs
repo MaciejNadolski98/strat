@@ -1,5 +1,6 @@
 mod components;
 mod constants;
+mod draft;
 mod effects;
 mod enemies;
 mod game;
@@ -18,6 +19,7 @@ mod waves;
 use bevy::prelude::*;
 
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
+use draft::{place_draft_tower, update_draft_input, update_draft_ui};
 use effects::{update_explosion_effects, update_floating_text};
 use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
@@ -28,15 +30,15 @@ use resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, MaxHp, Money,
     NextWaveTimer, PassiveIncome, PathTiles, Paused, Regeneration, Shop, SpawnTimer, SpellShop,
-    WaterDamage, WaveNumber,
+    TowerDraft, WaterDamage, WaveNumber,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
 use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
 };
-use towers::{aim_towers, place_tower, progress_cooldown, update_tower_range_indicator, update_tower_tooltip};
-use waves::{RunMode, enemies_in_wave};
+use towers::{aim_towers, progress_cooldown, update_tower_range_indicator, update_tower_tooltip};
+use waves::RunMode;
 
 fn main() {
     let run_mode = RunMode::from_args(std::env::args());
@@ -68,9 +70,8 @@ fn main() {
         .insert_resource(WaterDamage { value: 0.0 })
         .insert_resource(ActiveSpellEffects::new())
         .insert_resource(WaveNumber { value: 1 })
-        .insert_resource(EnemiesRemaining {
-            count: enemies_in_wave(1),
-        })
+        .insert_resource(EnemiesRemaining { count: 0 })
+        .insert_resource(TowerDraft::new())
         .insert_resource(SpawnTimer::new())
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
@@ -93,10 +94,11 @@ fn main() {
             Update,
             (
                 progress_cooldown,
+                update_draft_input,
                 update_shop_input,
                 update_spell_input,
                 update_path_input,
-                place_tower,
+                place_draft_tower,
                 spawn_enemies,
                 move_enemies,
                 update_burning_enemies,
@@ -128,6 +130,7 @@ fn main() {
                 update_spell_tooltip,
                 update_tower_tooltip,
                 update_tower_range_indicator,
+                update_draft_ui,
             )
                 .chain()
                 .after(update_spell_slots),

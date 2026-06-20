@@ -2,6 +2,7 @@ use bevy::math::primitives::Circle;
 use bevy::prelude::*;
 
 use crate::components::{
+    DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel,
     HudText, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText,
     ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerRangeIndicator,
 };
@@ -103,6 +104,7 @@ pub fn setup(
 
     spawn_shop_slots(&mut commands);
     spawn_spell_slots(&mut commands);
+    spawn_draft_ui(&mut commands);
 }
 
 fn spawn_grid(commands: &mut Commands) {
@@ -155,7 +157,7 @@ fn spawn_shop_slots(commands: &mut Commands) {
             Sprite::from_color(Color::srgb(0.72, 0.78, 0.76), Vec2::new(9.0, 32.0)),
             Transform::from_translation(Vec3::new(x, y + 22.0, 8.0)),
             Visibility::Hidden,
-            ShopSlotBarrel { index },
+            ShopSlotBarrel,
         ));
 
         commands.spawn((
@@ -202,6 +204,70 @@ fn spawn_spell_slots(commands: &mut Commands) {
             TextShadow::default(),
             Transform::from_translation(Vec3::new(x, y - 28.0, 9.0)),
             SpellSlotLabel { index },
+        ));
+    }
+}
+
+fn spawn_draft_ui(commands: &mut Commands) {
+    let y = 30.0;
+    let start_x = -150.0;
+    let spacing = 150.0;
+
+    commands.spawn((
+        Sprite::from_color(Color::srgba(0.05, 0.07, 0.09, 0.96), Vec2::new(490.0, 210.0)),
+        Transform::from_translation(Vec3::new(0.0, y, 10.0)),
+        Visibility::Hidden,
+        DraftPanel,
+    ));
+
+    commands.spawn((
+        Text2d::new(""),
+        TextFont {
+            font_size: 17.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.92, 0.92, 0.84)),
+        TextShadow::default(),
+        Transform::from_translation(Vec3::new(0.0, y + 98.0, 14.0)),
+        Visibility::Hidden,
+        DraftHeaderText,
+    ));
+
+    for index in 0..3 {
+        let x = start_x + index as f32 * spacing;
+
+        commands.spawn((
+            Sprite::from_color(Color::srgb(0.15, 0.17, 0.16), Vec2::new(130.0, 140.0)),
+            Transform::from_translation(Vec3::new(x, y, 11.0)),
+            Visibility::Hidden,
+            DraftSlot { index },
+        ));
+
+        commands.spawn((
+            Sprite::from_color(Color::srgb(0.5, 0.5, 0.5), Vec2::new(36.0, 36.0)),
+            Transform::from_translation(Vec3::new(x, y + 20.0, 12.0)),
+            Visibility::Hidden,
+            DraftSlotIcon { index },
+        ));
+
+        commands.spawn((
+            Sprite::from_color(Color::srgb(0.72, 0.78, 0.76), Vec2::new(9.0, 32.0)),
+            Transform::from_translation(Vec3::new(x, y + 36.0, 13.0)),
+            Visibility::Hidden,
+            DraftSlotBarrel { index },
+        ));
+
+        commands.spawn((
+            Text2d::new(""),
+            TextFont {
+                font_size: 15.0,
+                ..default()
+            },
+            TextColor(Color::srgb(0.88, 0.88, 0.80)),
+            TextShadow::default(),
+            Transform::from_translation(Vec3::new(x, y - 56.0, 14.0)),
+            Visibility::Hidden,
+            DraftSlotLabel { index },
         ));
     }
 }

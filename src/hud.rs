@@ -5,12 +5,13 @@ use crate::components::{DamageDealt, HudText, Tower, TowerKind};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, PathTiles, Paused, Regeneration,
-    WaterDamage, WaveNumber,
+    TowerDraft, TowerDraftPhase, WaterDamage, WaveNumber,
 };
 use crate::waves::RunMode;
 
 #[derive(SystemParam)]
 pub struct HudStats<'w> {
+    draft: Res<'w, TowerDraft>,
     money: Res<'w, Money>,
     hp: Res<'w, CurrentHp>,
     max_hp: Res<'w, MaxHp>,
@@ -47,8 +48,10 @@ pub fn update_hud(
         "Game over - press R to restart"
     } else if stats.paused.value {
         "Paused - press Space to resume"
+    } else if stats.draft.phase == TowerDraftPhase::Placing {
+        "Left click on the map to place your tower"
     } else {
-        "Left click: place selected shop item or extend path   Space: pause"
+        "Left click: extend path    B: buy shop item    E: reroll shop    Space: pause"
     };
 
     let mut hud_text = format!(

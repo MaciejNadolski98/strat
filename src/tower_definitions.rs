@@ -23,7 +23,6 @@ pub struct TowerDefinition {
     pub base_size: Vec2,
     pub barrel_size: Vec2,
     pub barrel_offset: f32,
-    pub cost: u32,
     pub stat_effects: &'static [TowerStatEffect],
 }
 
@@ -47,7 +46,6 @@ pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition {
     base_size: Vec2::new(36.0, 36.0),
     barrel_size: Vec2::new(12.0, 38.0),
     barrel_offset: 16.0,
-    cost: 10,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
@@ -74,7 +72,6 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
     base_size: Vec2::new(40.0, 40.0),
     barrel_size: Vec2::new(18.0, 30.0),
     barrel_offset: 13.0,
-    cost: 16,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
@@ -101,7 +98,6 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
     base_size: Vec2::new(32.0, 32.0),
     barrel_size: Vec2::new(10.0, 28.0),
     barrel_offset: 12.0,
-    cost: 18,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
         TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0),
@@ -128,7 +124,6 @@ pub const TOWER_SNIPER: TowerDefinition = TowerDefinition {
     base_size: Vec2::new(36.0, 36.0),
     barrel_size: Vec2::new(8.0, 48.0),
     barrel_offset: 20.0,
-    cost: 15,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
         TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),

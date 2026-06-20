@@ -6,9 +6,8 @@ use crate::constants::STARTING_MONEY;
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
     ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, KillCount, MaxHp, Money,
-    NextWaveTimer, PathTiles, Paused, Shop, SpawnTimer, SpellShop, WaveNumber,
+    NextWaveTimer, PathTiles, Paused, Shop, SpawnTimer, SpellShop, TowerDraft, WaveNumber,
 };
-use crate::waves::enemies_in_wave;
 
 #[derive(SystemParam)]
 pub struct RestartState<'w> {
@@ -24,6 +23,7 @@ pub struct RestartState<'w> {
     next_wave_timer: ResMut<'w, NextWaveTimer>,
     shop: ResMut<'w, Shop>,
     spell_shop: ResMut<'w, SpellShop>,
+    draft: ResMut<'w, TowerDraft>,
     active_spell_effects: ResMut<'w, ActiveSpellEffects>,
     paused: ResMut<'w, Paused>,
     path_tiles: ResMut<'w, PathTiles>,
@@ -86,11 +86,12 @@ pub fn restart_game(
     state.game_won.value = false;
 
     state.wave_number.value = 1;
-    state.remaining.count = enemies_in_wave(1);
+    state.remaining.count = 0;
     state.spawn_timer.reset();
     state.next_wave_timer.timer.reset();
     *state.shop = Shop::new(1);
     *state.spell_shop = SpellShop::new();
+    *state.draft = TowerDraft::new();
     state.path_tiles.reset();
     spawn_path_visuals(&mut commands, &state.path_tiles);
     if let Ok(mut marker_transform) = end_marker.single_mut() {
