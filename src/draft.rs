@@ -160,30 +160,32 @@ pub fn place_draft_tower(
     let TowerDraftPhase::Placing(tower_kind) = draft.phase else { return; };
     apply_tower_effects(tower_kind, &mut stats);
 
-    commands
-        .spawn((
-            tower_kind.body_sprite(1.0),
-            Transform::from_translation(grid_position.extend(2.0)),
-            Tower,
-            tower_kind,
-            tower_kind.damage_formula(),
-            FireCooldown {
-                base_cooldown: tower_kind.cooldown(),
-                timer: Timer::new(
-                    Duration::from_secs_f32(
-                        tower_kind.cooldown() / stats.attack_speed_value().max(0.1),
-                    ),
-                    TimerMode::Once,
+    let mut spawner = commands.spawn((
+        tower_kind.body_sprite(1.0),
+        Transform::from_translation(grid_position.extend(2.0)),
+        Tower,
+        tower_kind,
+        tower_kind.damage_formula(),
+        FireCooldown {
+            base_cooldown: tower_kind.cooldown(),
+            timer: Timer::new(
+                Duration::from_secs_f32(
+                    tower_kind.cooldown() / stats.attack_speed_value().max(0.1),
                 ),
-            },
-            AngularSpeed {
-                value: tower_kind.angular_speed(),
-            },
-        ))
-        .with_child((
+                TimerMode::Once,
+            ),
+        },
+        AngularSpeed {
+            value: tower_kind.angular_speed(),
+        },
+    ));
+
+    if tower_kind.barrel_size() != Vec2::ZERO {
+        spawner.with_child((
             tower_kind.barrel_sprite(1.0),
             Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
         ));
+    }
 
     draft.phase = TowerDraftPhase::WaveRunning;
     remaining.count = enemies_in_wave(wave_number.value);
@@ -255,9 +257,11 @@ pub fn update_tower_phantom(
     p_transform.translation = grid_pos.extend(3.0);
     *p_visibility = Visibility::Visible;
 
-    *b_sprite = kind.barrel_sprite(ALPHA);
-    b_transform.translation = Vec3::new(grid_pos.x, grid_pos.y + kind.barrel_offset(), 4.0);
-    *b_visibility = Visibility::Visible;
+    if kind.barrel_size() != Vec2::ZERO {
+        *b_sprite = kind.barrel_sprite(ALPHA);
+        b_transform.translation = Vec3::new(grid_pos.x, grid_pos.y + kind.barrel_offset(), 4.0);
+        *b_visibility = Visibility::Visible;
+    }
 
     i_transform.translation = grid_pos.extend(1.5);
     i_transform.scale = Vec3::splat(kind.range());
