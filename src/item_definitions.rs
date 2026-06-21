@@ -42,9 +42,9 @@ pub const ITEM_COFFEE: StatUpgradeDefinition = StatUpgradeDefinition {
     icon_color: Color::srgb(0.86, 0.72, 0.24),
 };
 
-pub const ITEM_PASSIVE_INCOME: StatUpgradeDefinition = StatUpgradeDefinition {
-    name: "Income",
-    effects: &[TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0)],
+pub const ITEM_LOOT: StatUpgradeDefinition = StatUpgradeDefinition {
+    name: "loot",
+    effects: &[TowerStatEffect::new(PlayerStatKind::Loot, 1.0)],
     cost: 10,
     icon_color: Color::srgb(0.95, 0.78, 0.24),
 };

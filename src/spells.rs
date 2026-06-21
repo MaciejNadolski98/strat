@@ -2,11 +2,12 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    Burning, Enemy, Health, Reward, ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel,
+    Burning, DropsSpell, Enemy, Health, Reward, ShopTooltip, SpellSlot, SpellSlotIcon,
+    SpellSlotLabel,
 };
 use crate::effects::spawn_floating_text;
 use crate::resources::{
-    ActiveSpellEffects, FireDamage, GameOver, GameWon, KillCount, Money, PassiveIncome, SpellKind,
+    ActiveSpellEffects, FireDamage, GameOver, GameWon, KillCount, Money, Loot, SpellKind,
     SpellShop,
 };
 
@@ -142,10 +143,11 @@ pub fn update_burning_enemies(
     time: Res<Time>,
     mut money: ResMut<Money>,
     mut kills: ResMut<KillCount>,
-    passive_income: Res<PassiveIncome>,
-    mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, &mut Burning), With<Enemy>>,
+    loot: Res<Loot>,
+    mut spell_shop: ResMut<SpellShop>,
+    mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, &mut Burning, Option<&DropsSpell>), With<Enemy>>,
 ) {
-    for (entity, transform, mut health, reward, mut burning) in &mut enemies {
+    for (entity, transform, mut health, reward, mut burning, drops_spell) in &mut enemies {
         if health.current <= 0.0 {
             continue;
         }
@@ -167,16 +169,26 @@ pub fn update_burning_enemies(
             }
 
             if health.current <= 0.0 {
-                let kill_yield = reward.amount + passive_income.amount;
-                money.amount += kill_yield;
+                let kill_loot = reward.amount + loot.amount;
+                money.amount += kill_loot;
                 kills.amount += 1;
                 spawn_floating_text(
                     &mut commands,
-                    format!("+${kill_yield}"),
+                    format!("+${kill_loot}"),
                     transform.translation.truncate() + Vec2::new(34.0, 30.0),
                     Color::srgb(1.0, 0.86, 0.20),
                     19.0,
                 );
+                if drops_spell.is_some() {
+                    spell_shop.store_spell(SpellKind::random());
+                    spawn_floating_text(
+                        &mut commands,
+                        "Spell!".to_string(),
+                        transform.translation.truncate() + Vec2::new(-20.0, 52.0),
+                        Color::srgb(0.72, 0.30, 0.92),
+                        22.0,
+                    );
+                }
                 commands.entity(entity).despawn();
                 continue;
             }

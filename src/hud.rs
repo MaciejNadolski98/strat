@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::components::{DamageDealt, HudText, Tower};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameWon, KillCount, MaxHp, Money, PassiveIncome, PathTiles, Paused, Regeneration,
+    GameOver, GameWon, KillCount, MaxHp, Money, Loot, PathTiles, Paused, Regeneration,
     TowerDraft, TowerDraftPhase, WaterDamage, WaveNumber,
 };
 use crate::tower_definitions::TowerKind;
@@ -20,7 +20,7 @@ pub struct HudStats<'w> {
     wave_number: Res<'w, WaveNumber>,
     kills: Res<'w, KillCount>,
     attack_speed: Res<'w, AttackSpeed>,
-    passive_income: Res<'w, PassiveIncome>,
+    loot: Res<'w, Loot>,
     critical_chance: Res<'w, CriticalChance>,
     explosion_size: Res<'w, ExplosionSize>,
     earth_damage: Res<'w, EarthDamage>,
@@ -56,7 +56,7 @@ pub fn update_hud(
     };
 
     let mut hud_text = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}   Path tile: ${}\nAtk speed: {:.2}x   Income: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}   Path tile: ${}\nAtk speed: {:.2}x   loot: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.amount,
@@ -67,7 +67,7 @@ pub fn update_hud(
         stats.run_mode.label(),
         stats.path_tiles.extension_cost(),
         stats.attack_speed.value,
-        stats.passive_income.amount,
+        stats.loot.amount,
         stats.critical_chance.value * 100.0,
         stats.explosion_size.value,
         stats.earth_damage.value,

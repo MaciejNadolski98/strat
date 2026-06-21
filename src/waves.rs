@@ -113,6 +113,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Brute, 5, 1.8, 0.0),
             group!(Grunt, 14, 0.55, 2.0),
             group!(Runner, 6, 0.9, 8.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -127,6 +128,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Grunt, 18, 0.45, 0.0),
             group!(Brute, 6, 1.5, 2.0),
             group!(Runner, 8, 0.75, 8.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -141,6 +143,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Brute, 8, 1.2, 0.0),
             group!(Armored, 8, 1.1, 2.0),
             group!(Grunt, 16, 0.4, 6.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -155,6 +158,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Grunt, 20, 0.35, 0.0),
             group!(Brute, 10, 1.0, 2.0),
             group!(Armored, 8, 0.95, 6.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -169,6 +173,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Armored, 14, 0.75, 0.0),
             group!(Brute, 12, 0.9, 2.0),
             group!(Runner, 18, 0.4, 7.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -183,6 +188,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Runner, 24, 0.32, 0.0),
             group!(Armored, 14, 0.7, 2.0),
             group!(Brute, 12, 0.85, 6.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -197,6 +203,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Grunt, 24, 0.25, 0.0),
             group!(Runner, 24, 0.3, 1.0),
             group!(Armored, 16, 0.65, 4.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -204,6 +211,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Brute, 20, 0.65, 0.0),
             group!(Armored, 18, 0.6, 1.5),
             group!(Runner, 24, 0.28, 5.0),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
     Wave {
@@ -211,6 +219,7 @@ pub const WAVES: [Wave; WAVE_COUNT] = [
             group!(Runner, 28, 0.25, 0.0),
             group!(Brute, 22, 0.58, 1.0),
             group!(Armored, 22, 0.55, 2.5),
+            group!(Titan, 1, 30.0, 18.0),
         ],
     },
 ];

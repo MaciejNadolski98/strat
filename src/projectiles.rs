@@ -1,18 +1,19 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    Damage, DamageDealt, Enemy, ExplosionRadius, Health, IsCritical, Projectile, Reward,
-    SourceTower, Speed, Target, Tower,
+    Damage, DamageDealt, DropsSpell, Enemy, ExplosionRadius, Health, IsCritical, Projectile,
+    Reward, SourceTower, Speed, Target, Tower,
 };
 use crate::effects::{spawn_explosion_effect, spawn_floating_text};
-use crate::resources::{EnemyKilledEvent, KillCount, Money, PassiveIncome};
+use crate::resources::{EnemyKilledEvent, KillCount, Money, Loot, SpellKind, SpellShop};
 
 pub fn move_projectiles(
     mut commands: Commands,
     time: Res<Time>,
     mut money: ResMut<Money>,
     mut kills: ResMut<KillCount>,
-    passive_income: Res<PassiveIncome>,
+    loot: Res<Loot>,
+    mut spell_shop: ResMut<SpellShop>,
     mut kill_events: EventWriter<EnemyKilledEvent>,
     mut projectiles: Query<
         (
@@ -27,7 +28,7 @@ pub fn move_projectiles(
         ),
         (With<Projectile>, Without<Enemy>),
     >,
-    mut enemies: Query<(Entity, &Transform, &mut Health, &Reward), With<Enemy>>,
+    mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, Option<&DropsSpell>), With<Enemy>>,
     mut towers: Query<&mut DamageDealt, With<Tower>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -43,7 +44,7 @@ pub fn move_projectiles(
         source_tower,
     ) in &mut projectiles
     {
-        let Ok((_, enemy_transform, health, _)) = enemies.get(target.entity) else {
+        let Ok((_, enemy_transform, health, _, _)) = enemies.get(target.entity) else {
             commands.entity(projectile_entity).despawn();
             continue;
         };
@@ -60,10 +61,10 @@ pub fn move_projectiles(
 
         if to_enemy.length() <= step + 10.0 {
             let impact_position = enemy_position;
-            let mut killed = Vec::new();
+            let mut killed: Vec<(Entity, i32, Vec2, bool)> = Vec::new();
             let mut total_damage_dealt = 0.0;
 
-            if let Ok((entity, _, mut health, reward)) = enemies.get_mut(target.entity) {
+            if let Ok((entity, _, mut health, reward, drops_spell)) = enemies.get_mut(target.entity) {
                 let hp_lost = damage.amount.min(health.current).max(0.0);
                 health.current -= damage.amount;
                 if hp_lost > 0.0 {
@@ -71,7 +72,7 @@ pub fn move_projectiles(
                     spawn_damage_text(&mut commands, impact_position, hp_lost, is_critical.value);
                 }
                 if health.current <= 0.0 {
-                    killed.push((entity, reward.amount, impact_position));
+                    killed.push((entity, reward.amount, impact_position, drops_spell.is_some()));
                 }
             }
 
@@ -83,7 +84,7 @@ pub fn move_projectiles(
                     &mut meshes,
                     &mut materials,
                 );
-                for (entity, transform, mut health, reward) in &mut enemies {
+                for (entity, transform, mut health, reward, drops_spell) in &mut enemies {
                     if entity == target.entity || health.current <= 0.0 {
                         continue;
                     }
@@ -103,7 +104,7 @@ pub fn move_projectiles(
                             );
                         }
                         if health.current <= 0.0 {
-                            killed.push((entity, reward.amount, transform.translation.truncate()));
+                            killed.push((entity, reward.amount, transform.translation.truncate(), drops_spell.is_some()));
                         }
                     }
                 }
@@ -117,11 +118,21 @@ pub fn move_projectiles(
                 }
             }
 
-            for (entity, reward, position) in killed {
-                let kill_yield = reward + passive_income.amount;
-                money.amount += kill_yield;
+            for (entity, reward, position, drops_spell) in killed {
+                let kill_loot = reward + loot.amount;
+                money.amount += kill_loot;
                 kills.amount += 1;
-                spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), kill_yield);
+                spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), kill_loot);
+                if drops_spell {
+                    spell_shop.store_spell(SpellKind::random());
+                    spawn_floating_text(
+                        &mut commands,
+                        "Spell!".to_string(),
+                        position + Vec2::new(-20.0, 52.0),
+                        Color::srgb(0.72, 0.30, 0.92),
+                        22.0,
+                    );
+                }
                 commands.entity(entity).despawn();
                 kill_events.write(EnemyKilledEvent { source_tower: source_tower.entity });
             }

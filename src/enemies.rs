@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
+    DropsSpell, Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
 };
 use crate::resources::{
     ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NewRoundEvent, PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
@@ -70,27 +70,30 @@ pub fn spawn_enemies(
 fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, path_tiles: &PathTiles) {
     let max_health = kind.max_health(wave_number);
     let size = kind.size();
-    let enemy = commands
-        .spawn((
-            Sprite::from_color(enemy_color(kind, 1.0), size),
-            Transform::from_translation(path_tiles.start().extend(3.0)),
-            Enemy,
-            kind,
-            Waypoint { index: 1 },
-            PathProgress { distance: 0.0 },
-            Health {
-                current: max_health,
-                max: max_health,
-            },
-            Speed {
-                value: kind.speed(wave_number),
-            },
-            Reward {
-                amount: kind.reward(),
-            },
-        ))
-        .id();
+    let mut spawner = commands.spawn((
+        Sprite::from_color(enemy_color(kind, 1.0), size),
+        Transform::from_translation(path_tiles.start().extend(3.0)),
+        Enemy,
+        kind,
+        Waypoint { index: 1 },
+        PathProgress { distance: 0.0 },
+        Health {
+            current: max_health,
+            max: max_health,
+        },
+        Speed {
+            value: kind.speed(wave_number),
+        },
+        Reward {
+            amount: kind.reward(),
+        },
+    ));
 
+    if matches!(kind, EnemyKind::Titan) {
+        spawner.insert(DropsSpell);
+    }
+
+    let enemy = spawner.id();
     spawn_health_bar(commands, enemy, size);
 }
 

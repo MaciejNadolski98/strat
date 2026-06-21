@@ -9,9 +9,8 @@ use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, MaxHp, Money, PassiveIncome, PlayerStatKind, Regeneration, Shop, SpellKind,
-    SpellShop, StatUpgradeKind, TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage,
-    WaveNumber,
+    GameOver, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop, StatUpgradeKind,
+    TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -20,7 +19,7 @@ pub struct PlayerStatsMut<'w> {
     max_hp: ResMut<'w, MaxHp>,
     regeneration: ResMut<'w, Regeneration>,
     attack_speed: ResMut<'w, AttackSpeed>,
-    passive_income: ResMut<'w, PassiveIncome>,
+    loot: ResMut<'w, Loot>,
     critical_chance: ResMut<'w, CriticalChance>,
     explosion_size: ResMut<'w, ExplosionSize>,
     earth_damage: ResMut<'w, EarthDamage>,
@@ -49,9 +48,9 @@ impl<'w> PlayerStatsMut<'w> {
             PlayerStatKind::AttackSpeed => {
                 self.attack_speed.value = (self.attack_speed.value + delta).max(0.1);
             }
-            PlayerStatKind::PassiveIncome => {
-                self.passive_income.amount =
-                    (self.passive_income.amount + delta.round() as i32).max(0);
+            PlayerStatKind::Loot => {
+                self.loot.amount =
+                    (self.loot.amount + delta.round() as i32).max(0);
             }
             PlayerStatKind::CriticalChance => {
                 self.critical_chance.value = (self.critical_chance.value + delta).clamp(0.0, 1.0);
@@ -87,7 +86,6 @@ pub fn update_shop_input(
     game_over: Res<GameOver>,
     wave_number: Res<WaveNumber>,
     draft: Res<TowerDraft>,
-    mut spell_shop: ResMut<SpellShop>,
     mut stats: PlayerStatsMut,
 ) {
     if game_over.value || draft.phase == TowerDraftPhase::Picking {
@@ -126,23 +124,6 @@ pub fn update_shop_input(
             money.amount -= offer.cost;
             shop.take_offer(selected);
             apply_stat_upgrade(upgrade, &mut stats);
-            spawn_floating_text(
-                &mut commands,
-                format!("-${}", offer.cost),
-                Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
-                Color::srgb(1.0, 0.86, 0.20),
-                20.0,
-            );
-            return;
-        }
-
-        if let Some(spell) = offer.item.spell_kind() {
-            if !spell_shop.store_spell(spell) {
-                return;
-            }
-
-            money.amount -= offer.cost;
-            shop.take_offer(selected);
             spawn_floating_text(
                 &mut commands,
                 format!("-${}", offer.cost),
@@ -221,9 +202,6 @@ pub fn update_shop_text(
         if let Some(kind) = offer.item.stat_upgrade_kind() {
             sprite.color = kind.icon_color();
             *visibility = Visibility::Visible;
-        } else if let Some(kind) = offer.item.spell_kind() {
-            sprite.color = kind.icon_color();
-            *visibility = Visibility::Visible;
         } else {
             *visibility = Visibility::Hidden;
         }
@@ -282,10 +260,7 @@ pub fn update_shop_tooltip(
 
         tooltip_text.0 = match offer.item.stat_upgrade_kind() {
             Some(kind) => upgrade_tooltip(kind, offer.cost),
-            None => match offer.item.spell_kind() {
-                Some(kind) => spell_tooltip(kind, offer.cost),
-                None => offer.item.name().to_string(),
-            },
+            None => offer.item.name().to_string(),
         };
         *tooltip_visibility = Visibility::Visible;
         return;
@@ -299,15 +274,6 @@ fn upgrade_tooltip(kind: StatUpgradeKind, cost: i32) -> String {
         kind.name(),
         cost,
         kind.effect_text()
-    )
-}
-
-fn spell_tooltip(kind: SpellKind, cost: i32) -> String {
-    format!(
-        "{}  ${}\nOne use spell\n{}\nBuys into the first free spell slot",
-        kind.name(),
-        cost,
-        kind.description()
     )
 }
 

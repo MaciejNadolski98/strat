@@ -123,6 +123,7 @@ pub enum EnemyKind {
     Runner,
     Brute,
     Armored,
+    Titan,
 }
 
 impl EnemyKind {
@@ -132,6 +133,7 @@ impl EnemyKind {
             Self::Runner => 48.0,
             Self::Brute => 130.0,
             Self::Armored => 102.0,
+            Self::Titan => 450.0,
         };
         let wave_growth = (1.0 + MAX_HEALTH_GROWTH).powi(wave.saturating_sub(1) as i32);
 
@@ -144,6 +146,7 @@ impl EnemyKind {
             Self::Runner => 92.0 + wave as f32 * 5.0,
             Self::Brute => 38.0 + wave as f32 * 2.0,
             Self::Armored => 54.0 + wave as f32 * 2.5,
+            Self::Titan => 20.0 + wave as f32 * 0.5,
         }
     }
 
@@ -153,6 +156,7 @@ impl EnemyKind {
             Self::Grunt => 2,
             Self::Armored => 4,
             Self::Brute => 5,
+            Self::Titan => 15,
         }
     }
 
@@ -162,6 +166,7 @@ impl EnemyKind {
             Self::Runner => Vec2::new(20.0, 20.0),
             Self::Brute => Vec2::new(34.0, 34.0),
             Self::Armored => Vec2::new(28.0, 28.0),
+            Self::Titan => Vec2::new(50.0, 50.0),
         }
     }
 
@@ -171,9 +176,13 @@ impl EnemyKind {
             Self::Runner => ((0.98, 0.45, 0.12), (0.94, 0.82, 0.24)),
             Self::Brute => ((0.45, 0.12, 0.11), (0.72, 0.22, 0.18)),
             Self::Armored => ((0.25, 0.28, 0.35), (0.42, 0.58, 0.72)),
+            Self::Titan => ((0.22, 0.05, 0.30), (0.55, 0.15, 0.75)),
         }
     }
 }
+
+#[derive(Component)]
+pub struct DropsSpell;
 
 #[derive(Component)]
 pub struct FireCooldown {

@@ -32,6 +32,6 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
     barrel_offset: 12.0,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
-        TowerStatEffect::new(PlayerStatKind::PassiveIncome, 1.0),
+        TowerStatEffect::new(PlayerStatKind::Loot, 1.0),
     ],
 };

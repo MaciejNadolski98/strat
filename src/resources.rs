@@ -53,7 +53,7 @@ pub struct AttackSpeed {
 }
 
 #[derive(Resource)]
-pub struct PassiveIncome {
+pub struct Loot {
     pub amount: i32,
 }
 
@@ -189,28 +189,24 @@ pub enum SpellKind {
 pub struct SpellDefinition {
     pub name: &'static str,
     pub description: &'static str,
-    pub cost: u32,
     pub icon_color: Color,
 }
 
 const IGNITE_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
     name: "Ignite",
     description: "Sets all enemies on fire, scaling with fire damage",
-    cost: 7,
     icon_color: Color::srgb(0.92, 0.26, 0.12),
 };
 
 const ELEMENTAL_SURGE_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
     name: "Surge",
     description: "Doubles elemental damage until wave end",
-    cost: 15,
     icon_color: Color::srgb(0.30, 0.62, 0.92),
 };
 
 const SLOW_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
     name: "Slow",
     description: "Slows all enemies until wave end",
-    cost: 10,
     icon_color: Color::srgb(0.42, 0.82, 0.92),
 };
 
@@ -237,10 +233,6 @@ impl SpellKind {
 
     pub fn description(self) -> &'static str {
         self.definition().description
-    }
-
-    pub fn cost(self) -> u32 {
-        self.definition().cost
     }
 
     pub fn icon_color(self) -> Color {
@@ -299,7 +291,7 @@ pub enum PlayerStatKind {
     MaxHp,
     Regeneration,
     AttackSpeed,
-    PassiveIncome,
+    Loot,
     CriticalChance,
     ExplosionSize,
     EarthDamage,
@@ -314,7 +306,7 @@ impl PlayerStatKind {
             Self::MaxHp => "Max HP",
             Self::Regeneration => "Regen",
             Self::AttackSpeed => "Atk Speed",
-            Self::PassiveIncome => "Income",
+            Self::Loot => "loot",
             Self::CriticalChance => "Crit",
             Self::ExplosionSize => "Splash",
             Self::EarthDamage => "Earth",
@@ -363,7 +355,7 @@ pub enum StatUpgradeKind {
     MaxHp,
     Regeneration,
     AttackSpeed,
-    PassiveIncome,
+    Loot,
     CriticalChance,
     ExplosionSize,
     EarthDamage,
@@ -382,7 +374,7 @@ impl StatUpgradeKind {
             0 => Self::MaxHp,
             1 => Self::Regeneration,
             2 => Self::AttackSpeed,
-            3 => Self::PassiveIncome,
+            3 => Self::Loot,
             4 => Self::CriticalChance,
             5 => Self::ExplosionSize,
             6 => Self::EarthDamage,
@@ -401,7 +393,7 @@ impl StatUpgradeKind {
             Self::MaxHp => &ITEM_POTATO,
             Self::Regeneration => &ITEM_MEDS,
             Self::AttackSpeed => &ITEM_COFFEE,
-            Self::PassiveIncome => &ITEM_PASSIVE_INCOME,
+            Self::Loot => &ITEM_LOOT,
             Self::CriticalChance => &ITEM_CRITICAL_CHANCE,
             Self::ExplosionSize => &ITEM_EXPLOSION_SIZE,
             Self::EarthDamage => &ITEM_EARTH_DAMAGE,
@@ -485,43 +477,28 @@ fn scale_price(base_price: u32, wave: u32) -> i32 {
 #[derive(Clone, Copy)]
 pub enum ShopItem {
     StatUpgrade(StatUpgradeKind),
-    Spell(SpellKind),
 }
 
 impl ShopItem {
     pub fn random() -> Self {
-        if rand::random::<f32>() < 0.70 {
-            Self::StatUpgrade(StatUpgradeKind::random())
-        } else {
-            Self::Spell(SpellKind::random())
-        }
+        Self::StatUpgrade(StatUpgradeKind::random())
     }
 
     pub fn name(self) -> &'static str {
         match self {
             Self::StatUpgrade(kind) => kind.name(),
-            Self::Spell(kind) => kind.name(),
         }
     }
 
     pub fn stat_upgrade_kind(self) -> Option<StatUpgradeKind> {
         match self {
-            Self::Spell(_) => None,
             Self::StatUpgrade(kind) => Some(kind),
-        }
-    }
-
-    pub fn spell_kind(self) -> Option<SpellKind> {
-        match self {
-            Self::StatUpgrade(_) => None,
-            Self::Spell(kind) => Some(kind),
         }
     }
 
     pub fn cost(self, wave: u32) -> i32 {
         match self {
             Self::StatUpgrade(kind) => scale_price(kind.cost(), wave),
-            Self::Spell(kind) => scale_price(kind.cost(), wave),
         }
     }
 }

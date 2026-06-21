@@ -30,7 +30,7 @@ use projectiles::move_projectiles;
 use resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
-    MaxHp, Money, NextWaveTimer, PassiveIncome, PathTiles, Paused, Regeneration, Shop, SpawnTimer,
+    MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Regeneration, Shop, SpawnTimer,
     SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 use setup::setup;
@@ -67,7 +67,7 @@ fn main() {
         .insert_resource(Paused { value: false })
         .insert_resource(Regeneration { amount: 1 })
         .insert_resource(AttackSpeed { value: 1.0 })
-        .insert_resource(PassiveIncome { amount: 2 })
+        .insert_resource(Loot { amount: 2 })
         .insert_resource(CriticalChance { value: 0.12 })
         .insert_resource(ExplosionSize { value: 0.0 })
         .insert_resource(EarthDamage { value: 0.0 })
