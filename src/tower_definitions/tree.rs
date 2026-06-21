@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::components::{DamageFormula, Enemy, FireCooldown, Health, Speed};
+use crate::components::{DamageFormula, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
 use crate::effects::spawn_floating_text;
-use crate::enemies::{move_enemies, reset_enemy_speeds};
+use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Loot, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tower_definitions::TowerKind;
@@ -22,7 +22,7 @@ impl Plugin for TreePlugin {
         app.add_systems(
             Update,
             apply_tree_aura
-                .after(reset_enemy_speeds)
+                .after(reset_temporary_enemy_speed)
                 .before(move_enemies)
                 .run_if(game_is_running),
         );
@@ -31,7 +31,7 @@ impl Plugin for TreePlugin {
 
 pub const TOWER_TREE: TowerDefinition = TowerDefinition {
     name: "Tree",
-    range: 180.0,
+    range: 87.0,
     cooldown: 4.0,
     damage_formula: DamageFormula {
         flat: 0,
@@ -88,7 +88,7 @@ fn apply_tree_aura(
     water_damage: Res<WaterDamage>,
     loot: Res<Loot>,
     mut tree_towers: Query<(&Transform, &mut FireCooldown), With<TreeTower>>,
-    mut enemies: Query<(&Transform, &Health, &mut Speed), With<Enemy>>,
+    mut enemies: Query<(&Transform, &Health, &mut TemporaryEnemySpeed), With<Enemy>>,
 ) {
     let slow_mult = tree_slow_multiplier(earth_damage.value);
     let income_per_enemy = tree_income_per_enemy(water_damage.value);
@@ -103,7 +103,7 @@ fn apply_tree_aura(
 
         let mut enemies_in_range: u32 = 0;
 
-        for (enemy_transform, health, mut speed) in &mut enemies {
+        for (enemy_transform, health, mut temp_speed) in &mut enemies {
             if health.current <= 0.0 {
                 continue;
             }
@@ -112,7 +112,7 @@ fn apply_tree_aura(
                 continue;
             }
 
-            speed.value *= slow_mult;
+            temp_speed.multiplier *= slow_mult;
             enemies_in_range += 1;
         }
 

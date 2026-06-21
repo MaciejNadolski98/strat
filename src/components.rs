@@ -190,6 +190,22 @@ pub struct FireCooldown {
     pub timer: Timer,
 }
 
+#[derive(Component, Default)]
+pub struct TemporaryAttackSpeed {
+    pub bonus: f32,
+}
+
+#[derive(Component)]
+pub struct TemporaryEnemySpeed {
+    pub multiplier: f32,
+}
+
+impl Default for TemporaryEnemySpeed {
+    fn default() -> Self {
+        Self { multiplier: 1.0 }
+    }
+}
+
 #[derive(Component)]
 pub struct AngularSpeed {
     pub value: f32,

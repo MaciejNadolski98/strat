@@ -1,19 +1,17 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    DropsSpell, Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed, Waypoint,
+    DropsSpell, Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed,
+    TemporaryEnemySpeed, Waypoint,
 };
 use crate::resources::{
     ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NewRoundEvent, PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
 };
 use crate::waves::{RunMode, wave};
 
-pub fn reset_enemy_speeds(
-    wave_number: Res<WaveNumber>,
-    mut enemies: Query<(&EnemyKind, &mut Speed), With<Enemy>>,
-) {
-    for (kind, mut speed) in &mut enemies {
-        speed.value = kind.speed(wave_number.value);
+pub fn reset_temporary_enemy_speed(mut enemies: Query<&mut TemporaryEnemySpeed, With<Enemy>>) {
+    for mut temp in &mut enemies {
+        temp.multiplier = 1.0;
     }
 }
 
@@ -96,6 +94,7 @@ fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, path_
         Reward {
             amount: kind.reward(),
         },
+        TemporaryEnemySpeed::default(),
     ));
 
     if matches!(kind, EnemyKind::Titan) {
@@ -121,6 +120,7 @@ pub fn move_enemies(
             &mut PathProgress,
             &Health,
             &Speed,
+            &TemporaryEnemySpeed,
         ),
         With<Enemy>,
     >,
@@ -129,7 +129,7 @@ pub fn move_enemies(
         return;
     }
 
-    for (entity, mut transform, mut waypoint, mut progress, health, speed) in &mut enemies {
+    for (entity, mut transform, mut waypoint, mut progress, health, speed, temp_speed) in &mut enemies {
         if health.current <= 0.0 {
             continue;
         }
@@ -144,7 +144,7 @@ pub fn move_enemies(
         };
         let position = transform.translation.truncate();
         let to_target = target - position;
-        let step = speed.value * active_spell_effects.enemy_speed_multiplier * time.delta_secs();
+        let step = speed.value * temp_speed.multiplier * active_spell_effects.enemy_speed_multiplier * time.delta_secs();
         progress.distance += step;
 
         if to_target.length() <= step {

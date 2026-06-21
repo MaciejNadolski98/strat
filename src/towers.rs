@@ -7,8 +7,8 @@ use bevy::window::PrimaryWindow;
 
 use crate::components::{
     AngularSpeed, Damage, DamageFormula, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health,
-    IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target, Tower,
-    TowerRangeIndicator,
+    IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target,
+    TemporaryAttackSpeed, Tower, TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
@@ -135,16 +135,23 @@ pub fn tower_tooltip(
     )
 }
 
+pub fn reset_temporary_attack_speed(mut towers: Query<&mut TemporaryAttackSpeed, With<Tower>>) {
+    for mut temp in &mut towers {
+        temp.bonus = 0.0;
+    }
+}
+
 pub fn progress_cooldown(
-    mut towers: Query<&mut FireCooldown, With<Tower>>,
+    mut towers: Query<(&mut FireCooldown, &TemporaryAttackSpeed), With<Tower>>,
     time: Res<Time>,
     attack_speed: Res<AttackSpeed>,
 ) {
     let delta = time.delta();
-    for mut cooldown in &mut towers {
+    for (mut cooldown, temp_speed) in &mut towers {
         let base_cooldown = cooldown.base_cooldown;
+        let effective_speed = (attack_speed.value + temp_speed.bonus).max(0.1);
         cooldown.timer.set_duration(Duration::from_secs_f32(
-            base_cooldown / attack_speed.value.max(0.1),
+            base_cooldown / effective_speed,
         ));
         cooldown.timer.tick(delta);
     }

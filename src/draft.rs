@@ -5,8 +5,8 @@ use bevy::window::PrimaryWindow;
 
 use crate::components::{
     AngularSpeed, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
-    DraftSlotIcon, DraftSlotLabel, FireCooldown, Tower, TowerPhantom, TowerPhantomBarrel,
-    TowerRangeIndicator,
+    DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, Tower, TowerPhantom,
+    TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::constants::GRID_SIZE;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
@@ -186,6 +186,7 @@ pub fn place_draft_tower(
         AngularSpeed {
             value: tower_kind.angular_speed(),
         },
+        TemporaryAttackSpeed::default(),
     ));
 
     if tower_kind.barrel_size() != Vec2::ZERO {

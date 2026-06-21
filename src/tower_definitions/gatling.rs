@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
-use crate::components::{DamageFormula, FireCooldown};
+use crate::components::{DamageFormula, TemporaryAttackSpeed};
 use crate::game::game_is_running;
 use crate::resources::{NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
+use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
 use crate::tower_definitions::TowerKind;
 use super::TowerDefinition;
 
@@ -12,12 +13,13 @@ impl Plugin for GatlingPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (
-                attach_gatling_tower,
-                accelerate,
-                decelerate,
-                reset,
-            )
+            (attach_gatling_tower, accelerate, reset).run_if(game_is_running),
+        );
+        app.add_systems(
+            Update,
+            decelerate
+                .after(reset_temporary_attack_speed)
+                .before(progress_cooldown)
                 .run_if(game_is_running),
         );
     }
@@ -49,8 +51,17 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
     custom_tooltip: None,
 };
 
+const MAX_SHOTS: f32 = 8.0;
+const SPEED_PER_SHOT: f32 = 0.2;
+const SHOT_DECAY_RATE: f32 = 1.0;
+
 #[derive(Component)]
 struct GatlingTower;
+
+#[derive(Component, Default)]
+struct GatlingWindUp {
+    shots: f32,
+}
 
 fn attach_gatling_tower(
     mut commands: Commands,
@@ -58,41 +69,40 @@ fn attach_gatling_tower(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == TowerKind::Gatling {
-            commands.entity(entity).insert(GatlingTower);
+            commands.entity(entity).insert((GatlingTower, GatlingWindUp::default()));
         }
     }
 }
 
 fn accelerate(
     mut events: EventReader<ShootEvent>,
-    mut towers: Query<&mut FireCooldown, With<GatlingTower>>,
+    mut towers: Query<&mut GatlingWindUp, With<GatlingTower>>,
 ) {
     for event in events.read() {
-        if let Ok(mut cooldown) = towers.get_mut(event.source_tower) {
-            let current_cooldown = cooldown.base_cooldown;
-            cooldown.base_cooldown = (current_cooldown - 0.2).max(0.1);
+        if let Ok(mut windup) = towers.get_mut(event.source_tower) {
+            windup.shots = (windup.shots + 1.0).min(MAX_SHOTS);
         }
     }
 }
 
 fn decelerate(
-    towers: Query<&mut FireCooldown, With<GatlingTower>>,
+    mut towers: Query<(&mut GatlingWindUp, &mut TemporaryAttackSpeed), With<GatlingTower>>,
     time: Res<Time>,
 ) {
     let delta = time.delta_secs();
-    for mut cooldown in towers {
-        let current_cooldown = cooldown.base_cooldown;
-        cooldown.base_cooldown = (current_cooldown + delta / 3.0).min(TOWER_GATLING.cooldown);
+    for (mut windup, mut temp_speed) in &mut towers {
+        windup.shots = (windup.shots - delta * SHOT_DECAY_RATE).max(0.0);
+        temp_speed.bonus = windup.shots * SPEED_PER_SHOT;
     }
 }
 
 fn reset(
     mut events: EventReader<NewRoundEvent>,
-    towers: Query<&mut FireCooldown, With<GatlingTower>>,
+    mut towers: Query<&mut GatlingWindUp, With<GatlingTower>>,
 ) {
     if events.read().next().is_some() {
-        for mut cooldown in towers {
-            cooldown.base_cooldown = TOWER_GATLING.cooldown;
+        for mut windup in &mut towers {
+            windup.shots = 0.0;
         }
     }
 }

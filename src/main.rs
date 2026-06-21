@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
 use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text};
-use enemies::{move_enemies, reset_enemy_speeds, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
+use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
 use tower_definitions::TowerDefinitionPlugins;
 use hud::update_hud;
@@ -39,8 +39,8 @@ use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
 };
 use towers::{
-    aim_towers, progress_cooldown, update_draft_tooltip, update_tower_range_indicator,
-    update_tower_tooltip,
+    aim_towers, progress_cooldown, reset_temporary_attack_speed, update_draft_tooltip,
+    update_tower_range_indicator, update_tower_tooltip,
 };
 use waves::RunMode;
 
@@ -105,6 +105,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                reset_temporary_attack_speed,
                 progress_cooldown,
                 place_draft_tower,
                 update_draft_input,
@@ -112,7 +113,7 @@ fn main() {
                 update_spell_input,
                 update_path_input,
                 spawn_enemies,
-                reset_enemy_speeds,
+                reset_temporary_enemy_speed,
                 move_enemies,
                 update_burning_enemies,
                 aim_towers,
