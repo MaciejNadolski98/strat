@@ -22,6 +22,10 @@ impl Plugin for GatlingPlugin {
                 .before(progress_cooldown)
                 .run_if(game_is_running),
         );
+        app.add_systems(
+            Update,
+            update_windup_bar.after(decelerate).run_if(game_is_running),
+        );
     }
 }
 
@@ -63,13 +67,60 @@ struct GatlingWindUp {
     shots: f32,
 }
 
+#[derive(Component)]
+struct GatlingWindUpBar {
+    owner: Entity,
+    width: f32,
+    fill: bool,
+}
+
+const BAR_WIDTH: f32 = 32.0;
+const BAR_HEIGHT: f32 = 4.0;
+const BAR_Y: f32 = -24.0;
+
 fn attach_gatling_tower(
     mut commands: Commands,
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
         if *kind == TowerKind::Gatling {
-            commands.entity(entity).insert((GatlingTower, GatlingWindUp::default()));
+            commands.entity(entity)
+                .insert((GatlingTower, GatlingWindUp::default()))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Sprite::from_color(
+                            Color::srgb(0.08, 0.08, 0.12),
+                            Vec2::new(BAR_WIDTH + 2.0, BAR_HEIGHT + 2.0),
+                        ),
+                        Transform::from_translation(Vec3::new(0.0, BAR_Y, 2.0)),
+                        Visibility::Hidden,
+                        GatlingWindUpBar { owner: entity, width: BAR_WIDTH, fill: false },
+                    ));
+                    parent.spawn((
+                        Sprite::from_color(
+                            Color::srgb(0.30, 0.65, 1.0),
+                            Vec2::new(BAR_WIDTH, BAR_HEIGHT),
+                        ),
+                        Transform::from_translation(Vec3::new(0.0, BAR_Y, 3.0)),
+                        Visibility::Hidden,
+                        GatlingWindUpBar { owner: entity, width: BAR_WIDTH, fill: true },
+                    ));
+                });
+        }
+    }
+}
+
+fn update_windup_bar(
+    towers: Query<&GatlingWindUp, With<GatlingTower>>,
+    mut bars: Query<(&GatlingWindUpBar, &mut Transform, &mut Visibility)>,
+) {
+    for (bar, mut transform, mut visibility) in &mut bars {
+        let Ok(windup) = towers.get(bar.owner) else { continue; };
+        let ratio = (windup.shots / MAX_SHOTS).clamp(0.0, 1.0);
+        *visibility = if ratio > 0.0 { Visibility::Visible } else { Visibility::Hidden };
+        if bar.fill {
+            transform.scale.x = ratio;
+            transform.translation.x = -bar.width * (1.0 - ratio) * 0.5;
         }
     }
 }
