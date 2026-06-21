@@ -8,6 +8,15 @@ use crate::resources::{
 };
 use crate::waves::{RunMode, wave};
 
+pub fn reset_enemy_speeds(
+    wave_number: Res<WaveNumber>,
+    mut enemies: Query<(&EnemyKind, &mut Speed), With<Enemy>>,
+) {
+    for (kind, mut speed) in &mut enemies {
+        speed.value = kind.speed(wave_number.value);
+    }
+}
+
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,

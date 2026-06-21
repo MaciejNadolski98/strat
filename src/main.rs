@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
 use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text};
-use enemies::{move_enemies, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
+use enemies::{move_enemies, reset_enemy_speeds, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, restart_game, toggle_pause};
 use tower_definitions::TowerDefinitionPlugins;
 use hud::update_hud;
@@ -112,6 +112,7 @@ fn main() {
                 update_spell_input,
                 update_path_input,
                 spawn_enemies,
+                reset_enemy_speeds,
                 move_enemies,
                 update_burning_enemies,
                 aim_towers,

@@ -4,6 +4,7 @@ pub mod cannon;
 pub mod golem;
 pub mod sniper;
 pub mod sprayer;
+pub mod tree;
 
 pub use ballista::TOWER_BALLISTA;
 pub use gatling::TOWER_GATLING;
@@ -11,6 +12,7 @@ pub use cannon::TOWER_CANNON;
 pub use golem::TOWER_GOLEM;
 pub use sniper::TOWER_SNIPER;
 pub use sprayer::TOWER_SPRAYER;
+pub use tree::TOWER_TREE;
 
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
@@ -27,6 +29,7 @@ pub enum TowerKind {
     Sprayer,
     Sniper,
     Golem,
+    Tree,
 }
 
 impl TowerKind {
@@ -38,6 +41,7 @@ impl TowerKind {
             Self::Sprayer => &TOWER_SPRAYER,
             Self::Sniper => &TOWER_SNIPER,
             Self::Golem => &TOWER_GOLEM,
+            Self::Tree => &TOWER_TREE,
         }
     }
 
@@ -107,13 +111,14 @@ impl TowerKind {
     }
 }
 
-pub const ALL_TOWER_KINDS: [TowerKind; 6] = [
+pub const ALL_TOWER_KINDS: [TowerKind; 7] = [
     TowerKind::Ballista,
     TowerKind::Gatling,
     TowerKind::Cannon,
     TowerKind::Sprayer,
     TowerKind::Sniper,
     TowerKind::Golem,
+    TowerKind::Tree,
 ];
 
 #[derive(Clone, Copy)]
@@ -131,6 +136,7 @@ pub struct TowerDefinition {
     pub barrel_size: Vec2,
     pub barrel_offset: f32,
     pub stat_effects: &'static [TowerStatEffect],
+    pub custom_tooltip: Option<fn(f32, f32) -> String>,
 }
 
 pub struct TowerDefinitionPlugins;
@@ -144,5 +150,6 @@ impl PluginGroup for TowerDefinitionPlugins {
             .add(sprayer::SprayerPlugin)
             .add(sniper::SniperPlugin)
             .add(golem::GolemPlugin)
+            .add(tree::TreePlugin)
     }
 }

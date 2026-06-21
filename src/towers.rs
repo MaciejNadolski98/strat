@@ -12,10 +12,11 @@ use crate::components::{
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
-    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize, FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage
+    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
+    FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
-use crate::tower_definitions::TowerKind;
+use crate::tower_definitions::{TowerKind, tree::TreeTower};
 
 #[derive(SystemParam)]
 pub struct TowerTooltipStats<'w> {
@@ -85,6 +86,10 @@ pub fn tower_tooltip(
     damage_formula: &DamageFormula,
     stats: &TowerTooltipStats,
 ) -> String {
+    if let Some(custom_fn) = kind.definition().custom_tooltip {
+        return custom_fn(stats.earth_damage.value, stats.water_damage.value);
+    }
+
     let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
     let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
         &stats.earth_damage,
@@ -156,7 +161,7 @@ pub fn aim_towers(
             &mut FireCooldown,
             &AngularSpeed,
         ),
-        With<Tower>,
+        (With<Tower>, Without<TreeTower>),
     >,
     enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
     game_over: Res<GameOver>,

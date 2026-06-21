@@ -43,6 +43,7 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
     barrel_size: Vec2::new(14.0, 34.0),
     barrel_offset: 15.0,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
+    custom_tooltip: None,
 };
 
 fn attach_golem_kill_count(

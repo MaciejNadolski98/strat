@@ -46,6 +46,7 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
     ],
+    custom_tooltip: None,
 };
 
 #[derive(Component)]

@@ -34,4 +34,5 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
         TowerStatEffect::new(PlayerStatKind::Loot, 1.0),
     ],
+    custom_tooltip: None,
 };
