@@ -55,7 +55,7 @@ pub fn update_draft_ui(
         Query<(&mut Text2d, &mut Visibility), With<DraftHeaderText>>,
         Query<(&DraftSlot, &Transform, &mut Sprite, &mut Visibility)>,
         Query<(&DraftSlotIcon, &mut Sprite, &mut Visibility)>,
-        Query<(&DraftSlotBarrel, &mut Sprite, &mut Visibility)>,
+        Query<(&DraftSlotBarrel, &mut Sprite, &mut Visibility, &mut Transform)>,
         Query<(&DraftSlotLabel, &mut Text2d, &mut Visibility)>,
     )>,
 ) {
@@ -100,14 +100,22 @@ pub fn update_draft_ui(
     for (icon, mut sprite, mut visibility) in &mut queries.p3() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
-            sprite.color = draft.offers[icon.index].base_color();
+            let kind = draft.offers[icon.index];
+            sprite.color = kind.base_color();
+            sprite.custom_size = Some(kind.base_size());
         }
     }
 
-    for (barrel, mut sprite, mut visibility) in &mut queries.p4() {
-        *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
-        if is_visible {
-            sprite.color = draft.offers[barrel.index].barrel_color();
+    for (barrel, mut sprite, mut visibility, mut transform) in &mut queries.p4() {
+        let kind = draft.offers[barrel.index];
+        let has_barrel = kind.barrel_size() != Vec2::ZERO;
+        *visibility = if is_visible && has_barrel { Visibility::Visible } else { Visibility::Hidden };
+        if is_visible && has_barrel {
+            sprite.color = kind.barrel_color();
+            sprite.custom_size = Some(kind.barrel_size());
+            // icon center is at y=50 (panel y=30 + offset 20); barrel sits barrel_offset above that
+            let slot_x = -150.0 + barrel.index as f32 * 150.0;
+            transform.translation = Vec3::new(slot_x, 50.0 + kind.barrel_offset(), 13.0);
         }
     }
 
