@@ -89,7 +89,9 @@ pub struct TowerKillCount {
 pub struct TowerPhantom;
 
 #[derive(Component)]
-pub struct TowerPhantomBarrel;
+pub struct TowerPhantomBarrel {
+    pub sub_index: usize,
+}
 
 #[derive(Component)]
 pub struct DraftPanel;
@@ -107,6 +109,7 @@ pub struct DraftSlotIcon {
 #[derive(Component)]
 pub struct DraftSlotBarrel {
     pub index: usize,
+    pub sub_index: usize,
 }
 
 #[derive(Component)]

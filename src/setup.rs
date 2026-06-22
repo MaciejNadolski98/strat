@@ -104,22 +104,25 @@ pub fn setup(
     ));
 
     commands.spawn((
-        Sprite::from_color(Color::srgba(0.0, 0.0, 0.0, 0.0), Vec2::new(40.0, 40.0)),
+        Mesh2d(meshes.add(bevy::math::primitives::Rectangle::new(40.0, 40.0))),
+        MeshMaterial2d(materials.add(Color::srgba(0.0, 0.0, 0.0, 0.0))),
         Transform::from_translation(Vec3::new(0.0, 0.0, 3.0)),
         Visibility::Hidden,
         TowerPhantom,
     ));
 
-    commands.spawn((
-        Sprite::from_color(Color::srgba(0.0, 0.0, 0.0, 0.0), Vec2::new(9.0, 32.0)),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 4.0)),
-        Visibility::Hidden,
-        TowerPhantomBarrel,
-    ));
+    for sub_index in 0..2 {
+        commands.spawn((
+            Sprite::from_color(Color::srgba(0.0, 0.0, 0.0, 0.0), Vec2::new(9.0, 32.0)),
+            Transform::from_translation(Vec3::new(0.0, 0.0, 4.0)),
+            Visibility::Hidden,
+            TowerPhantomBarrel { sub_index },
+        ));
+    }
 
     spawn_shop_slots(&mut commands);
     spawn_spell_slots(&mut commands);
-    spawn_draft_ui(&mut commands);
+    spawn_draft_ui(&mut commands, &mut meshes, &mut materials);
 }
 
 fn spawn_grid(commands: &mut Commands) {
@@ -223,7 +226,11 @@ fn spawn_spell_slots(commands: &mut Commands) {
     }
 }
 
-fn spawn_draft_ui(commands: &mut Commands) {
+fn spawn_draft_ui(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+) {
     let y = 30.0;
     let start_x = -150.0;
     let spacing = 150.0;
@@ -259,18 +266,21 @@ fn spawn_draft_ui(commands: &mut Commands) {
         ));
 
         commands.spawn((
-            Sprite::from_color(Color::srgb(0.5, 0.5, 0.5), Vec2::new(36.0, 36.0)),
+            Mesh2d(meshes.add(bevy::math::primitives::Rectangle::new(36.0, 36.0))),
+            MeshMaterial2d(materials.add(Color::srgb(0.5, 0.5, 0.5))),
             Transform::from_translation(Vec3::new(x, y + 20.0, 12.0)),
             Visibility::Hidden,
             DraftSlotIcon { index },
         ));
 
-        commands.spawn((
-            Sprite::from_color(Color::srgb(0.72, 0.78, 0.76), Vec2::new(9.0, 32.0)),
-            Transform::from_translation(Vec3::new(x, y + 36.0, 13.0)),
-            Visibility::Hidden,
-            DraftSlotBarrel { index },
-        ));
+        for sub_index in 0..2 {
+            commands.spawn((
+                Sprite::from_color(Color::srgb(0.72, 0.78, 0.76), Vec2::new(9.0, 32.0)),
+                Transform::from_translation(Vec3::new(x, y + 36.0, 13.0)),
+                Visibility::Hidden,
+                DraftSlotBarrel { index, sub_index },
+            ));
+        }
 
         commands.spawn((
             Text2d::new(""),

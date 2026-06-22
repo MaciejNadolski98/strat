@@ -5,7 +5,9 @@ use crate::game::game_is_running;
 use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
+use crate::tower_definitions::templates::BASE_TRIANGLE_M;
 use super::TowerDefinition;
+use super::templates::{BARREL_HEAVY, PALETTE_EARTH};
 
 pub struct GolemPlugin;
 
@@ -37,11 +39,10 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
     projectile_speed: 350.0,
     explosion_radius: 0.0,
     angular_speed: 1.2,
-    base_color: Color::srgb(0.40, 0.34, 0.22),
-    barrel_color: Color::srgb(0.66, 0.56, 0.36),
-    base_size: Vec2::new(38.0, 38.0),
-    barrel_size: Vec2::new(14.0, 34.0),
-    barrel_offset: 15.0,
+    base_color: PALETTE_EARTH.base,
+    barrel_color: PALETTE_EARTH.barrel,
+    base: BASE_TRIANGLE_M,
+    barrel: BARREL_HEAVY,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
     custom_tooltip: None,
 };

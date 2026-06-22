@@ -3,11 +3,14 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
+use bevy::sprite::ColorMaterial;
+
 use crate::components::{
     AngularSpeed, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
     DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, Tower, TowerPhantom,
     TowerPhantomBarrel, TowerRangeIndicator,
 };
+use crate::tower_definitions::BarrelTemplate;
 use crate::constants::GRID_SIZE;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::resources::{
@@ -50,11 +53,13 @@ pub fn update_draft_ui(
     wave_number: Res<WaveNumber>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut queries: ParamSet<(
         Query<&mut Visibility, With<DraftPanel>>,
         Query<(&mut Text2d, &mut Visibility), With<DraftHeaderText>>,
         Query<(&DraftSlot, &Transform, &mut Sprite, &mut Visibility)>,
-        Query<(&DraftSlotIcon, &mut Sprite, &mut Visibility)>,
+        Query<(&DraftSlotIcon, &mut Mesh2d, &mut MeshMaterial2d<ColorMaterial>, &mut Visibility)>,
         Query<(&DraftSlotBarrel, &mut Sprite, &mut Visibility, &mut Transform)>,
         Query<(&DraftSlotLabel, &mut Text2d, &mut Visibility)>,
     )>,
@@ -97,25 +102,32 @@ pub fn update_draft_ui(
         }
     }
 
-    for (icon, mut sprite, mut visibility) in &mut queries.p3() {
+    for (icon, mut mesh, mut mat, mut visibility) in &mut queries.p3() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
             let kind = draft.offers[icon.index];
-            sprite.color = kind.base_color();
-            sprite.custom_size = Some(kind.base_size());
+            mesh.0 = meshes.add(kind.base_shape().into_mesh(kind.base_size()));
+            *mat = MeshMaterial2d(materials.add(kind.base_color()));
         }
     }
 
     for (barrel, mut sprite, mut visibility, mut transform) in &mut queries.p4() {
         let kind = draft.offers[barrel.index];
-        let has_barrel = kind.barrel_size() != Vec2::ZERO;
-        *visibility = if is_visible && has_barrel { Visibility::Visible } else { Visibility::Hidden };
-        if is_visible && has_barrel {
+        let barrel_template = kind.definition().barrel;
+        let slot_x = -150.0 + barrel.index as f32 * 150.0;
+        let (show, dx) = match barrel_template {
+            BarrelTemplate::None => (false, 0.0),
+            BarrelTemplate::Single { .. } => (barrel.sub_index == 0, 0.0),
+            BarrelTemplate::Double { spacing, .. } => {
+                let dx = if barrel.sub_index == 0 { -spacing * 0.5 } else { spacing * 0.5 };
+                (true, dx)
+            }
+        };
+        *visibility = if is_visible && show { Visibility::Visible } else { Visibility::Hidden };
+        if is_visible && show {
             sprite.color = kind.barrel_color();
-            sprite.custom_size = Some(kind.barrel_size());
-            // icon center is at y=50 (panel y=30 + offset 20); barrel sits barrel_offset above that
-            let slot_x = -150.0 + barrel.index as f32 * 150.0;
-            transform.translation = Vec3::new(slot_x, 50.0 + kind.barrel_offset(), 13.0);
+            sprite.custom_size = Some(barrel_template.size());
+            transform.translation = Vec3::new(slot_x + dx, 50.0 + barrel_template.offset(), 13.0);
         }
     }
 
@@ -129,6 +141,8 @@ pub fn update_draft_ui(
 
 pub fn place_draft_tower(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
@@ -169,7 +183,6 @@ pub fn place_draft_tower(
     apply_tower_effects(tower_kind, &mut stats);
 
     let mut spawner = commands.spawn((
-        tower_kind.body_sprite(1.0),
         Transform::from_translation(grid_position.extend(2.0)),
         Tower,
         tower_kind,
@@ -189,11 +202,34 @@ pub fn place_draft_tower(
         TemporaryAttackSpeed::default(),
     ));
 
-    if tower_kind.barrel_size() != Vec2::ZERO {
-        spawner.with_child((
-            tower_kind.barrel_sprite(1.0),
-            Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
+    if tower_kind.base_shape().is_rectangle() {
+        spawner.insert(tower_kind.body_sprite(1.0));
+    } else {
+        spawner.insert((
+            Mesh2d(meshes.add(tower_kind.base_shape().into_mesh(tower_kind.base_size()))),
+            MeshMaterial2d(materials.add(tower_kind.base_color())),
         ));
+    }
+
+    match tower_kind.definition().barrel {
+        BarrelTemplate::None => {}
+        BarrelTemplate::Single { .. } => {
+            spawner.with_child((
+                tower_kind.barrel_sprite(1.0),
+                Transform::from_translation(Vec3::new(0.0, tower_kind.barrel_offset(), 1.0)),
+            ));
+        }
+        BarrelTemplate::Double { spacing, .. } => {
+            let offset = tower_kind.barrel_offset();
+            spawner.with_children(|parent| {
+                for dx in [-spacing * 0.5, spacing * 0.5] {
+                    parent.spawn((
+                        tower_kind.barrel_sprite(1.0),
+                        Transform::from_translation(Vec3::new(dx, offset, 1.0)),
+                    ));
+                }
+            });
+        }
     }
 
     draft.phase = TowerDraftPhase::WaveRunning;
@@ -207,13 +243,15 @@ pub fn update_tower_phantom(
     towers: Query<&Transform, With<Tower>>,
     path_tiles: Res<PathTiles>,
     draft: Res<TowerDraft>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut phantom: Query<
-        (&mut Transform, &mut Sprite, &mut Visibility),
+        (&mut Mesh2d, &mut MeshMaterial2d<ColorMaterial>, &mut Transform, &mut Visibility),
         (With<TowerPhantom>, Without<Tower>, Without<TowerPhantomBarrel>),
     >,
     mut barrel: Query<
-        (&mut Transform, &mut Sprite, &mut Visibility),
-        (With<TowerPhantomBarrel>, Without<Tower>, Without<TowerPhantom>),
+        (&TowerPhantomBarrel, &mut Transform, &mut Sprite, &mut Visibility),
+        (Without<Tower>, Without<TowerPhantom>),
     >,
     mut indicator: Query<
         (&mut Transform, &mut Visibility),
@@ -225,10 +263,7 @@ pub fn update_tower_phantom(
         ),
     >,
 ) {
-    let Ok((mut p_transform, mut p_sprite, mut p_visibility)) = phantom.single_mut() else {
-        return;
-    };
-    let Ok((mut b_transform, mut b_sprite, mut b_visibility)) = barrel.single_mut() else {
+    let Ok((mut p_mesh, mut p_mat, mut p_transform, mut p_visibility)) = phantom.single_mut() else {
         return;
     };
     let Ok((mut i_transform, mut i_visibility)) = indicator.single_mut() else {
@@ -236,7 +271,9 @@ pub fn update_tower_phantom(
     };
 
     *p_visibility = Visibility::Hidden;
-    *b_visibility = Visibility::Hidden;
+    for (_, _, _, mut b_visibility) in &mut barrel {
+        *b_visibility = Visibility::Hidden;
+    }
 
     let TowerDraftPhase::Placing(kind) = draft.phase else {
         return;
@@ -262,14 +299,30 @@ pub fn update_tower_phantom(
 
     const ALPHA: f32 = 0.55;
 
-    *p_sprite = kind.body_sprite(ALPHA);
+    p_mesh.0 = meshes.add(kind.base_shape().into_mesh(kind.base_size()));
+    *p_mat = MeshMaterial2d(materials.add(kind.base_color().with_alpha(ALPHA)));
     p_transform.translation = grid_pos.extend(3.0);
     *p_visibility = Visibility::Visible;
 
-    if kind.barrel_size() != Vec2::ZERO {
-        *b_sprite = kind.barrel_sprite(ALPHA);
-        b_transform.translation = Vec3::new(grid_pos.x, grid_pos.y + kind.barrel_offset(), 4.0);
-        *b_visibility = Visibility::Visible;
+    let barrel_template = kind.definition().barrel;
+    for (phantom_barrel, mut b_transform, mut b_sprite, mut b_visibility) in &mut barrel {
+        let (show, dx) = match barrel_template {
+            BarrelTemplate::None => (false, 0.0),
+            BarrelTemplate::Single { .. } => (phantom_barrel.sub_index == 0, 0.0),
+            BarrelTemplate::Double { spacing, .. } => {
+                let dx = if phantom_barrel.sub_index == 0 { -spacing * 0.5 } else { spacing * 0.5 };
+                (true, dx)
+            }
+        };
+        if show {
+            *b_sprite = kind.barrel_sprite(ALPHA);
+            b_transform.translation = Vec3::new(
+                grid_pos.x + dx,
+                grid_pos.y + barrel_template.offset(),
+                4.0,
+            );
+            *b_visibility = Visibility::Visible;
+        }
     }
 
     i_transform.translation = grid_pos.extend(1.5);

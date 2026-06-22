@@ -7,6 +7,7 @@ use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Loot, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tower_definitions::TowerKind;
 use super::TowerDefinition;
+use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
 
 #[derive(Component)]
 pub struct TreeTower;
@@ -44,11 +45,10 @@ pub const TOWER_TREE: TowerDefinition = TowerDefinition {
     projectile_speed: 0.0,
     explosion_radius: 0.0,
     angular_speed: 0.0,
-    base_color: Color::srgb(0.20, 0.55, 0.18),
-    barrel_color: Color::srgb(0.20, 0.55, 0.18),
-    base_size: Vec2::new(36.0, 36.0),
-    barrel_size: Vec2::ZERO,
-    barrel_offset: 0.0,
+    base_color: PALETTE_FOREST.base,
+    barrel_color: PALETTE_FOREST.barrel,
+    base: BASE_HEX_M,
+    barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)],
     custom_tooltip: Some(tree_custom_tooltip),
 };

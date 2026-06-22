@@ -1,3 +1,6 @@
+pub mod templates;
+pub use templates::{BarrelTemplate, BaseTemplate, TowerShape};
+
 pub mod ballista;
 pub mod gatling;
 pub mod cannon;
@@ -87,15 +90,19 @@ impl TowerKind {
     }
 
     pub fn base_size(self) -> Vec2 {
-        self.definition().base_size
+        self.definition().base.size
+    }
+
+    pub fn base_shape(self) -> TowerShape {
+        self.definition().base.shape
     }
 
     pub fn barrel_size(self) -> Vec2 {
-        self.definition().barrel_size
+        self.definition().barrel.size()
     }
 
     pub fn barrel_offset(self) -> f32 {
-        self.definition().barrel_offset
+        self.definition().barrel.offset()
     }
 
     pub fn stat_effects(self) -> &'static [TowerStatEffect] {
@@ -132,9 +139,8 @@ pub struct TowerDefinition {
     pub angular_speed: f32,
     pub base_color: Color,
     pub barrel_color: Color,
-    pub base_size: Vec2,
-    pub barrel_size: Vec2,
-    pub barrel_offset: f32,
+    pub base: BaseTemplate,
+    pub barrel: BarrelTemplate,
     pub stat_effects: &'static [TowerStatEffect],
     pub custom_tooltip: Option<fn(f32, f32) -> String>,
 }

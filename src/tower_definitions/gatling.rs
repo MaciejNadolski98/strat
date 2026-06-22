@@ -6,6 +6,7 @@ use crate::resources::{NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffec
 use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
 use crate::tower_definitions::TowerKind;
 use super::TowerDefinition;
+use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
 
 pub struct GatlingPlugin;
 
@@ -44,11 +45,10 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
     projectile_speed: 890.0,
     explosion_radius: 0.0,
     angular_speed: 2.3,
-    base_color: Color::srgb(0.22, 0.42, 0.74),
+    base_color: PALETTE_BLUE.base,
     barrel_color: Color::srgb(0.10, 0.10, 0.10),
-    base_size: Vec2::new(36.0, 36.0),
-    barrel_size: Vec2::new(12.0, 38.0),
-    barrel_offset: 16.0,
+    base: BASE_STANDARD,
+    barrel: BARREL_DOUBLE_LIGHT,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
     ],

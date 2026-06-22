@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use super::TowerDefinition;
+use super::templates::{BASE_TRIANGLE_M, BARREL_LIGHT, PALETTE_BLUE};
 
 pub struct BallistaPlugin;
 
@@ -25,11 +26,10 @@ pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition {
     projectile_speed: 430.0,
     explosion_radius: 0.0,
     angular_speed: 1.6,
-    base_color: Color::srgb(0.22, 0.42, 0.74),
-    barrel_color: Color::srgb(0.67, 0.83, 0.96),
-    base_size: Vec2::new(36.0, 36.0),
-    barrel_size: Vec2::new(12.0, 38.0),
-    barrel_offset: 16.0,
+    base_color: PALETTE_BLUE.base,
+    barrel_color: PALETTE_BLUE.barrel,
+    base: BASE_TRIANGLE_M,
+    barrel: BARREL_LIGHT,
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
