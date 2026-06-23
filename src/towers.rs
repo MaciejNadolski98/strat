@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, Damage, DamageFormula, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health,
+    AngularSpeed, AuraTower, Damage, DamageFormula, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health,
     IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target,
     TemporaryAttackSpeed, Tower, TowerRangeIndicator,
 };
@@ -16,7 +16,7 @@ use crate::resources::{
     FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
-use crate::tower_definitions::{TowerKind, tree::TreeTower};
+use crate::tower_definitions::TowerKind;
 
 #[derive(SystemParam)]
 pub struct TowerTooltipStats<'w> {
@@ -168,7 +168,7 @@ pub fn aim_towers(
             &mut FireCooldown,
             &AngularSpeed,
         ),
-        (With<Tower>, Without<TreeTower>),
+        (With<Tower>, Without<AuraTower>),
     >,
     enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
     game_over: Res<GameOver>,

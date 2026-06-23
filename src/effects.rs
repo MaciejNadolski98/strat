@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::math::primitives::Circle;
 
-use crate::components::{ExplosionEffect, FloatingText};
+use crate::components::{ExplosionEffect, FloatingText, PulseEffect};
 
 pub fn spawn_floating_text(
     commands: &mut Commands,
@@ -61,6 +61,54 @@ pub fn update_floating_text(
         text_color.0 = text_color.0.with_alpha(alpha);
 
         if floating.lifetime.finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub fn spawn_pulse(
+    commands: &mut Commands,
+    position: Vec2,
+    max_radius: f32,
+    color: Color,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+) {
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::new(1.0))),
+        MeshMaterial2d(materials.add(color)),
+        Transform::from_translation(position.extend(7.5)).with_scale(Vec3::splat(4.0)),
+        PulseEffect {
+            lifetime: Timer::from_seconds(0.55, TimerMode::Once),
+            max_radius,
+        },
+    ));
+}
+
+pub fn update_pulses(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut pulses: Query<(
+        Entity,
+        &mut PulseEffect,
+        &mut Transform,
+        &MeshMaterial2d<ColorMaterial>,
+    )>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for (entity, mut pulse, mut transform, material) in &mut pulses {
+        pulse.lifetime.tick(time.delta());
+        let progress = pulse.lifetime.fraction();
+
+        let scale = 4.0 + (pulse.max_radius - 4.0) * progress;
+        transform.scale = Vec3::splat(scale);
+
+        if let Some(mat) = materials.get_mut(material) {
+            let alpha = mat.color.alpha() * (1.0 - progress);
+            mat.color = mat.color.with_alpha(alpha);
+        }
+
+        if pulse.lifetime.finished() {
             commands.entity(entity).despawn();
         }
     }

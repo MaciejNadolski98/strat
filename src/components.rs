@@ -188,6 +188,15 @@ impl EnemyKind {
 pub struct DropsSpell;
 
 #[derive(Component)]
+pub struct AuraTower;
+
+#[derive(Component)]
+pub struct PulseEffect {
+    pub lifetime: Timer,
+    pub max_radius: f32,
+}
+
+#[derive(Component)]
 pub struct FireCooldown {
     pub base_cooldown: f32,
     pub timer: Timer,

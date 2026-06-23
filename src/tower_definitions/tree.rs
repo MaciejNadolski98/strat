@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{DamageFormula, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
+use crate::components::{AuraTower, DamageFormula, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
 use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
@@ -76,7 +76,7 @@ fn attach_tree_marker(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == TowerKind::Tree {
-            commands.entity(entity).insert(TreeTower);
+            commands.entity(entity).insert((TreeTower, AuraTower));
         }
     }
 }
