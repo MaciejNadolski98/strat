@@ -109,9 +109,7 @@ fn main() {
                 progress_cooldown,
                 place_draft_tower,
                 update_draft_input,
-                update_shop_input,
                 update_spell_input,
-                update_path_input,
                 spawn_enemies,
                 reset_temporary_enemy_speed,
                 move_enemies,
@@ -151,6 +149,8 @@ fn main() {
                 .chain()
                 .after(update_spell_slots),
         )
+        .add_systems(Update, update_shop_input.after(toggle_pause))
+        .add_systems(Update, update_path_input.after(toggle_pause))
         .add_systems(Update, restart_game)
         .run();
 }

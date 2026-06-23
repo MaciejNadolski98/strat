@@ -6,7 +6,7 @@ use crate::constants::{
     GRID_SIZE, HUD_BUILD_LIMIT, PATH_HALF_WIDTH, SHOP_BUILD_LIMIT, WINDOW_WIDTH,
 };
 use crate::effects::spawn_floating_text;
-use crate::resources::{GameOver, Money, PathTiles};
+use crate::resources::{GameOver, GameWon, Money, PathTiles};
 
 pub fn is_buildable_cell(position: Vec2, path_tiles: &PathTiles) -> bool {
     is_in_play_area(position) && !path_tiles.contains(position)
@@ -18,12 +18,13 @@ pub fn update_path_input(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     game_over: Res<GameOver>,
+    game_won: Res<GameWon>,
     mut money: ResMut<Money>,
     mut path_tiles: ResMut<PathTiles>,
     mut end_marker: Query<&mut Transform, With<PathEndMarker>>,
     mut path_visuals: ParamSet<(Query<Entity, With<PathTile>>, Query<Entity, With<PathEdge>>)>,
 ) {
-    if game_over.value || !mouse.just_pressed(MouseButton::Left) {
+    if game_over.value || game_won.value || !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 

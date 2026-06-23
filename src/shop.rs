@@ -9,7 +9,7 @@ use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop, StatUpgradeKind,
+    GameOver, GameWon, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop, StatUpgradeKind,
     TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage, WaveNumber,
 };
 
@@ -84,11 +84,12 @@ pub fn update_shop_input(
     mut shop: ResMut<Shop>,
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
+    game_won: Res<GameWon>,
     wave_number: Res<WaveNumber>,
     draft: Res<TowerDraft>,
     mut stats: PlayerStatsMut,
 ) {
-    if game_over.value || draft.phase == TowerDraftPhase::Picking {
+    if game_over.value || game_won.value || draft.phase == TowerDraftPhase::Picking {
         return;
     }
 
