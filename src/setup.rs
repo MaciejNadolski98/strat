@@ -3,9 +3,9 @@ use bevy::prelude::*;
 
 use crate::components::{
     DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel,
-    HudText, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel, ShopText,
-    ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerPhantom, TowerPhantomBarrel,
-    TowerRangeIndicator,
+    HudText, MainCamera, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel,
+    ShopText, ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerPhantom,
+    TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::constants::{GRID_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::{snap_axis, spawn_path_visuals};
@@ -17,15 +17,15 @@ pub fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2d);
+    let camera = commands.spawn((Camera2d, MainCamera)).id();
 
-    commands.spawn((
+    let background = commands.spawn((
         Sprite::from_color(
             Color::srgb(0.10, 0.15, 0.13),
-            Vec2::new(WINDOW_WIDTH, WINDOW_HEIGHT),
+            Vec2::new(WINDOW_WIDTH * 4.0, WINDOW_HEIGHT * 4.0),
         ),
         Transform::from_translation(Vec3::new(0.0, 0.0, -10.0)),
-    ));
+    )).id();
 
     spawn_grid(&mut commands);
 
@@ -120,65 +120,69 @@ pub fn setup(
         ));
     }
 
-    spawn_shop_slots(&mut commands);
-    spawn_spell_slots(&mut commands);
-    spawn_draft_ui(&mut commands, &mut meshes, &mut materials);
+    let shop_ui = spawn_shop_slots(&mut commands);
+    let spell_ui = spawn_spell_slots(&mut commands);
+    let draft_ui = spawn_draft_ui(&mut commands, &mut meshes, &mut materials);
+
+    commands.entity(camera).add_child(background);
+    for e in shop_ui.into_iter().chain(spell_ui).chain(draft_ui) {
+        commands.entity(camera).add_child(e);
+    }
 }
 
 fn spawn_grid(commands: &mut Commands) {
     let grid_color = Color::srgba(0.68, 0.76, 0.70, 0.12);
-    let min_x = -WINDOW_WIDTH * 0.5;
-    let max_x = WINDOW_WIDTH * 0.5;
-    let min_y = -WINDOW_HEIGHT * 0.5;
-    let max_y = WINDOW_HEIGHT * 0.5;
+    let extent_x = WINDOW_WIDTH * 5.0;
+    let extent_y = WINDOW_HEIGHT * 5.0;
 
-    let mut x = snap_axis(min_x);
-    while x <= max_x {
+    let mut x = snap_axis(-extent_x);
+    while x <= extent_x {
         commands.spawn((
-            Sprite::from_color(grid_color, Vec2::new(1.0, WINDOW_HEIGHT)),
+            Sprite::from_color(grid_color, Vec2::new(1.0, extent_y * 2.0)),
             Transform::from_translation(Vec3::new(x, 0.0, -8.0)),
         ));
         x += GRID_SIZE;
     }
 
-    let mut y = snap_axis(min_y);
-    while y <= max_y {
+    let mut y = snap_axis(-extent_y);
+    while y <= extent_y {
         commands.spawn((
-            Sprite::from_color(grid_color, Vec2::new(WINDOW_WIDTH, 1.0)),
+            Sprite::from_color(grid_color, Vec2::new(extent_x * 2.0, 1.0)),
             Transform::from_translation(Vec3::new(0.0, y, -8.0)),
         ));
         y += GRID_SIZE;
     }
 }
 
-fn spawn_shop_slots(commands: &mut Commands) {
+fn spawn_shop_slots(commands: &mut Commands) -> Vec<Entity> {
     let y = -WINDOW_HEIGHT * 0.5 + 44.0;
     let start_x = -170.0;
     let spacing = 116.0;
+    let mut entities = Vec::new();
 
     for index in 0..3 {
         let x = start_x + index as f32 * spacing;
-        commands.spawn((
+        entities.push(commands.spawn((
             Sprite::from_color(Color::srgb(0.15, 0.17, 0.16), Vec2::new(96.0, 72.0)),
             Transform::from_translation(Vec3::new(x, y, 6.0)),
             ShopSlot { index },
-        ));
+        )).id());
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Sprite::from_color(Color::srgb(0.20, 0.22, 0.21), Vec2::new(36.0, 36.0)),
             Transform::from_translation(Vec3::new(x, y + 8.0, 7.0)),
             Visibility::Hidden,
             ShopSlotIcon { index },
-        ));
+        )).id());
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Sprite::from_color(Color::srgb(0.72, 0.78, 0.76), Vec2::new(9.0, 32.0)),
             Transform::from_translation(Vec3::new(x, y + 22.0, 8.0)),
             Visibility::Hidden,
             ShopSlotBarrel,
-        ));
+        )).id());
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Text2d::new(""),
             TextFont {
                 font_size: 15.0,
@@ -188,31 +192,34 @@ fn spawn_shop_slots(commands: &mut Commands) {
             TextShadow::default(),
             Transform::from_translation(Vec3::new(x, y - 28.0, 9.0)),
             ShopSlotLabel { index },
-        ));
+        )).id());
     }
+
+    entities
 }
 
-fn spawn_spell_slots(commands: &mut Commands) {
+fn spawn_spell_slots(commands: &mut Commands) -> Vec<Entity> {
     let x = WINDOW_WIDTH * 0.5 - 58.0;
     let start_y = 84.0;
     let spacing = 92.0;
+    let mut entities = Vec::new();
 
     for index in 0..3 {
         let y = start_y - index as f32 * spacing;
-        commands.spawn((
+        entities.push(commands.spawn((
             Sprite::from_color(Color::srgb(0.12, 0.13, 0.14), Vec2::new(92.0, 76.0)),
             Transform::from_translation(Vec3::new(x, y, 6.0)),
             SpellSlot { index },
-        ));
+        )).id());
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Sprite::from_color(Color::srgb(0.20, 0.22, 0.24), Vec2::new(38.0, 38.0)),
             Transform::from_translation(Vec3::new(x, y + 10.0, 7.0)),
             Visibility::Hidden,
             SpellSlotIcon { index },
-        ));
+        )).id());
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Text2d::new(""),
             TextFont {
                 font_size: 14.0,
@@ -222,27 +229,30 @@ fn spawn_spell_slots(commands: &mut Commands) {
             TextShadow::default(),
             Transform::from_translation(Vec3::new(x, y - 28.0, 9.0)),
             SpellSlotLabel { index },
-        ));
+        )).id());
     }
+
+    entities
 }
 
 fn spawn_draft_ui(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
-) {
+) -> Vec<Entity> {
     let y = 30.0;
     let start_x = -150.0;
     let spacing = 150.0;
+    let mut entities = Vec::new();
 
-    commands.spawn((
+    entities.push(commands.spawn((
         Sprite::from_color(Color::srgba(0.05, 0.07, 0.09, 0.96), Vec2::new(490.0, 210.0)),
         Transform::from_translation(Vec3::new(0.0, y, 10.0)),
         Visibility::Hidden,
         DraftPanel,
-    ));
+    )).id());
 
-    commands.spawn((
+    entities.push(commands.spawn((
         Text2d::new(""),
         TextFont {
             font_size: 17.0,
@@ -253,36 +263,36 @@ fn spawn_draft_ui(
         Transform::from_translation(Vec3::new(0.0, y + 98.0, 14.0)),
         Visibility::Hidden,
         DraftHeaderText,
-    ));
+    )).id());
 
     for index in 0..3 {
         let x = start_x + index as f32 * spacing;
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Sprite::from_color(Color::srgb(0.15, 0.17, 0.16), Vec2::new(130.0, 140.0)),
             Transform::from_translation(Vec3::new(x, y, 11.0)),
             Visibility::Hidden,
             DraftSlot { index },
-        ));
+        )).id());
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Mesh2d(meshes.add(bevy::math::primitives::Rectangle::new(36.0, 36.0))),
             MeshMaterial2d(materials.add(Color::srgb(0.5, 0.5, 0.5))),
             Transform::from_translation(Vec3::new(x, y + 20.0, 12.0)),
             Visibility::Hidden,
             DraftSlotIcon { index },
-        ));
+        )).id());
 
         for sub_index in 0..2 {
-            commands.spawn((
+            entities.push(commands.spawn((
                 Sprite::from_color(Color::srgb(0.72, 0.78, 0.76), Vec2::new(9.0, 32.0)),
                 Transform::from_translation(Vec3::new(x, y + 36.0, 13.0)),
                 Visibility::Hidden,
                 DraftSlotBarrel { index, sub_index },
-            ));
+            )).id());
         }
 
-        commands.spawn((
+        entities.push(commands.spawn((
             Text2d::new(""),
             TextFont {
                 font_size: 15.0,
@@ -293,6 +303,8 @@ fn spawn_draft_ui(
             Transform::from_translation(Vec3::new(x, y - 56.0, 14.0)),
             Visibility::Hidden,
             DraftSlotLabel { index },
-        ));
+        )).id());
     }
+
+    entities
 }

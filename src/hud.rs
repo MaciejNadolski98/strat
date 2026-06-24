@@ -44,19 +44,19 @@ pub fn update_hud(
     };
 
     let status = if stats.game_won.value {
-        "Victory - press R to restart"
+        Some("Victory — press R to restart")
     } else if stats.game_over.value {
-        "Game over - press R to restart"
+        Some("Game over — press R to restart")
     } else if stats.paused.value {
-        "Paused - press Space to resume"
+        Some("Paused — press Space to resume")
     } else if matches!(stats.draft.phase, TowerDraftPhase::Placing(_)) {
-        "Left click on the map to place your tower"
+        Some("Left click on the map to place your tower")
     } else {
-        "Left click: extend path    B: buy shop item    E: reroll shop    Space: pause"
+        None
     };
 
     let mut hud_text = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}   Path tile: ${}\nAtk speed: {:.2}x   loot: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}\n{}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}   Path tile: ${}\nAtk speed: {:.2}x   loot: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.amount,
@@ -74,8 +74,11 @@ pub fn update_hud(
         stats.fire_damage.value,
         stats.air_damage.value,
         stats.water_damage.value,
-        status
     );
+    if let Some(s) = status {
+        hud_text.push('\n');
+        hud_text.push_str(s);
+    }
 
     if stats.game_over.value || stats.game_won.value {
         hud_text.push_str(&tower_damage_summary(&towers));

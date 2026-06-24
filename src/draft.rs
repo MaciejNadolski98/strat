@@ -24,7 +24,7 @@ pub fn update_draft_input(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    draft_slots: Query<(&DraftSlot, &Transform)>,
+    draft_slots: Query<(&DraftSlot, &GlobalTransform)>,
     mut draft: ResMut<TowerDraft>,
     game_over: Res<GameOver>,
 ) {
@@ -38,8 +38,8 @@ pub fn update_draft_input(
         let Some(cursor_pos) = window.cursor_position() else { return; };
         let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
 
-        for (slot, transform) in &draft_slots {
-            let pos = transform.translation.truncate();
+        for (slot, global) in &draft_slots {
+            let pos = global.translation().truncate();
             if (world_pos.x - pos.x).abs() <= 65.0 && (world_pos.y - pos.y).abs() <= 70.0 {
                 draft.phase = TowerDraftPhase::Placing(draft.offers[slot.index]);
                 return;
@@ -58,7 +58,7 @@ pub fn update_draft_ui(
     mut queries: ParamSet<(
         Query<&mut Visibility, With<DraftPanel>>,
         Query<(&mut Text2d, &mut Visibility), With<DraftHeaderText>>,
-        Query<(&DraftSlot, &Transform, &mut Sprite, &mut Visibility)>,
+        Query<(&GlobalTransform, &mut Sprite, &mut Visibility), With<DraftSlot>>,
         Query<(&DraftSlotIcon, &mut Mesh2d, &mut MeshMaterial2d<ColorMaterial>, &mut Visibility)>,
         Query<(&DraftSlotBarrel, &mut Sprite, &mut Visibility, &mut Transform)>,
         Query<(&DraftSlotLabel, &mut Text2d, &mut Visibility)>,
@@ -87,10 +87,10 @@ pub fn update_draft_ui(
         }
     }
 
-    for (_, transform, mut sprite, mut visibility) in &mut queries.p2() {
+    for (global, mut sprite, mut visibility) in &mut queries.p2() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
-            let pos = transform.translation.truncate();
+            let pos: Vec2 = global.translation().truncate();
             let is_hovered = cursor_world
                 .map(|wp| (wp.x - pos.x).abs() <= 65.0 && (wp.y - pos.y).abs() <= 70.0)
                 .unwrap_or(false);

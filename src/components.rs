@@ -188,6 +188,9 @@ impl EnemyKind {
 pub struct DropsSpell;
 
 #[derive(Component)]
+pub struct MainCamera;
+
+#[derive(Component)]
 pub struct AuraTower;
 
 #[derive(Component)]

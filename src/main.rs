@@ -22,7 +22,7 @@ use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH}
 use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
-use game::{game_is_running, restart_game, toggle_pause};
+use game::{game_is_running, pan_camera, restart_game, toggle_pause};
 use tower_definitions::TowerDefinitionPlugins;
 use hud::update_hud;
 use pathing::update_path_input;
@@ -150,6 +150,7 @@ fn main() {
                 .chain()
                 .after(update_spell_slots),
         )
+        .add_systems(Update, pan_camera)
         .add_systems(Update, update_shop_input.after(toggle_pause))
         .add_systems(Update, update_path_input.after(toggle_pause))
         .add_systems(Update, restart_game)

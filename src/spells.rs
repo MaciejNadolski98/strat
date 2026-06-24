@@ -95,7 +95,7 @@ pub fn update_spell_tooltip(
     spell_shop: Res<SpellShop>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    slots: Query<(&SpellSlot, &Transform)>,
+    slots: Query<(&SpellSlot, &GlobalTransform)>,
     mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
 ) {
     let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
@@ -115,8 +115,8 @@ pub fn update_spell_tooltip(
         return;
     };
 
-    for (slot, transform) in &slots {
-        let slot_position = transform.translation.truncate();
+    for (slot, global) in &slots {
+        let slot_position = global.translation().truncate();
         let inside_slot = (world_position.x - slot_position.x).abs() <= 46.0
             && (world_position.y - slot_position.y).abs() <= 38.0;
         if !inside_slot {

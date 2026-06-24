@@ -2,9 +2,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{PathEdge, PathEndMarker, PathTile};
-use crate::constants::{
-    GRID_SIZE, HUD_BUILD_LIMIT, PATH_HALF_WIDTH, SHOP_BUILD_LIMIT, WINDOW_WIDTH,
-};
+use crate::constants::{GRID_SIZE, PATH_HALF_WIDTH, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::resources::{GameOver, GameWon, Money, PathTiles};
 
@@ -143,10 +141,11 @@ fn is_consecutive_path_neighbor(path_tiles: &PathTiles, index: usize, position: 
 
 fn is_in_play_area(position: Vec2) -> bool {
     let half_cell = GRID_SIZE * 0.5;
-    position.x >= -WINDOW_WIDTH * 0.5 + half_cell
-        && position.x <= WINDOW_WIDTH * 0.5 - half_cell
-        && position.y >= SHOP_BUILD_LIMIT
-        && position.y <= HUD_BUILD_LIMIT
+    let extent = WINDOW_WIDTH * 5.0;
+    position.x >= -extent + half_cell
+        && position.x <= extent - half_cell
+        && position.y >= -extent + half_cell
+        && position.y <= extent - half_cell
 }
 
 pub fn snap_to_grid(position: Vec2) -> Vec2 {

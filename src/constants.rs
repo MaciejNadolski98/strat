@@ -9,8 +9,6 @@ pub const STARTING_MONEY: i32 = 40;
 pub const PLAYER_BASE_MAX_HP: i32 = 20;
 pub const GRID_SIZE: f32 = 48.0;
 pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
-pub const HUD_BUILD_LIMIT: f32 = WINDOW_HEIGHT * 0.5 - 90.0;
-pub const SHOP_BUILD_LIMIT: f32 = -WINDOW_HEIGHT * 0.5 + 96.0;
 
 pub const MAX_HEALTH_GROWTH: f32 = 0.4;
 pub const PRICE_GROWTH: f32 = 0.4;

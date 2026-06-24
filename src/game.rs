@@ -1,7 +1,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::{Enemy, PathEdge, PathEndMarker, PathTile, Projectile, Tower};
+use crate::components::{Enemy, MainCamera, PathEdge, PathEndMarker, PathTile, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
@@ -40,6 +40,22 @@ pub fn toggle_pause(
     }
 
     paused.value = !paused.value;
+}
+
+const PAN_SPEED: f32 = 320.0;
+
+pub fn pan_camera(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut camera: Query<&mut Transform, With<MainCamera>>,
+) {
+    let Ok(mut transform) = camera.single_mut() else { return; };
+    let mut dir = Vec2::ZERO;
+    if keyboard.pressed(KeyCode::KeyW) { dir.y += 1.0; }
+    if keyboard.pressed(KeyCode::KeyS) { dir.y -= 1.0; }
+    if keyboard.pressed(KeyCode::KeyA) { dir.x -= 1.0; }
+    if keyboard.pressed(KeyCode::KeyD) { dir.x += 1.0; }
+    transform.translation += dir.normalize_or_zero().extend(0.0) * PAN_SPEED * time.delta_secs();
 }
 
 pub fn game_is_running(paused: Res<Paused>, game_won: Res<GameWon>) -> bool {

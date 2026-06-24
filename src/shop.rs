@@ -80,7 +80,7 @@ pub fn update_shop_input(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    shop_slots: Query<(&ShopSlot, &Transform)>,
+    shop_slots: Query<(&ShopSlot, &GlobalTransform)>,
     mut shop: ResMut<Shop>,
     mut money: ResMut<Money>,
     game_over: Res<GameOver>,
@@ -101,8 +101,8 @@ pub fn update_shop_input(
         if let (Ok(window), Ok((cam, cam_transform))) = (windows.single(), camera.single()) {
             if let Some(cursor_pos) = window.cursor_position() {
                 if let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) {
-                    for (slot, transform) in &shop_slots {
-                        let pos = transform.translation.truncate();
+                    for (slot, global) in &shop_slots {
+                        let pos = global.translation().truncate();
                         if (world_pos.x - pos.x).abs() <= 48.0
                             && (world_pos.y - pos.y).abs() <= 36.0
                         {
@@ -156,7 +156,7 @@ pub fn update_shop_text(
     camera: Query<(&Camera, &GlobalTransform)>,
     mut text: Query<&mut Text, With<ShopText>>,
     mut slots: ParamSet<(
-        Query<(&ShopSlot, &Transform, &mut Sprite)>,
+        Query<(&ShopSlot, &GlobalTransform, &mut Sprite)>,
         Query<(&ShopSlotIcon, &mut Sprite, &mut Visibility)>,
         Query<(&ShopSlotBarrel, &mut Sprite, &mut Visibility)>,
         Query<(&ShopSlotLabel, &mut Text2d)>,
@@ -177,10 +177,10 @@ pub fn update_shop_text(
         cam.viewport_to_world_2d(cam_t, window.cursor_position()?).ok()
     })();
 
-    for (slot, transform, mut sprite) in &mut slots.p0() {
+    for (slot, global, mut sprite) in &mut slots.p0() {
         let offer = shop.offers[slot.index];
         let is_empty = offer.is_none();
-        let pos = transform.translation.truncate();
+        let pos = global.translation().truncate();
         let is_hovered = cursor_world
             .map(|wp| (wp.x - pos.x).abs() <= 48.0 && (wp.y - pos.y).abs() <= 36.0)
             .unwrap_or(false);
@@ -225,7 +225,7 @@ pub fn update_shop_tooltip(
     shop: Res<Shop>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    slots: Query<(&ShopSlot, &Transform)>,
+    slots: Query<(&ShopSlot, &GlobalTransform)>,
     mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
 ) {
     let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
@@ -247,8 +247,8 @@ pub fn update_shop_tooltip(
         return;
     };
 
-    for (slot, transform) in &slots {
-        let slot_position = transform.translation.truncate();
+    for (slot, global) in &slots {
+        let slot_position = global.translation().truncate();
         let inside_slot = (world_position.x - slot_position.x).abs() <= 48.0
             && (world_position.y - slot_position.y).abs() <= 36.0;
         if !inside_slot {
