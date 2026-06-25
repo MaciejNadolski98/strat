@@ -216,6 +216,11 @@ pub struct TemporaryAttackSpeed {
     pub bonus: f32,
 }
 
+#[derive(Component, Default)]
+pub struct TemporaryDamageBonus {
+    pub flat: f32,
+}
+
 #[derive(Component)]
 pub struct TemporaryEnemySpeed {
     pub multiplier: f32,
@@ -321,16 +326,16 @@ impl DamageFormula {
         water_damage: &WaterDamage,
         crit: bool,
         elemental_multiplier: f32,
-    ) -> u32 {
+    ) -> f32 {
         let mut dmg = self.flat as f32;
         dmg += self.earth_multiplier * earth_damage.value * elemental_multiplier;
         dmg += self.air_multiplier * air_damage.value * elemental_multiplier;
         dmg += self.fire_multiplier * fire_damage.value * elemental_multiplier;
         dmg += self.water_multiplier * water_damage.value * elemental_multiplier;
         if crit {
-            (dmg * self.crit_multiplier) as u32
+            dmg * self.crit_multiplier
         } else {
-            dmg as u32
+            dmg
         }
     }
 }

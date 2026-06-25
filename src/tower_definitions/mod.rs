@@ -3,6 +3,7 @@ pub use templates::{BarrelTemplate, BaseTemplate, TowerShape};
 
 pub mod ballista;
 pub mod cyclone;
+pub mod pyre;
 pub mod zephyr;
 pub mod gatling;
 pub mod cannon;
@@ -13,6 +14,7 @@ pub mod tree;
 
 pub use ballista::TOWER_BALLISTA;
 pub use cyclone::TOWER_CYCLONE;
+pub use pyre::TOWER_PYRE;
 pub use zephyr::TOWER_ZEPHYR;
 pub use gatling::TOWER_GATLING;
 pub use cannon::TOWER_CANNON;
@@ -37,6 +39,7 @@ pub struct CustomTooltipTexts(pub HashMap<TowerKind, String>);
 pub enum TowerKind {
     Ballista,
     Cyclone,
+    Pyre,
     Zephyr,
     Gatling,
     Cannon,
@@ -51,6 +54,7 @@ impl TowerKind {
         match self {
             Self::Ballista => &TOWER_BALLISTA,
             Self::Cyclone => &TOWER_CYCLONE,
+            Self::Pyre => &TOWER_PYRE,
             Self::Zephyr => &TOWER_ZEPHYR,
             Self::Gatling => &TOWER_GATLING,
             Self::Cannon => &TOWER_CANNON,
@@ -131,9 +135,10 @@ impl TowerKind {
     }
 }
 
-pub const ALL_TOWER_KINDS: [TowerKind; 9] = [
+pub const ALL_TOWER_KINDS: [TowerKind; 10] = [
     TowerKind::Ballista,
     TowerKind::Cyclone,
+    TowerKind::Pyre,
     TowerKind::Zephyr,
     TowerKind::Gatling,
     TowerKind::Cannon,
@@ -166,6 +171,7 @@ impl PluginGroup for TowerDefinitionPlugins {
         PluginGroupBuilder::start::<Self>()
             .add(ballista::BallistaPlugin)
             .add(cyclone::CyclonePlugin)
+            .add(pyre::PyrePlugin)
             .add(zephyr::ZephyrPlugin)
             .add(gatling::GatlingPlugin)
             .add(cannon::CannonPlugin)

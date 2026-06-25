@@ -8,7 +8,8 @@ use bevy::window::PrimaryWindow;
 use crate::components::{
     AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, DraftSlot, Enemy,
     ExplosionRadius, FireCooldown, Health, IsCritical, PathProgress, Projectile, ShopTooltip,
-    SourceTower, Speed, Target, TemporaryAttackSpeed, Tower, TowerRangeIndicator,
+    SourceTower, Speed, Target, TemporaryAttackSpeed, TemporaryDamageBonus, Tower,
+    TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
@@ -40,7 +41,14 @@ pub fn apply_tower_effects(kind: TowerKind, stats: &mut PlayerStatsMut) {
 pub fn update_tower_tooltip(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    towers: Query<(&TowerKind, &DamageFormula, &Transform, Option<&CustomTooltip>), With<Tower>>,
+    towers: Query<(
+        &TowerKind,
+        &DamageFormula,
+        &Transform,
+        Option<&CustomTooltip>,
+        Option<&TemporaryAttackSpeed>,
+        Option<&TemporaryDamageBonus>,
+    ), With<Tower>>,
     stats: TowerTooltipStats,
     mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
 ) {
@@ -63,24 +71,38 @@ pub fn update_tower_tooltip(
 
     let hovered_tower = towers
         .iter()
-        .filter_map(|(kind, damage_formula, transform, custom)| {
+        .filter_map(|(kind, damage_formula, transform, custom, temp_speed, temp_damage)| {
             let tower_position = transform.translation.truncate();
             let half_size = kind.base_size() * 0.5;
             let inside_tower = (world_position.x - tower_position.x).abs() <= half_size.x
                 && (world_position.y - tower_position.y).abs() <= half_size.y;
 
-            inside_tower.then_some((kind, damage_formula, transform.translation.z, custom))
+            inside_tower.then_some((kind, damage_formula, transform.translation.z, custom, temp_speed, temp_damage))
         })
         .max_by(|a, b| a.2.total_cmp(&b.2));
 
-    let Some((kind, damage_formula, _, custom)) = hovered_tower else {
+    let Some((kind, damage_formula, _, custom, temp_speed, temp_damage)) = hovered_tower else {
         return;
     };
 
-    tooltip_text.0 = match custom {
-        Some(ct) if !ct.0.is_empty() => ct.0.clone(),
-        _ => tower_tooltip(*kind, damage_formula, &stats),
+    let temp_speed_val = temp_speed.map(|ts| ts.bonus).unwrap_or(0.0);
+    let temp_damage_val = temp_damage.map(|td| td.flat).unwrap_or(0.0);
+
+    let text = match custom {
+        Some(ct) if !ct.0.is_empty() => {
+            let mut t = ct.0.clone();
+            if temp_damage_val > 0.01 {
+                t.push_str(&format!("\n[Active] +{temp_damage_val:.1} damage"));
+            }
+            if temp_speed_val > 0.01 {
+                t.push_str(&format!("\n[Active] +{temp_speed_val:.2}x atk speed"));
+            }
+            t
+        }
+        _ => tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val),
     };
+
+    tooltip_text.0 = text;
     *tooltip_visibility = Visibility::Visible;
 }
 
@@ -88,6 +110,8 @@ pub fn tower_tooltip(
     kind: TowerKind,
     damage_formula: &DamageFormula,
     stats: &TowerTooltipStats,
+    temp_flat_damage: f32,
+    temp_speed_bonus: f32,
 ) -> String {
     let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
     let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
@@ -97,7 +121,7 @@ pub fn tower_tooltip(
         &stats.water_damage,
         false,
         elemental_multiplier,
-    );
+    ) + temp_flat_damage;
     let critical_damage = damage_formula.calculate_damage_with_elemental_multiplier(
         &stats.earth_damage,
         &stats.fire_damage,
@@ -105,8 +129,23 @@ pub fn tower_tooltip(
         &stats.water_damage,
         true,
         elemental_multiplier,
-    );
-    let effective_cooldown = kind.cooldown() / stats.attack_speed.value.max(0.1);
+    ) + temp_flat_damage;
+    let effective_speed = (stats.attack_speed.value + temp_speed_bonus).max(0.1);
+    let effective_cooldown = kind.cooldown() / effective_speed;
+
+    let mut active_parts: Vec<String> = Vec::new();
+    if temp_flat_damage > 0.01 {
+        active_parts.push(format!("+{temp_flat_damage:.1} dmg"));
+    }
+    if temp_speed_bonus > 0.01 {
+        active_parts.push(format!("+{temp_speed_bonus:.2}x spd"));
+    }
+    let active_suffix = if active_parts.is_empty() {
+        String::new()
+    } else {
+        format!(" [Active: {}]", active_parts.join(", "))
+    };
+
     let stat_effects = kind.stat_effects();
     let effect_text = if stat_effects.is_empty() {
         "None".to_string()
@@ -119,7 +158,7 @@ pub fn tower_tooltip(
     };
 
     format!(
-        "{}\nDamage: {} ({} crit)\nFormula: {}\nRange: {:.0}\nCooldown: {:.2}s\nCrit: {:.0}%\nProjectile: {:.0}/s\nSplash: {:.0}\nTurn speed: {:.1}\nStat effects:\n{}",
+        "{}\nDamage: {:.0} ({:.0} crit)\nFormula: {}{active_suffix}\nRange: {:.0}\nCooldown: {:.2}s\nCrit: {:.0}%\nProjectile: {:.0}/s\nSplash: {:.0}\nTurn speed: {:.1}\nStat effects:\n{}",
         kind.name(),
         regular_damage,
         critical_damage,
@@ -137,6 +176,12 @@ pub fn tower_tooltip(
 pub fn reset_temporary_attack_speed(mut towers: Query<&mut TemporaryAttackSpeed, With<Tower>>) {
     for mut temp in &mut towers {
         temp.bonus = 0.0;
+    }
+}
+
+pub fn reset_temporary_damage_bonus(mut towers: Query<&mut TemporaryDamageBonus, With<Tower>>) {
+    for mut temp in &mut towers {
+        temp.flat = 0.0;
     }
 }
 
@@ -166,6 +211,7 @@ pub fn aim_towers(
             &DamageFormula,
             &mut FireCooldown,
             &AngularSpeed,
+            &TemporaryDamageBonus,
         ),
         (With<Tower>, Without<AuraTower>),
     >,
@@ -192,6 +238,7 @@ pub fn aim_towers(
         damage_formula,
         mut cooldown,
         rotation_speed,
+        damage_bonus,
     ) in &mut towers
     {
         let tower_position = tower_transform.translation.truncate();
@@ -232,7 +279,7 @@ pub fn aim_towers(
                 &water_damage,
                 is_critical,
                 active_spell_effects.elemental_multiplier,
-            ) as f32;
+            ) + damage_bonus.flat;
 
             cooldown.timer.reset();
             shoot_events.write(ShootEvent { source_tower: tower_entity });
@@ -350,7 +397,7 @@ pub fn update_draft_tooltip(
                 text.clone()
             } else {
                 let damage_formula = kind.damage_formula();
-                tower_tooltip(kind, &damage_formula, &stats)
+                tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0)
             };
             *tooltip_visibility = Visibility::Visible;
             return;

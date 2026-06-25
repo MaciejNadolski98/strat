@@ -7,8 +7,8 @@ use bevy::sprite::ColorMaterial;
 
 use crate::components::{
     AngularSpeed, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
-    DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, Tower, TowerPhantom,
-    TowerPhantomBarrel, TowerRangeIndicator,
+    DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, TemporaryDamageBonus,
+    Tower, TowerPhantom, TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::tower_definitions::BarrelTemplate;
 use crate::constants::GRID_SIZE;
@@ -199,6 +199,7 @@ pub fn place_draft_tower(
             value: tower_kind.angular_speed(),
         },
         TemporaryAttackSpeed::default(),
+        TemporaryDamageBonus::default(),
     ));
 
     if tower_kind.base_shape().is_rectangle() {

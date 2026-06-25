@@ -39,7 +39,7 @@ use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
 };
 use towers::{
-    aim_towers, progress_cooldown, reset_temporary_attack_speed, update_draft_tooltip,
+    aim_towers, progress_cooldown, reset_temporary_attack_speed, reset_temporary_damage_bonus, update_draft_tooltip,
     update_tower_range_indicator, update_tower_tooltip,
 };
 use waves::RunMode;
@@ -107,6 +107,7 @@ fn main() {
             Update,
             (
                 reset_temporary_attack_speed,
+                reset_temporary_damage_bonus,
                 progress_cooldown,
                 place_draft_tower,
                 update_draft_input,
