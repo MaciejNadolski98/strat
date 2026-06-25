@@ -34,5 +34,4 @@ pub const TOWER_SNIPER: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
         TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
     ],
-    custom_tooltip: None,
 };

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    AuraTower, DamageFormula, DropsSpell, Enemy, FireCooldown, Health, Reward,
+    AuraTower, CustomTooltip, DamageFormula, DropsSpell, Enemy, FireCooldown, Health, Reward,
 };
 use crate::effects::{spawn_floating_text, spawn_pulse};
 use crate::game::game_is_running;
@@ -28,6 +28,7 @@ impl Plugin for CyclonePlugin {
                 .after(progress_cooldown)
                 .run_if(game_is_running),
         );
+        app.add_systems(Update, update_cyclone_tooltip);
     }
 }
 
@@ -51,18 +52,7 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
     base: BASE_PENTAGON_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
-    custom_tooltip: Some(cyclone_custom_tooltip),
 };
-
-fn cyclone_custom_tooltip(_earth: f32, _water: f32, _air: f32, _fire: f32) -> String {
-    format!(
-        "Cyclone\nBursts all enemies in range every {:.1}s\nDamage: {} + {:.2} air\nRange: {:.0}\nStat effects:\n+3 air",
-        TOWER_CYCLONE.cooldown,
-        TOWER_CYCLONE.damage_formula.flat,
-        TOWER_CYCLONE.damage_formula.air_multiplier,
-        TOWER_CYCLONE.range,
-    )
-}
 
 fn attach_cyclone_tower(
     mut commands: Commands,
@@ -70,7 +60,7 @@ fn attach_cyclone_tower(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == TowerKind::Cyclone {
-            commands.entity(entity).insert((CycloneTower, AuraTower));
+            commands.entity(entity).insert((CycloneTower, AuraTower, CustomTooltip::default()));
         }
     }
 }
@@ -182,5 +172,23 @@ fn apply_cyclone_burst(
             commands.entity(entity).despawn();
             kill_events.write(EnemyKilledEvent { source_tower: tower_entity });
         }
+    }
+}
+
+fn update_cyclone_tooltip(
+    air_damage: Res<AirDamage>,
+    mut towers: Query<&mut CustomTooltip, With<CycloneTower>>,
+    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
+) {
+    let text = format!(
+        "Cyclone\nBursts all enemies in range every {:.1}s\nDamage: {} + {:.0} air\nRange: {:.0}\nStat effects:\n+3 air",
+        TOWER_CYCLONE.cooldown,
+        TOWER_CYCLONE.damage_formula.flat,
+        TOWER_CYCLONE.damage_formula.air_multiplier * air_damage.value,
+        TOWER_CYCLONE.range,
+    );
+    tooltip_texts.0.insert(TowerKind::Cyclone, text.clone());
+    for mut tooltip in &mut towers {
+        tooltip.0.clone_from(&text);
     }
 }

@@ -15,6 +15,9 @@ pub struct Enemy;
 #[derive(Component)]
 pub struct Projectile;
 
+#[derive(Component, Default)]
+pub struct CustomTooltip(pub String);
+
 #[derive(Component)]
 pub struct PathTile;
 

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{AuraTower, DamageFormula, TemporaryAttackSpeed, Tower};
+use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryAttackSpeed, Tower};
 use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
@@ -23,6 +23,7 @@ impl Plugin for ZephyrPlugin {
                 .before(progress_cooldown)
                 .run_if(game_is_running),
         );
+        app.add_systems(Update, update_zephyr_tooltip);
     }
 }
 
@@ -46,22 +47,30 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
     base: BASE_CIRCLE_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
-    custom_tooltip: Some(zephyr_custom_tooltip),
 };
 
 pub fn zephyr_speed_bonus(air: f32, earth: f32) -> f32 {
     air * 0.04 - earth * 0.06
 }
 
-fn zephyr_custom_tooltip(earth: f32, _water: f32, air: f32, _fire: f32) -> String {
-    let bonus = zephyr_speed_bonus(air, earth);
-    format!(
+fn update_zephyr_tooltip(
+    air_damage: Res<AirDamage>,
+    earth_damage: Res<EarthDamage>,
+    mut towers: Query<&mut CustomTooltip, With<ZephyrTower>>,
+    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
+) {
+    let bonus = zephyr_speed_bonus(air_damage.value, earth_damage.value);
+    let text = format!(
         "Zephyr\nBoosts adjacent tower attack speed\nAir: +{:.2}  Earth: -{:.2}\nTotal: {:+.2}x atk speed\nRange: {:.0}\nStat effects:\n+3 air",
-        air * 0.04,
-        earth * 0.06,
+        air_damage.value * 0.04,
+        earth_damage.value * 0.06,
         bonus,
         TOWER_ZEPHYR.range,
-    )
+    );
+    tooltip_texts.0.insert(TowerKind::Zephyr, text.clone());
+    for mut tooltip in &mut towers {
+        tooltip.0.clone_from(&text);
+    }
 }
 
 fn attach_zephyr_marker(
@@ -70,7 +79,7 @@ fn attach_zephyr_marker(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == TowerKind::Zephyr {
-            commands.entity(entity).insert((ZephyrTower, AuraTower));
+            commands.entity(entity).insert((ZephyrTower, AuraTower, CustomTooltip::default()));
         }
     }
 }

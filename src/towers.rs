@@ -6,9 +6,9 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, AuraTower, Damage, DamageFormula, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health,
-    IsCritical, PathProgress, Projectile, ShopTooltip, SourceTower, Speed, Target,
-    TemporaryAttackSpeed, Tower, TowerRangeIndicator,
+    AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, DraftSlot, Enemy,
+    ExplosionRadius, FireCooldown, Health, IsCritical, PathProgress, Projectile, ShopTooltip,
+    SourceTower, Speed, Target, TemporaryAttackSpeed, Tower, TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
@@ -40,7 +40,7 @@ pub fn apply_tower_effects(kind: TowerKind, stats: &mut PlayerStatsMut) {
 pub fn update_tower_tooltip(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    towers: Query<(&TowerKind, &DamageFormula, &Transform), With<Tower>>,
+    towers: Query<(&TowerKind, &DamageFormula, &Transform, Option<&CustomTooltip>), With<Tower>>,
     stats: TowerTooltipStats,
     mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
 ) {
@@ -63,21 +63,24 @@ pub fn update_tower_tooltip(
 
     let hovered_tower = towers
         .iter()
-        .filter_map(|(kind, damage_formula, transform)| {
+        .filter_map(|(kind, damage_formula, transform, custom)| {
             let tower_position = transform.translation.truncate();
             let half_size = kind.base_size() * 0.5;
             let inside_tower = (world_position.x - tower_position.x).abs() <= half_size.x
                 && (world_position.y - tower_position.y).abs() <= half_size.y;
 
-            inside_tower.then_some((kind, damage_formula, transform.translation.z))
+            inside_tower.then_some((kind, damage_formula, transform.translation.z, custom))
         })
         .max_by(|a, b| a.2.total_cmp(&b.2));
 
-    let Some((kind, damage_formula, _)) = hovered_tower else {
+    let Some((kind, damage_formula, _, custom)) = hovered_tower else {
         return;
     };
 
-    tooltip_text.0 = tower_tooltip(*kind, damage_formula, &stats);
+    tooltip_text.0 = match custom {
+        Some(ct) if !ct.0.is_empty() => ct.0.clone(),
+        _ => tower_tooltip(*kind, damage_formula, &stats),
+    };
     *tooltip_visibility = Visibility::Visible;
 }
 
@@ -86,10 +89,6 @@ pub fn tower_tooltip(
     damage_formula: &DamageFormula,
     stats: &TowerTooltipStats,
 ) -> String {
-    if let Some(custom_fn) = kind.definition().custom_tooltip {
-        return custom_fn(stats.earth_damage.value, stats.water_damage.value, stats.air_damage.value, stats.fire_damage.value);
-    }
-
     let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
     let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
         &stats.earth_damage,
@@ -323,6 +322,7 @@ pub fn update_draft_tooltip(
     camera: Query<(&Camera, &GlobalTransform)>,
     slots: Query<(&DraftSlot, &Transform)>,
     stats: TowerTooltipStats,
+    custom_tooltips: Res<crate::tower_definitions::CustomTooltipTexts>,
     mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
 ) {
     if draft.phase != TowerDraftPhase::Picking {
@@ -346,8 +346,12 @@ pub fn update_draft_tooltip(
         let pos = transform.translation.truncate();
         if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
             let kind = draft.offers[slot.index];
-            let damage_formula = kind.damage_formula();
-            tooltip_text.0 = tower_tooltip(kind, &damage_formula, &stats);
+            tooltip_text.0 = if let Some(text) = custom_tooltips.0.get(&kind).filter(|t| !t.is_empty()) {
+                text.clone()
+            } else {
+                let damage_formula = kind.damage_formula();
+                tower_tooltip(kind, &damage_formula, &stats)
+            };
             *tooltip_visibility = Visibility::Visible;
             return;
         }

@@ -21,14 +21,19 @@ pub use sniper::TOWER_SNIPER;
 pub use sprayer::TOWER_SPRAYER;
 pub use tree::TOWER_TREE;
 
+use std::collections::HashMap;
+
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::TowerStatEffect;
 
+#[derive(Resource, Default)]
+pub struct CustomTooltipTexts(pub HashMap<TowerKind, String>);
 
-#[derive(Component, Clone, Copy, PartialEq, Eq)]
+
+#[derive(Component, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TowerKind {
     Ballista,
     Cyclone,
@@ -152,7 +157,6 @@ pub struct TowerDefinition {
     pub base: BaseTemplate,
     pub barrel: BarrelTemplate,
     pub stat_effects: &'static [TowerStatEffect],
-    pub custom_tooltip: Option<fn(f32, f32, f32, f32) -> String>,
 }
 
 pub struct TowerDefinitionPlugins;

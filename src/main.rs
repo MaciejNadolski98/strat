@@ -23,7 +23,7 @@ use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower
 use effects::{update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, pan_camera, restart_game, toggle_pause};
-use tower_definitions::TowerDefinitionPlugins;
+use tower_definitions::{CustomTooltipTexts, TowerDefinitionPlugins};
 use hud::update_hud;
 use pathing::{update_path_hints, update_path_input};
 use projectiles::move_projectiles;
@@ -100,6 +100,7 @@ fn main() {
             }),
             TowerDefinitionPlugins,
         ))
+        .init_resource::<CustomTooltipTexts>()
         .add_systems(Startup, setup)
         .add_systems(Update, toggle_pause)
         .add_systems(

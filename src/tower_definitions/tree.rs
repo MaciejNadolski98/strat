@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{AuraTower, DamageFormula, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
+use crate::components::{AuraTower, CustomTooltip, DamageFormula, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
 use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
@@ -27,6 +27,7 @@ impl Plugin for TreePlugin {
                 .before(move_enemies)
                 .run_if(game_is_running),
         );
+        app.add_systems(Update, update_tree_tooltip);
     }
 }
 
@@ -50,7 +51,6 @@ pub const TOWER_TREE: TowerDefinition = TowerDefinition {
     base: BASE_HEX_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)],
-    custom_tooltip: Some(tree_custom_tooltip),
 };
 
 pub fn tree_slow_multiplier(earth: f32) -> f32 {
@@ -61,13 +61,22 @@ pub fn tree_income_per_enemy(water: f32) -> f32 {
     1.0 + water * 0.15
 }
 
-pub fn tree_custom_tooltip(earth: f32, water: f32, _air: f32, _fire: f32) -> String {
-    let slow_pct = (1.0 - tree_slow_multiplier(earth)) * 100.0;
-    let income = tree_income_per_enemy(water);
-    format!(
+fn update_tree_tooltip(
+    earth_damage: Res<EarthDamage>,
+    water_damage: Res<WaterDamage>,
+    mut towers: Query<&mut CustomTooltip, With<TreeTower>>,
+    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
+) {
+    let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value)) * 100.0;
+    let income = tree_income_per_enemy(water_damage.value);
+    let text = format!(
         "Tree\nAura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s\nRange: {:.0}\nStat effects:\n+3 water",
         TOWER_TREE.range,
-    )
+    );
+    tooltip_texts.0.insert(TowerKind::Tree, text.clone());
+    for mut tooltip in &mut towers {
+        tooltip.0.clone_from(&text);
+    }
 }
 
 fn attach_tree_marker(
@@ -76,7 +85,7 @@ fn attach_tree_marker(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == TowerKind::Tree {
-            commands.entity(entity).insert((TreeTower, AuraTower));
+            commands.entity(entity).insert((TreeTower, AuraTower, CustomTooltip::default()));
         }
     }
 }

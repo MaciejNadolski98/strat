@@ -34,5 +34,4 @@ pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
     ],
-    custom_tooltip: None,
 };

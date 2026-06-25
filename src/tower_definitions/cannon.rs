@@ -34,5 +34,4 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
     ],
-    custom_tooltip: None,
 };

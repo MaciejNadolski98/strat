@@ -44,7 +44,6 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
     base: BASE_TRIANGLE_M,
     barrel: BARREL_HEAVY,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
-    custom_tooltip: None,
 };
 
 fn attach_golem_kill_count(
