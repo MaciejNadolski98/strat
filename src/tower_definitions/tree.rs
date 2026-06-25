@@ -61,7 +61,7 @@ pub fn tree_income_per_enemy(water: f32) -> f32 {
     1.0 + water * 0.15
 }
 
-pub fn tree_custom_tooltip(earth: f32, water: f32) -> String {
+pub fn tree_custom_tooltip(earth: f32, water: f32, _air: f32, _fire: f32) -> String {
     let slow_pct = (1.0 - tree_slow_multiplier(earth)) * 100.0;
     let income = tree_income_per_enemy(water);
     format!(

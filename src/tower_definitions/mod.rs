@@ -3,6 +3,7 @@ pub use templates::{BarrelTemplate, BaseTemplate, TowerShape};
 
 pub mod ballista;
 pub mod cyclone;
+pub mod zephyr;
 pub mod gatling;
 pub mod cannon;
 pub mod golem;
@@ -12,6 +13,7 @@ pub mod tree;
 
 pub use ballista::TOWER_BALLISTA;
 pub use cyclone::TOWER_CYCLONE;
+pub use zephyr::TOWER_ZEPHYR;
 pub use gatling::TOWER_GATLING;
 pub use cannon::TOWER_CANNON;
 pub use golem::TOWER_GOLEM;
@@ -30,6 +32,7 @@ use crate::resources::TowerStatEffect;
 pub enum TowerKind {
     Ballista,
     Cyclone,
+    Zephyr,
     Gatling,
     Cannon,
     Sprayer,
@@ -43,6 +46,7 @@ impl TowerKind {
         match self {
             Self::Ballista => &TOWER_BALLISTA,
             Self::Cyclone => &TOWER_CYCLONE,
+            Self::Zephyr => &TOWER_ZEPHYR,
             Self::Gatling => &TOWER_GATLING,
             Self::Cannon => &TOWER_CANNON,
             Self::Sprayer => &TOWER_SPRAYER,
@@ -122,9 +126,10 @@ impl TowerKind {
     }
 }
 
-pub const ALL_TOWER_KINDS: [TowerKind; 8] = [
+pub const ALL_TOWER_KINDS: [TowerKind; 9] = [
     TowerKind::Ballista,
     TowerKind::Cyclone,
+    TowerKind::Zephyr,
     TowerKind::Gatling,
     TowerKind::Cannon,
     TowerKind::Sprayer,
@@ -147,7 +152,7 @@ pub struct TowerDefinition {
     pub base: BaseTemplate,
     pub barrel: BarrelTemplate,
     pub stat_effects: &'static [TowerStatEffect],
-    pub custom_tooltip: Option<fn(f32, f32) -> String>,
+    pub custom_tooltip: Option<fn(f32, f32, f32, f32) -> String>,
 }
 
 pub struct TowerDefinitionPlugins;
@@ -157,6 +162,7 @@ impl PluginGroup for TowerDefinitionPlugins {
         PluginGroupBuilder::start::<Self>()
             .add(ballista::BallistaPlugin)
             .add(cyclone::CyclonePlugin)
+            .add(zephyr::ZephyrPlugin)
             .add(gatling::GatlingPlugin)
             .add(cannon::CannonPlugin)
             .add(sprayer::SprayerPlugin)

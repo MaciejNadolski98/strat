@@ -54,7 +54,7 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
     custom_tooltip: Some(cyclone_custom_tooltip),
 };
 
-fn cyclone_custom_tooltip(_earth: f32, _water: f32) -> String {
+fn cyclone_custom_tooltip(_earth: f32, _water: f32, _air: f32, _fire: f32) -> String {
     format!(
         "Cyclone\nBursts all enemies in range every {:.1}s\nDamage: {} + {:.2} air\nRange: {:.0}\nStat effects:\n+3 air",
         TOWER_CYCLONE.cooldown,

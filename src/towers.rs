@@ -87,7 +87,7 @@ pub fn tower_tooltip(
     stats: &TowerTooltipStats,
 ) -> String {
     if let Some(custom_fn) = kind.definition().custom_tooltip {
-        return custom_fn(stats.earth_damage.value, stats.water_damage.value);
+        return custom_fn(stats.earth_damage.value, stats.water_damage.value, stats.air_damage.value, stats.fire_damage.value);
     }
 
     let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
