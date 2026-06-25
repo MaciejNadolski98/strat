@@ -25,7 +25,7 @@ use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_e
 use game::{game_is_running, pan_camera, restart_game, toggle_pause};
 use tower_definitions::TowerDefinitionPlugins;
 use hud::update_hud;
-use pathing::update_path_input;
+use pathing::{update_path_hints, update_path_input};
 use projectiles::move_projectiles;
 use resources::{
     ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
@@ -153,6 +153,7 @@ fn main() {
         .add_systems(Update, pan_camera)
         .add_systems(Update, update_shop_input.after(toggle_pause))
         .add_systems(Update, update_path_input.after(toggle_pause))
+        .add_systems(Update, update_path_hints)
         .add_systems(Update, restart_game)
         .run();
 }

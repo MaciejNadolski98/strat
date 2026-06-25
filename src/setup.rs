@@ -29,7 +29,7 @@ pub fn setup(
 
     spawn_grid(&mut commands);
 
-    spawn_path_visuals(&mut commands, &path_tiles);
+    spawn_path_visuals(&mut commands, &path_tiles, &[]);
 
     commands.spawn((
         Sprite::from_color(Color::srgb(0.35, 0.13, 0.12), Vec2::new(52.0, 52.0)),

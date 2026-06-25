@@ -1,7 +1,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::{Enemy, MainCamera, PathEdge, PathEndMarker, PathTile, Projectile, Tower};
+use crate::components::{Enemy, MainCamera, PathEdge, PathEndMarker, PathExtensionHint, PathTile, Projectile, Tower};
 use crate::constants::STARTING_MONEY;
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
@@ -73,6 +73,7 @@ pub fn restart_game(
         Query<Entity, With<PathTile>>,
         Query<Entity, With<PathEdge>>,
     )>,
+    hints: Query<Entity, With<PathExtensionHint>>,
     mut end_marker: Query<&mut Transform, With<PathEndMarker>>,
 ) {
     if !keyboard.just_pressed(KeyCode::KeyR) {
@@ -94,6 +95,9 @@ pub fn restart_game(
     for entity in cleanup.p4().iter() {
         commands.entity(entity).despawn();
     }
+    for entity in &hints {
+        commands.entity(entity).despawn();
+    }
 
     state.money.amount = STARTING_MONEY;
     state.hp.amount = state.max_hp.amount;
@@ -109,7 +113,7 @@ pub fn restart_game(
     *state.spell_shop = SpellShop::new();
     *state.draft = TowerDraft::new();
     state.path_tiles.reset();
-    spawn_path_visuals(&mut commands, &state.path_tiles);
+    spawn_path_visuals(&mut commands, &state.path_tiles, &[]);
     if let Ok(mut marker_transform) = end_marker.single_mut() {
         marker_transform.translation = state.path_tiles.end().extend(0.0);
     }

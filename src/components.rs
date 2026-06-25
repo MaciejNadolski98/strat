@@ -25,6 +25,9 @@ pub struct PathEdge;
 pub struct PathEndMarker;
 
 #[derive(Component)]
+pub struct PathExtensionHint;
+
+#[derive(Component)]
 pub struct HudText;
 
 #[derive(Component)]

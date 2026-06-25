@@ -170,8 +170,7 @@ pub fn place_draft_tower(
     };
 
     let grid_position = snap_to_grid(world_position);
-    if path_tiles.can_extend_to(grid_position)
-        || !is_buildable_cell(grid_position, &path_tiles)
+    if !is_buildable_cell(grid_position, &path_tiles)
         || towers
             .iter()
             .any(|t| t.translation.truncate().distance(grid_position) < GRID_SIZE * 0.5)
@@ -288,8 +287,7 @@ pub fn update_tower_phantom(
 
     let grid_pos = snap_to_grid(world_pos);
 
-    if path_tiles.can_extend_to(grid_pos)
-        || !is_buildable_cell(grid_pos, &path_tiles)
+    if !is_buildable_cell(grid_pos, &path_tiles)
         || towers
             .iter()
             .any(|t| t.translation.truncate().distance(grid_pos) < GRID_SIZE * 0.5)
