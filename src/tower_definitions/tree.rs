@@ -4,7 +4,7 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula, Enemy, FireCool
 use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
-use crate::resources::{EarthDamage, Loot, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
+use crate::resources::{EarthDamage, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
@@ -27,6 +27,7 @@ impl Plugin for TreePlugin {
                 .before(move_enemies)
                 .run_if(game_is_running),
         );
+        app.add_systems(Update, update_income_bubbles.run_if(game_is_running));
         app.add_systems(Update, update_tree_tooltip);
     }
 }
@@ -60,7 +61,7 @@ pub fn tree_slow_multiplier(earth: f32) -> f32 {
 }
 
 pub fn tree_income_per_enemy(water: f32) -> f32 {
-    1.0 + water * 0.15
+    1.0 + water * 0.015
 }
 
 fn update_tree_tooltip(
@@ -72,7 +73,7 @@ fn update_tree_tooltip(
     let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value)) * 100.0;
     let income = tree_income_per_enemy(water_damage.value);
     let extras = format!(
-        "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s",
+        "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s (1 + water × 0.015)",
     );
     tooltip_texts.0.insert(TowerKind::Tree, extras.clone());
     for mut tooltip in &mut towers {
@@ -96,7 +97,6 @@ fn apply_tree_aura(
     mut money: ResMut<Money>,
     earth_damage: Res<EarthDamage>,
     water_damage: Res<WaterDamage>,
-    loot: Res<Loot>,
     mut tree_towers: Query<(&Transform, &mut FireCooldown), With<TreeTower>>,
     mut enemies: Query<(&Transform, &Health, &mut TemporaryEnemySpeed), With<Enemy>>,
 ) {
@@ -111,25 +111,27 @@ fn apply_tree_aura(
             cooldown.timer.reset();
         }
 
-        let mut enemies_in_range: u32 = 0;
+        let mut enemies_in_range: Vec<Vec2> = Vec::new();
 
         for (enemy_transform, health, mut temp_speed) in &mut enemies {
             if health.current <= 0.0 {
                 continue;
             }
-            let dist = enemy_transform.translation.truncate().distance(tree_pos);
-            if dist > TOWER_TREE.range {
+            let enemy_pos = enemy_transform.translation.truncate();
+            if enemy_pos.distance(tree_pos) > TOWER_TREE.range {
                 continue;
             }
 
             temp_speed.multiplier *= slow_mult;
-            enemies_in_range += 1;
+            enemies_in_range.push(enemy_pos);
         }
 
-        if income_due && enemies_in_range > 0 {
-            let earned = ((enemies_in_range as f32 * income_per_enemy).ceil() as i32)
-                .max(1)
-                + loot.amount;
+        if income_due && !enemies_in_range.is_empty() {
+            for &enemy_pos in &enemies_in_range {
+                spawn_income_bubble(&mut commands, enemy_pos, tree_pos);
+            }
+            let earned = ((enemies_in_range.len() as f32 * income_per_enemy).ceil() as i32)
+                .max(1);
             money.amount += earned;
             spawn_floating_text(
                 &mut commands,
@@ -138,6 +140,44 @@ fn apply_tree_aura(
                 Color::srgb(0.40, 0.92, 0.36),
                 18.0,
             );
+        }
+    }
+}
+
+#[derive(Component)]
+struct IncomeBubble {
+    origin: Vec2,
+    target: Vec2,
+    lifetime: Timer,
+}
+
+fn spawn_income_bubble(commands: &mut Commands, origin: Vec2, target: Vec2) {
+    commands.spawn((
+        Sprite::from_color(Color::srgba(0.28, 0.62, 0.96, 0.88), Vec2::splat(7.0)),
+        Transform::from_translation(origin.extend(5.0)),
+        IncomeBubble {
+            origin,
+            target,
+            lifetime: Timer::from_seconds(0.65, TimerMode::Once),
+        },
+    ));
+}
+
+fn update_income_bubbles(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut bubbles: Query<(Entity, &mut IncomeBubble, &mut Transform, &mut Sprite)>,
+) {
+    for (entity, mut bubble, mut transform, mut sprite) in &mut bubbles {
+        bubble.lifetime.tick(time.delta());
+        let t = bubble.lifetime.fraction();
+        let pos = bubble.origin.lerp(bubble.target, t);
+        let arc_y = 48.0 * 4.0 * t * (1.0 - t);
+        transform.translation = Vec3::new(pos.x, pos.y + arc_y, 5.0);
+        let alpha = if t > 0.75 { 0.88 * (1.0 - (t - 0.75) / 0.25) } else { 0.88 };
+        sprite.color = Color::srgba(0.28, 0.62, 0.96, alpha);
+        if bubble.lifetime.finished() {
+            commands.entity(entity).despawn();
         }
     }
 }
