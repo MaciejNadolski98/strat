@@ -11,7 +11,7 @@ use crate::resources::{
 };
 use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -52,6 +52,9 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
     base: BASE_PENTAGON_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
+    tooltip_config: TooltipConfig::STANDARD
+        .with_turn_speed(false)
+        .with_projectile(false),
 };
 
 fn attach_cyclone_tower(
@@ -176,19 +179,12 @@ fn apply_cyclone_burst(
 }
 
 fn update_cyclone_tooltip(
-    air_damage: Res<AirDamage>,
     mut towers: Query<&mut CustomTooltip, With<CycloneTower>>,
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    let text = format!(
-        "Cyclone\nBursts all enemies in range every {:.1}s\nDamage: {} + {:.0} air\nRange: {:.0}\nStat effects:\n+3 air",
-        TOWER_CYCLONE.cooldown,
-        TOWER_CYCLONE.damage_formula.flat,
-        TOWER_CYCLONE.damage_formula.air_multiplier * air_damage.value,
-        TOWER_CYCLONE.range,
-    );
-    tooltip_texts.0.insert(TowerKind::Cyclone, text.clone());
+    let extras = "Hits all enemies in range simultaneously".to_string();
+    tooltip_texts.0.insert(TowerKind::Cyclone, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&text);
+        tooltip.0.clone_from(&extras);
     }
 }

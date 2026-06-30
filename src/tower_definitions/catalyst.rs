@@ -4,7 +4,7 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -50,6 +50,7 @@ pub const TOWER_CATALYST: TowerDefinition = TowerDefinition {
     base: BASE_PENTAGON_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)],
+    tooltip_config: TooltipConfig::UTILITY,
 };
 
 pub fn catalyst_seconds_per_spell(fire: f32) -> f32 {
@@ -126,12 +127,12 @@ fn update_catalyst_tooltip(
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value);
-    let static_text = format!(
-        "Catalyst\nGenerates a random spell every {seconds_per_spell:.1}s\n(20 / (0.2 + fire × 1.8%) s/spell)\nStat effects:\n+2 fire",
+    let static_extras = format!(
+        "Generates a spell every {seconds_per_spell:.1}s\n(20 / (0.2 + fire × 1.8%) s/spell)",
     );
-    tooltip_texts.0.insert(TowerKind::Catalyst, static_text.clone());
+    tooltip_texts.0.insert(TowerKind::Catalyst, static_extras.clone());
     for (mut tooltip, catalyst) in &mut towers {
         let pct = catalyst.progress * 100.0;
-        tooltip.0 = format!("{static_text}\nProgress: {pct:.0}%");
+        tooltip.0 = format!("{static_extras}\nProgress: {pct:.0}%");
     }
 }

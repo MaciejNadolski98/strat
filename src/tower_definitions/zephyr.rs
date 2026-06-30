@@ -5,7 +5,7 @@ use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_CIRCLE_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -47,6 +47,7 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
     base: BASE_CIRCLE_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
+    tooltip_config: TooltipConfig::AURA,
 };
 
 pub fn zephyr_speed_bonus(air: f32, earth: f32) -> f32 {
@@ -60,16 +61,15 @@ fn update_zephyr_tooltip(
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let bonus = zephyr_speed_bonus(air_damage.value, earth_damage.value);
-    let text = format!(
-        "Zephyr\nBoosts adjacent tower attack speed\nAir: +{:.2}  Earth: -{:.2}\nTotal: {:+.2}x atk speed\nRange: {:.0}\nStat effects:\n+3 air",
+    let extras = format!(
+        "Boosts adjacent tower attack speed\nAir: +{:.2}  Earth: -{:.2}\nTotal: {:+.2}x atk speed",
         air_damage.value * 0.04,
         earth_damage.value * 0.06,
         bonus,
-        TOWER_ZEPHYR.range,
     );
-    tooltip_texts.0.insert(TowerKind::Zephyr, text.clone());
+    tooltip_texts.0.insert(TowerKind::Zephyr, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&text);
+        tooltip.0.clone_from(&extras);
     }
 }
 

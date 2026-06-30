@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_SIEGE, BARREL_CANNON, PALETTE_BRONZE};
 
 pub struct CannonPlugin;
@@ -34,4 +34,5 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
     ],
+    tooltip_config: TooltipConfig::STANDARD.with_splash(true),
 };

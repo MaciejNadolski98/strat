@@ -5,7 +5,7 @@ use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use crate::towers::{aim_towers, reset_temporary_damage_bonus};
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_TRIANGLE_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -45,6 +45,7 @@ pub const TOWER_PYRE: TowerDefinition = TowerDefinition {
     base: BASE_TRIANGLE_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 3.0)],
+    tooltip_config: TooltipConfig::AURA,
 };
 
 pub fn pyre_damage_bonus(fire: f32) -> f32 {
@@ -93,12 +94,9 @@ fn update_pyre_tooltip(
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let bonus = pyre_damage_bonus(fire_damage.value);
-    let text = format!(
-        "Pyre\nBoosts adjacent tower damage\n+{bonus:.1} flat damage (fire × 0.5)\nRange: {:.0}\nStat effects:\n+3 fire",
-        TOWER_PYRE.range,
-    );
-    tooltip_texts.0.insert(TowerKind::Pyre, text.clone());
+    let extras = format!("Boosts adjacent tower damage\n+{bonus:.1} flat damage (fire × 0.5)");
+    tooltip_texts.0.insert(TowerKind::Pyre, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&text);
+        tooltip.0.clone_from(&extras);
     }
 }

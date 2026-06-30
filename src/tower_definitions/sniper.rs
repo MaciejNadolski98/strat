@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_STANDARD, BARREL_SNIPER, PALETTE_VIOLET};
 
 pub struct SniperPlugin;
@@ -34,4 +34,5 @@ pub const TOWER_SNIPER: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
         TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
     ],
+    tooltip_config: TooltipConfig::STANDARD,
 };

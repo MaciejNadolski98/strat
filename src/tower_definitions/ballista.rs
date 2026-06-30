@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_TRIANGLE_M, BARREL_LIGHT, PALETTE_BLUE};
 
 pub struct BallistaPlugin;
@@ -34,4 +34,5 @@ pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.03),
     ],
+    tooltip_config: TooltipConfig::STANDARD,
 };

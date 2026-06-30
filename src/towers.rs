@@ -88,18 +88,10 @@ pub fn update_tower_tooltip(
     let temp_speed_val = temp_speed.map(|ts| ts.bonus).unwrap_or(0.0);
     let temp_damage_val = temp_damage.map(|td| td.flat).unwrap_or(0.0);
 
+    let base = tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val);
     let text = match custom {
-        Some(ct) if !ct.0.is_empty() => {
-            let mut t = ct.0.clone();
-            if temp_damage_val > 0.01 {
-                t.push_str(&format!("\n[Active] +{temp_damage_val:.1} damage"));
-            }
-            if temp_speed_val > 0.01 {
-                t.push_str(&format!("\n[Active] +{temp_speed_val:.2}x atk speed"));
-            }
-            t
-        }
-        _ => tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val),
+        Some(ct) if !ct.0.is_empty() => format!("{base}\n{}", ct.0),
+        _ => base,
     };
 
     tooltip_text.0 = text;
@@ -113,64 +105,63 @@ pub fn tower_tooltip(
     temp_flat_damage: f32,
     temp_speed_bonus: f32,
 ) -> String {
+    let config = kind.definition().tooltip_config;
     let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
-    let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
-        &stats.earth_damage,
-        &stats.fire_damage,
-        &stats.air_damage,
-        &stats.water_damage,
-        false,
-        elemental_multiplier,
-    ) + temp_flat_damage;
-    let critical_damage = damage_formula.calculate_damage_with_elemental_multiplier(
-        &stats.earth_damage,
-        &stats.fire_damage,
-        &stats.air_damage,
-        &stats.water_damage,
-        true,
-        elemental_multiplier,
-    ) + temp_flat_damage;
     let effective_speed = (stats.attack_speed.value + temp_speed_bonus).max(0.1);
-    let effective_cooldown = kind.cooldown() / effective_speed;
 
-    let mut active_parts: Vec<String> = Vec::new();
-    if temp_flat_damage > 0.01 {
-        active_parts.push(format!("+{temp_flat_damage:.1} dmg"));
+    let mut lines = vec![kind.name().to_string()];
+
+    if config.show_damage {
+        let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
+            &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
+            false, elemental_multiplier,
+        ) + temp_flat_damage;
+        let critical_damage = damage_formula.calculate_damage_with_elemental_multiplier(
+            &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
+            true, elemental_multiplier,
+        ) + temp_flat_damage;
+
+        let mut active_parts: Vec<String> = Vec::new();
+        if temp_flat_damage > 0.01 { active_parts.push(format!("+{temp_flat_damage:.1} dmg")); }
+        if temp_speed_bonus > 0.01 { active_parts.push(format!("+{temp_speed_bonus:.2}x spd")); }
+        let active_suffix = if active_parts.is_empty() {
+            String::new()
+        } else {
+            format!(" [Active: {}]", active_parts.join(", "))
+        };
+
+        lines.push(format!("Damage: {regular_damage:.0} ({critical_damage:.0} crit)"));
+        lines.push(format!("Formula: {damage_formula}{active_suffix}"));
     }
-    if temp_speed_bonus > 0.01 {
-        active_parts.push(format!("+{temp_speed_bonus:.2}x spd"));
+
+    if config.show_range {
+        lines.push(format!("Range: {:.0}", kind.range()));
     }
-    let active_suffix = if active_parts.is_empty() {
-        String::new()
-    } else {
-        format!(" [Active: {}]", active_parts.join(", "))
-    };
+    if config.show_cooldown {
+        lines.push(format!("Cooldown: {:.2}s", kind.cooldown() / effective_speed));
+    }
+    if config.show_crit {
+        lines.push(format!("Crit: {:.0}%", stats.critical_chance.value * 100.0));
+    }
+    if config.show_projectile {
+        lines.push(format!("Projectile: {:.0}/s", kind.projectile_speed()));
+    }
+    if config.show_splash {
+        lines.push(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value)));
+    }
+    if config.show_turn_speed {
+        lines.push(format!("Turn speed: {:.1}", kind.angular_speed()));
+    }
 
     let stat_effects = kind.stat_effects();
-    let effect_text = if stat_effects.is_empty() {
-        "None".to_string()
-    } else {
-        stat_effects
-            .iter()
-            .map(|effect| effect.effect_text())
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
+    if !stat_effects.is_empty() {
+        lines.push("Stat effects:".to_string());
+        for effect in stat_effects {
+            lines.push(effect.effect_text());
+        }
+    }
 
-    format!(
-        "{}\nDamage: {:.0} ({:.0} crit)\nFormula: {}{active_suffix}\nRange: {:.0}\nCooldown: {:.2}s\nCrit: {:.0}%\nProjectile: {:.0}/s\nSplash: {:.0}\nTurn speed: {:.1}\nStat effects:\n{}",
-        kind.name(),
-        regular_damage,
-        critical_damage,
-        damage_formula,
-        kind.range(),
-        effective_cooldown,
-        stats.critical_chance.value * 100.0,
-        kind.projectile_speed(),
-        kind.upgraded_explosion_radius(stats.explosion_size.value),
-        kind.angular_speed(),
-        effect_text,
-    )
+    lines.join("\n")
 }
 
 pub fn reset_temporary_attack_speed(mut towers: Query<&mut TemporaryAttackSpeed, With<Tower>>) {
@@ -393,11 +384,11 @@ pub fn update_draft_tooltip(
         let pos = transform.translation.truncate();
         if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
             let kind = draft.offers[slot.index];
-            tooltip_text.0 = if let Some(text) = custom_tooltips.0.get(&kind).filter(|t| !t.is_empty()) {
-                text.clone()
-            } else {
-                let damage_formula = kind.damage_formula();
-                tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0)
+            let damage_formula = kind.damage_formula();
+            let base = tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0);
+            tooltip_text.0 = match custom_tooltips.0.get(&kind).filter(|s| !s.is_empty()) {
+                Some(extras) => format!("{base}\n{extras}"),
+                None => base,
             };
             *tooltip_visibility = Visibility::Visible;
             return;

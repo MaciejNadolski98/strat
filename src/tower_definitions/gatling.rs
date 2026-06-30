@@ -2,10 +2,10 @@ use bevy::prelude::*;
 
 use crate::components::{CustomTooltip, DamageFormula, TemporaryAttackSpeed};
 use crate::game::game_is_running;
-use crate::resources::{AirDamage, AttackSpeed, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect, WaterDamage};
+use crate::resources::{AttackSpeed, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
 use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
 use crate::tower_definitions::TowerKind;
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
 
 pub struct GatlingPlugin;
@@ -53,6 +53,7 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
     stat_effects: &[
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
     ],
+    tooltip_config: TooltipConfig::STANDARD,
 };
 
 const MAX_SHOTS: f32 = 8.0;
@@ -159,30 +160,25 @@ fn reset(
 }
 
 fn update_gatling_tooltip(
-    air_damage: Res<AirDamage>,
-    water_damage: Res<WaterDamage>,
     attack_speed: Res<AttackSpeed>,
     mut towers: Query<(&GatlingWindUp, &mut CustomTooltip), With<GatlingTower>>,
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    let base = TOWER_GATLING.damage_formula.flat;
-    let air_contrib = TOWER_GATLING.damage_formula.air_multiplier * air_damage.value;
-    let water_contrib = TOWER_GATLING.damage_formula.water_multiplier * water_damage.value;
-    let total = base as f32 + air_contrib + water_contrib;
     let max_bonus = MAX_SHOTS * SPEED_PER_SHOT;
-    let base_cooldown = TOWER_GATLING.cooldown / attack_speed.value.max(0.1);
+    let effective_speed = attack_speed.value.max(0.1);
+    let base_cooldown = TOWER_GATLING.cooldown / effective_speed;
+    let min_cooldown = TOWER_GATLING.cooldown / (effective_speed + max_bonus);
 
-    let static_text = format!(
-        "Gatling\nBuilds attack speed while firing, decays when idle\nDamage: {total:.0} ({base} + {air_contrib:.0} air + {water_contrib:.0} water)\nMax wind-up: +{max_bonus:.1}x atk speed ({MAX_SHOTS:.0} shots)\nMin cooldown: {:.2}s\nDecay: {SHOT_DECAY_RATE:.0} shot/s\nRange: {:.0}\nStat effects:\n+2 air",
-        base_cooldown / (1.0 + max_bonus),
-        TOWER_GATLING.range,
+    let static_extras = format!(
+        "Builds attack speed while firing, decays when idle\nMax wind-up: +{max_bonus:.1}x atk speed ({MAX_SHOTS:.0} shots)\nBase cooldown: {base_cooldown:.2}s  Min: {min_cooldown:.2}s\nDecay: {SHOT_DECAY_RATE:.0} shot/s",
     );
-    tooltip_texts.0.insert(TowerKind::Gatling, static_text.clone());
+    tooltip_texts.0.insert(TowerKind::Gatling, static_extras.clone());
 
     for (windup, mut tooltip) in &mut towers {
         let current_bonus = windup.shots * SPEED_PER_SHOT;
+        let current_cooldown = TOWER_GATLING.cooldown / (effective_speed + current_bonus);
         tooltip.0 = format!(
-            "{static_text}\nCurrent wind-up: +{current_bonus:.2}x ({:.0}/{MAX_SHOTS:.0} shots)",
+            "{static_extras}\nCurrent wind-up: +{current_bonus:.2}x ({:.0}/{MAX_SHOTS:.0} shots)  {current_cooldown:.2}s",
             windup.shots,
         );
     }

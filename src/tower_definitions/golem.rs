@@ -6,7 +6,7 @@ use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use crate::tower_definitions::templates::BASE_TRIANGLE_M;
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BARREL_HEAVY, PALETTE_EARTH};
 
 pub struct GolemPlugin;
@@ -44,6 +44,7 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
     base: BASE_TRIANGLE_M,
     barrel: BARREL_HEAVY,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
+    tooltip_config: TooltipConfig::STANDARD,
 };
 
 fn attach_golem_kill_count(

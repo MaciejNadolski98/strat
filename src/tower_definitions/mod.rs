@@ -154,6 +154,98 @@ pub const ALL_TOWER_KINDS: [TowerKind; 11] = [
 ];
 
 #[derive(Clone, Copy)]
+pub struct TooltipConfig {
+    pub show_damage: bool,
+    pub show_range: bool,
+    pub show_cooldown: bool,
+    pub show_crit: bool,
+    pub show_projectile: bool,
+    pub show_splash: bool,
+    pub show_turn_speed: bool,
+}
+
+impl TooltipConfig {
+    pub const STANDARD: Self = Self {
+        show_damage: true,
+        show_range: true,
+        show_cooldown: true,
+        show_crit: true,
+        show_projectile: true,
+        show_splash: false,
+        show_turn_speed: true,
+    };
+
+    pub const AURA: Self = Self {
+        show_damage: false,
+        show_range: true,
+        show_cooldown: false,
+        show_crit: false,
+        show_projectile: false,
+        show_splash: false,
+        show_turn_speed: false,
+    };
+
+    pub const UTILITY: Self = Self {
+        show_damage: false,
+        show_range: false,
+        show_cooldown: false,
+        show_crit: false,
+        show_projectile: false,
+        show_splash: false,
+        show_turn_speed: false,
+    };
+
+    pub const fn with_damage(self, value: bool) -> Self {
+        Self {
+            show_damage: value,
+            ..self
+        }
+    }
+
+    pub const fn with_range(self, value: bool) -> Self {
+        Self {
+            show_range: value,
+            ..self
+        }
+    }
+
+    pub const fn with_cooldown(self, value: bool) -> Self {
+        Self {
+            show_cooldown: value,
+            ..self
+        }
+    }
+
+    pub const fn with_crit(self, value: bool) -> Self {
+        Self {
+            show_crit: value,
+            ..self
+        }
+    }
+
+    pub const fn with_projectile(self, value: bool) -> Self {
+        Self {
+            show_projectile: value,
+            ..self
+        }
+    }
+
+    pub const fn with_splash(self, value: bool) -> Self {
+        Self {
+            show_splash: value,
+            ..self
+        }
+    }
+
+    pub const fn with_turn_speed(self, value: bool) -> Self {
+        Self {
+            show_turn_speed: value,
+            ..self
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct TowerDefinition {
     pub name: &'static str,
     pub range: f32,
@@ -167,6 +259,7 @@ pub struct TowerDefinition {
     pub base: BaseTemplate,
     pub barrel: BarrelTemplate,
     pub stat_effects: &'static [TowerStatEffect],
+    pub tooltip_config: TooltipConfig,
 }
 
 pub struct TowerDefinitionPlugins;

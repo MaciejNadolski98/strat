@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_LIGHT, BARREL_LIGHT, PALETTE_TEAL};
 
 pub struct SprayerPlugin;
@@ -34,4 +34,5 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
         TowerStatEffect::new(PlayerStatKind::Loot, 1.0),
     ],
+    tooltip_config: TooltipConfig::STANDARD,
 };

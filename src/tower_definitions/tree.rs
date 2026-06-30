@@ -6,7 +6,7 @@ use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Loot, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tower_definitions::TowerKind;
-use super::TowerDefinition;
+use super::{TowerDefinition, TooltipConfig};
 use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
 
 #[derive(Component)]
@@ -51,6 +51,8 @@ pub const TOWER_TREE: TowerDefinition = TowerDefinition {
     base: BASE_HEX_M,
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)],
+    tooltip_config: TooltipConfig::AURA
+        .with_cooldown(true),
 };
 
 pub fn tree_slow_multiplier(earth: f32) -> f32 {
@@ -69,13 +71,12 @@ fn update_tree_tooltip(
 ) {
     let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value)) * 100.0;
     let income = tree_income_per_enemy(water_damage.value);
-    let text = format!(
-        "Tree\nAura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s\nRange: {:.0}\nStat effects:\n+3 water",
-        TOWER_TREE.range,
+    let extras = format!(
+        "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s",
     );
-    tooltip_texts.0.insert(TowerKind::Tree, text.clone());
+    tooltip_texts.0.insert(TowerKind::Tree, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&text);
+        tooltip.0.clone_from(&extras);
     }
 }
 
