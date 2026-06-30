@@ -164,6 +164,7 @@ pub struct TooltipConfig {
     pub show_turn_speed: bool,
 }
 
+#[allow(dead_code)]
 impl TooltipConfig {
     pub const STANDARD: Self = Self {
         show_damage: true,
