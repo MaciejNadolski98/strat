@@ -7,6 +7,10 @@ pub const PATH_EXTENSION_BASE_COST: i32 = 3;
 pub const PATH_EXTENSION_COST_STEP: i32 = 2;
 pub const STARTING_MONEY: i32 = 40;
 pub const PLAYER_BASE_MAX_HP: i32 = 20;
+pub const BASE_REGENERATION: i32 = 1;
+pub const BASE_ATTACK_SPEED: f32 = 1.0;
+pub const BASE_LOOT: i32 = 2;
+pub const BASE_CRITICAL_CHANCE: f32 = 0.12;
 pub const GRID_SIZE: f32 = 48.0;
 pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
 

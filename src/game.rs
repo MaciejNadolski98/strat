@@ -2,18 +2,23 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::components::{Enemy, MainCamera, PathEdge, PathEndMarker, PathExtensionHint, PathTile, Projectile, Tower};
-use crate::constants::STARTING_MONEY;
+use crate::constants::{
+    BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_REGENERATION, PLAYER_BASE_MAX_HP,
+    STARTING_MONEY,
+};
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
-    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, KillCount, MaxHp, Money,
-    NextWaveTimer, PathTiles, Paused, Shop, SpawnTimer, SpellShop, TowerDraft, WaveNumber,
+    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
+    EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, Loot, MaxHp,
+    Money, NextWaveTimer, PathTiles, Paused, Regeneration, Shop, SpawnTimer, SpellShop,
+    TowerDraft, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
 pub struct RestartState<'w> {
     money: ResMut<'w, Money>,
     hp: ResMut<'w, CurrentHp>,
-    max_hp: Res<'w, MaxHp>,
+    max_hp: ResMut<'w, MaxHp>,
     kills: ResMut<'w, KillCount>,
     game_over: ResMut<'w, GameOver>,
     game_won: ResMut<'w, GameWon>,
@@ -27,6 +32,15 @@ pub struct RestartState<'w> {
     active_spell_effects: ResMut<'w, ActiveSpellEffects>,
     paused: ResMut<'w, Paused>,
     path_tiles: ResMut<'w, PathTiles>,
+    regeneration: ResMut<'w, Regeneration>,
+    attack_speed: ResMut<'w, AttackSpeed>,
+    loot: ResMut<'w, Loot>,
+    critical_chance: ResMut<'w, CriticalChance>,
+    explosion_size: ResMut<'w, ExplosionSize>,
+    earth_damage: ResMut<'w, EarthDamage>,
+    fire_damage: ResMut<'w, FireDamage>,
+    air_damage: ResMut<'w, AirDamage>,
+    water_damage: ResMut<'w, WaterDamage>,
 }
 
 pub fn toggle_pause(
@@ -99,11 +113,21 @@ pub fn restart_game(
         commands.entity(entity).despawn();
     }
 
+    state.max_hp.amount = PLAYER_BASE_MAX_HP;
     state.money.amount = STARTING_MONEY;
-    state.hp.amount = state.max_hp.amount;
+    state.hp.amount = PLAYER_BASE_MAX_HP;
     state.kills.amount = 0;
     state.game_over.value = false;
     state.game_won.value = false;
+    state.regeneration.amount = BASE_REGENERATION;
+    state.attack_speed.value = BASE_ATTACK_SPEED;
+    state.loot.amount = BASE_LOOT;
+    state.critical_chance.value = BASE_CRITICAL_CHANCE;
+    state.explosion_size.value = 0.0;
+    state.earth_damage.value = 0.0;
+    state.fire_damage.value = 0.0;
+    state.air_damage.value = 0.0;
+    state.water_damage.value = 0.0;
 
     state.wave_number.value = 1;
     state.remaining.count = 0;

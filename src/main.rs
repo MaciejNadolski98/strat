@@ -18,7 +18,10 @@ mod waves;
 
 use bevy::prelude::*;
 
-use constants::{PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH};
+use constants::{
+    BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_REGENERATION, PLAYER_BASE_MAX_HP,
+    STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH,
+};
 use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
@@ -65,10 +68,10 @@ fn main() {
         .insert_resource(GameOver { value: false })
         .insert_resource(GameWon { value: false })
         .insert_resource(Paused { value: false })
-        .insert_resource(Regeneration { amount: 1 })
-        .insert_resource(AttackSpeed { value: 1.0 })
-        .insert_resource(Loot { amount: 2 })
-        .insert_resource(CriticalChance { value: 0.12 })
+        .insert_resource(Regeneration { amount: BASE_REGENERATION })
+        .insert_resource(AttackSpeed { value: BASE_ATTACK_SPEED })
+        .insert_resource(Loot { amount: BASE_LOOT })
+        .insert_resource(CriticalChance { value: BASE_CRITICAL_CHANCE })
         .insert_resource(ExplosionSize { value: 0.0 })
         .insert_resource(EarthDamage { value: 0.0 })
         .insert_resource(FireDamage { value: 0.0 })
