@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{DamageFormula, TowerKillCount};
+use crate::components::{CustomTooltip, DamageFormula, TowerKillCount};
 use crate::game::game_is_running;
 use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
@@ -22,6 +22,7 @@ impl Plugin for GolemPlugin {
             )
                 .run_if(game_is_running),
         );
+        app.add_systems(Update, update_golem_tooltip);
     }
 }
 
@@ -56,8 +57,20 @@ fn attach_golem_kill_count(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == KIND {
-            commands.entity(entity).insert(TowerKillCount { kills: 0 });
+            commands.entity(entity).insert((TowerKillCount { kills: 0 }, CustomTooltip::default()));
         }
+    }
+}
+
+fn update_golem_tooltip(
+    mut golems: Query<(&TowerKillCount, &mut CustomTooltip)>,
+    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
+) {
+    tooltip_texts.0.insert(KIND, "Every 10 kills: +1 Earth Damage".to_string());
+    for (kc, mut tooltip) in &mut golems {
+        let bonus = kc.kills / 10;
+        let progress = kc.kills % 10;
+        tooltip.0 = format!("Every 10 kills: +1 Earth Damage\nProduced: +{bonus} Earth\nProgress: {progress}/10 kills");
     }
 }
 
