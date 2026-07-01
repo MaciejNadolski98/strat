@@ -5,7 +5,7 @@ use crate::constants::{
     SHOP_REROLL_COST,
 };
 use crate::item_definitions::*;
-use crate::tower_definitions::{ALL_TOWER_KINDS, TowerKind};
+use crate::tower_definitions::TowerKind;
 
 #[derive(Resource)]
 pub struct Money {
@@ -441,31 +441,33 @@ pub enum TowerDraftPhase {
 
 #[derive(Resource)]
 pub struct TowerDraft {
-    pub offers: [TowerKind; 3],
+    pub offers: Vec<TowerKind>,
     pub phase: TowerDraftPhase,
+    pub(crate) known_kinds: Vec<TowerKind>,
 }
 
 impl TowerDraft {
-    pub fn new() -> Self {
+    pub fn new_empty() -> Self {
         Self {
-            offers: Self::generate_offers(),
+            offers: Vec::new(),
             phase: TowerDraftPhase::Picking,
+            known_kinds: Vec::new(),
         }
     }
 
     pub fn activate(&mut self) {
-        self.offers = Self::generate_offers();
+        self.offers = Self::generate_offers(&self.known_kinds);
         self.phase = TowerDraftPhase::Picking;
     }
 
-    fn generate_offers() -> [TowerKind; 3] {
-        let mut kinds = ALL_TOWER_KINDS.to_vec();
+    fn generate_offers(kinds: &[TowerKind]) -> Vec<TowerKind> {
+        let mut kinds = kinds.to_vec();
         let n = kinds.len();
         for i in 0..3.min(n) {
             let j = i + rand::random::<usize>() % (n - i);
             kinds.swap(i, j);
         }
-        [kinds[0], kinds[1], kinds[2]]
+        kinds[..3].to_vec()
     }
 }
 

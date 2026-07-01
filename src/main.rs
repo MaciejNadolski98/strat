@@ -26,7 +26,7 @@ use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower
 use effects::{update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, pan_camera, restart_game, toggle_pause};
-use tower_definitions::{CustomTooltipTexts, TowerDefinitionPlugins};
+use tower_definitions::{CustomTooltipTexts, TowerPlugins, TowerRegistry};
 use hud::update_hud;
 use pathing::{update_path_hints, update_path_input};
 use projectiles::move_projectiles;
@@ -48,6 +48,11 @@ use towers::{
 use waves::RunMode;
 
 use crate::resources::{NewRoundEvent, ShootEvent};
+
+fn initialize_draft(registry: Res<TowerRegistry>, mut draft: ResMut<TowerDraft>) {
+    draft.known_kinds = registry.kinds.clone();
+    draft.activate();
+}
 
 fn main() {
     let run_mode = RunMode::from_args(std::env::args());
@@ -80,7 +85,8 @@ fn main() {
         .insert_resource(ActiveSpellEffects::new())
         .insert_resource(WaveNumber { value: 1 })
         .insert_resource(EnemiesRemaining { count: 0 })
-        .insert_resource(TowerDraft::new())
+        .insert_resource(TowerRegistry::default())
+        .insert_resource(TowerDraft::new_empty())
         .insert_resource(SpawnTimer::new())
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
@@ -91,20 +97,18 @@ fn main() {
         .add_event::<EnemyKilledEvent>()
         .add_event::<ShootEvent>()
         .add_event::<NewRoundEvent>()
-        .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Simple Tower Defense".to_string(),
-                    resolution: (WINDOW_WIDTH, WINDOW_HEIGHT).into(),
-                    resizable: false,
-                    ..default()
-                }),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Simple Tower Defense".to_string(),
+                resolution: (WINDOW_WIDTH, WINDOW_HEIGHT).into(),
+                resizable: false,
                 ..default()
             }),
-            TowerDefinitionPlugins,
-        ))
+            ..default()
+        }))
+        .add_plugins(TowerPlugins)
         .init_resource::<CustomTooltipTexts>()
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, initialize_draft).chain())
         .add_systems(Update, toggle_pause)
         .add_systems(
             Update,

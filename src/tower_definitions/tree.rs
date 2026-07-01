@@ -6,7 +6,7 @@ use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tower_definitions::TowerKind;
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
 
 #[derive(Component)]
@@ -16,6 +16,7 @@ pub struct TreePlugin;
 
 impl Plugin for TreePlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(
             Update,
             attach_tree_marker.run_if(game_is_running),
@@ -56,6 +57,8 @@ pub const TOWER_TREE: TowerDefinition = TowerDefinition {
         .with_cooldown(true),
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_TREE);
+
 pub fn tree_slow_multiplier(earth: f32) -> f32 {
     0.3 + 0.7 / (1.0 + earth / 15.0)
 }
@@ -75,7 +78,7 @@ fn update_tree_tooltip(
     let extras = format!(
         "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s (1 + water × 0.015)",
     );
-    tooltip_texts.0.insert(TowerKind::Tree, extras.clone());
+    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
         tooltip.0.clone_from(&extras);
     }
@@ -86,7 +89,7 @@ fn attach_tree_marker(
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Tree {
+        if *kind == KIND {
             commands.entity(entity).insert((TreeTower, AuraTower, CustomTooltip::default()));
         }
     }

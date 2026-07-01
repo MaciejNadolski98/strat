@@ -135,7 +135,7 @@ pub fn restart_game(
     state.next_wave_timer.timer.reset();
     *state.shop = Shop::new(1);
     *state.spell_shop = SpellShop::new();
-    *state.draft = TowerDraft::new();
+    state.draft.activate();
     state.path_tiles.reset();
     spawn_path_visuals(&mut commands, &state.path_tiles, &[]);
     if let Ok(mut marker_transform) = end_marker.single_mut() {

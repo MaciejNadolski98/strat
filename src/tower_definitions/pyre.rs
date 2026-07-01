@@ -5,7 +5,7 @@ use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use crate::towers::{aim_towers, reset_temporary_damage_bonus};
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_TRIANGLE_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -15,6 +15,7 @@ pub struct PyrePlugin;
 
 impl Plugin for PyrePlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_pyre_marker.run_if(game_is_running));
         app.add_systems(Update, 
             apply_pyre_aura
@@ -48,6 +49,8 @@ pub const TOWER_PYRE: TowerDefinition = TowerDefinition {
     tooltip_config: TooltipConfig::AURA,
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_PYRE);
+
 pub fn pyre_damage_bonus(fire: f32) -> f32 {
     fire * 0.5
 }
@@ -57,7 +60,7 @@ fn attach_pyre_marker(
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Pyre {
+        if *kind == KIND {
             commands
                 .entity(entity)
                 .insert((PyreTower, AuraTower, CustomTooltip::default()));
@@ -95,7 +98,7 @@ fn update_pyre_tooltip(
 ) {
     let bonus = pyre_damage_bonus(fire_damage.value);
     let extras = format!("Boosts adjacent tower damage\n+{bonus:.1} flat damage (fire × 0.5)");
-    tooltip_texts.0.insert(TowerKind::Pyre, extras.clone());
+    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
         tooltip.0.clone_from(&extras);
     }

@@ -11,7 +11,7 @@ use crate::resources::{
 };
 use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -21,6 +21,7 @@ pub struct CyclonePlugin;
 
 impl Plugin for CyclonePlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_cyclone_tower.run_if(game_is_running));
         app.add_systems(
             Update,
@@ -57,12 +58,14 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
         .with_projectile(false),
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_CYCLONE);
+
 fn attach_cyclone_tower(
     mut commands: Commands,
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Cyclone {
+        if *kind == KIND {
             commands.entity(entity).insert((CycloneTower, AuraTower, CustomTooltip::default()));
         }
     }
@@ -183,7 +186,7 @@ fn update_cyclone_tooltip(
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let extras = "Hits all enemies in range simultaneously".to_string();
-    tooltip_texts.0.insert(TowerKind::Cyclone, extras.clone());
+    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
         tooltip.0.clone_from(&extras);
     }

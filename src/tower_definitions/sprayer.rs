@@ -2,13 +2,15 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerKind, TowerRegistry};
 use super::templates::{BASE_LIGHT, BARREL_LIGHT, PALETTE_TEAL};
 
 pub struct SprayerPlugin;
 
 impl Plugin for SprayerPlugin {
-    fn build(&self, _app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
+    }
 }
 
 pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
@@ -36,3 +38,5 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
     ],
     tooltip_config: TooltipConfig::STANDARD,
 };
+
+pub const KIND: TowerKind = TowerKind(&TOWER_SPRAYER);

@@ -5,7 +5,7 @@ use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_CIRCLE_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -15,6 +15,7 @@ pub struct ZephyrPlugin;
 
 impl Plugin for ZephyrPlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_zephyr_marker.run_if(game_is_running));
         app.add_systems(
             Update,
@@ -50,6 +51,8 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
     tooltip_config: TooltipConfig::AURA,
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);
+
 pub fn zephyr_speed_bonus(air: f32, earth: f32) -> f32 {
     air * 0.04 - earth * 0.06
 }
@@ -67,7 +70,7 @@ fn update_zephyr_tooltip(
         earth_damage.value * 0.06,
         bonus,
     );
-    tooltip_texts.0.insert(TowerKind::Zephyr, extras.clone());
+    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
         tooltip.0.clone_from(&extras);
     }
@@ -78,7 +81,7 @@ fn attach_zephyr_marker(
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Zephyr {
+        if *kind == KIND {
             commands.entity(entity).insert((ZephyrTower, AuraTower, CustomTooltip::default()));
         }
     }

@@ -2,13 +2,15 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerKind, TowerRegistry};
 use super::templates::{BASE_TRIANGLE_M, BARREL_LIGHT, PALETTE_BLUE};
 
 pub struct BallistaPlugin;
 
 impl Plugin for BallistaPlugin {
-    fn build(&self, _app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
+    }
 }
 
 pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition {
@@ -36,3 +38,5 @@ pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition {
     ],
     tooltip_config: TooltipConfig::STANDARD,
 };
+
+pub const KIND: TowerKind = TowerKind(&TOWER_BALLISTA);

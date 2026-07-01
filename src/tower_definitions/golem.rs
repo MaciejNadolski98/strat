@@ -6,13 +6,14 @@ use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use crate::tower_definitions::templates::BASE_TRIANGLE_M;
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BARREL_HEAVY, PALETTE_EARTH};
 
 pub struct GolemPlugin;
 
 impl Plugin for GolemPlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(
             Update,
             (
@@ -47,12 +48,14 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
     tooltip_config: TooltipConfig::STANDARD,
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_GOLEM);
+
 fn attach_golem_kill_count(
     mut commands: Commands,
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Golem {
+        if *kind == KIND {
             commands.entity(entity).insert(TowerKillCount { kills: 0 });
         }
     }

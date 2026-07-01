@@ -13,21 +13,8 @@ pub mod sniper;
 pub mod sprayer;
 pub mod tree;
 
-pub use ballista::TOWER_BALLISTA;
-pub use catalyst::TOWER_CATALYST;
-pub use cyclone::TOWER_CYCLONE;
-pub use pyre::TOWER_PYRE;
-pub use zephyr::TOWER_ZEPHYR;
-pub use gatling::TOWER_GATLING;
-pub use cannon::TOWER_CANNON;
-pub use golem::TOWER_GOLEM;
-pub use sniper::TOWER_SNIPER;
-pub use sprayer::TOWER_SPRAYER;
-pub use tree::TOWER_TREE;
-
 use std::collections::HashMap;
 
-use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 
 use crate::components::DamageFormula;
@@ -36,61 +23,36 @@ use crate::resources::TowerStatEffect;
 #[derive(Resource, Default)]
 pub struct CustomTooltipTexts(pub HashMap<TowerKind, String>);
 
-
-#[derive(Component, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TowerKind {
-    Ballista,
-    Catalyst,
-    Cyclone,
-    Pyre,
-    Zephyr,
-    Gatling,
-    Cannon,
-    Sprayer,
-    Sniper,
-    Golem,
-    Tree,
-}
+#[derive(Component, Clone, Copy)]
+pub struct TowerKind(pub &'static TowerDefinition);
 
 impl TowerKind {
     pub fn definition(self) -> &'static TowerDefinition {
-        match self {
-            Self::Ballista => &TOWER_BALLISTA,
-            Self::Catalyst => &TOWER_CATALYST,
-            Self::Cyclone => &TOWER_CYCLONE,
-            Self::Pyre => &TOWER_PYRE,
-            Self::Zephyr => &TOWER_ZEPHYR,
-            Self::Gatling => &TOWER_GATLING,
-            Self::Cannon => &TOWER_CANNON,
-            Self::Sprayer => &TOWER_SPRAYER,
-            Self::Sniper => &TOWER_SNIPER,
-            Self::Golem => &TOWER_GOLEM,
-            Self::Tree => &TOWER_TREE,
-        }
+        self.0
     }
 
     pub fn name(self) -> &'static str {
-        self.definition().name
+        self.0.name
     }
 
     pub fn range(self) -> f32 {
-        self.definition().range
+        self.0.range
     }
 
     pub fn cooldown(self) -> f32 {
-        self.definition().cooldown
+        self.0.cooldown
     }
 
     pub fn damage_formula(self) -> DamageFormula {
-        self.definition().damage_formula
+        self.0.damage_formula
     }
 
     pub fn projectile_speed(self) -> f32 {
-        self.definition().projectile_speed
+        self.0.projectile_speed
     }
 
     pub fn upgraded_explosion_radius(self, explosion_size: f32) -> f32 {
-        let base_radius = self.definition().explosion_radius;
+        let base_radius = self.0.explosion_radius;
         if base_radius > 0.0 {
             base_radius + explosion_size
         } else {
@@ -99,35 +61,35 @@ impl TowerKind {
     }
 
     pub fn angular_speed(self) -> f32 {
-        self.definition().angular_speed
+        self.0.angular_speed
     }
 
     pub fn base_color(self) -> Color {
-        self.definition().base_color
+        self.0.base_color
     }
 
     pub fn barrel_color(self) -> Color {
-        self.definition().barrel_color
+        self.0.barrel_color
     }
 
     pub fn base_size(self) -> Vec2 {
-        self.definition().base.size
+        self.0.base.size
     }
 
     pub fn base_shape(self) -> TowerShape {
-        self.definition().base.shape
+        self.0.base.shape
     }
 
     pub fn barrel_size(self) -> Vec2 {
-        self.definition().barrel.size()
+        self.0.barrel.size()
     }
 
     pub fn barrel_offset(self) -> f32 {
-        self.definition().barrel.offset()
+        self.0.barrel.offset()
     }
 
     pub fn stat_effects(self) -> &'static [TowerStatEffect] {
-        self.definition().stat_effects
+        self.0.stat_effects
     }
 
     pub fn body_sprite(self, alpha: f32) -> Sprite {
@@ -139,19 +101,37 @@ impl TowerKind {
     }
 }
 
-pub const ALL_TOWER_KINDS: [TowerKind; 11] = [
-    TowerKind::Ballista,
-    TowerKind::Catalyst,
-    TowerKind::Cyclone,
-    TowerKind::Pyre,
-    TowerKind::Zephyr,
-    TowerKind::Gatling,
-    TowerKind::Cannon,
-    TowerKind::Sprayer,
-    TowerKind::Sniper,
-    TowerKind::Golem,
-    TowerKind::Tree,
-];
+impl PartialEq for TowerKind {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.0, other.0)
+    }
+}
+
+impl Eq for TowerKind {}
+
+impl std::hash::Hash for TowerKind {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (self.0 as *const TowerDefinition).hash(state);
+    }
+}
+
+pub struct TowerPlugins;
+
+impl Plugin for TowerPlugins {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((
+            ballista::BallistaPlugin, catalyst::CatalystPlugin, cyclone::CyclonePlugin,
+            pyre::PyrePlugin, zephyr::ZephyrPlugin, gatling::GatlingPlugin,
+            cannon::CannonPlugin, sprayer::SprayerPlugin, sniper::SniperPlugin,
+            golem::GolemPlugin, tree::TreePlugin,
+        ));
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct TowerRegistry {
+    pub kinds: Vec<TowerKind>,
+}
 
 #[derive(Clone, Copy)]
 pub struct TooltipConfig {
@@ -197,52 +177,31 @@ impl TooltipConfig {
     };
 
     pub const fn with_damage(self, value: bool) -> Self {
-        Self {
-            show_damage: value,
-            ..self
-        }
+        Self { show_damage: value, ..self }
     }
 
     pub const fn with_range(self, value: bool) -> Self {
-        Self {
-            show_range: value,
-            ..self
-        }
+        Self { show_range: value, ..self }
     }
 
     pub const fn with_cooldown(self, value: bool) -> Self {
-        Self {
-            show_cooldown: value,
-            ..self
-        }
+        Self { show_cooldown: value, ..self }
     }
 
     pub const fn with_crit(self, value: bool) -> Self {
-        Self {
-            show_crit: value,
-            ..self
-        }
+        Self { show_crit: value, ..self }
     }
 
     pub const fn with_projectile(self, value: bool) -> Self {
-        Self {
-            show_projectile: value,
-            ..self
-        }
+        Self { show_projectile: value, ..self }
     }
 
     pub const fn with_splash(self, value: bool) -> Self {
-        Self {
-            show_splash: value,
-            ..self
-        }
+        Self { show_splash: value, ..self }
     }
 
     pub const fn with_turn_speed(self, value: bool) -> Self {
-        Self {
-            show_turn_speed: value,
-            ..self
-        }
+        Self { show_turn_speed: value, ..self }
     }
 }
 
@@ -261,23 +220,4 @@ pub struct TowerDefinition {
     pub barrel: BarrelTemplate,
     pub stat_effects: &'static [TowerStatEffect],
     pub tooltip_config: TooltipConfig,
-}
-
-pub struct TowerDefinitionPlugins;
-
-impl PluginGroup for TowerDefinitionPlugins {
-    fn build(self) -> PluginGroupBuilder {
-        PluginGroupBuilder::start::<Self>()
-            .add(ballista::BallistaPlugin)
-            .add(catalyst::CatalystPlugin)
-            .add(cyclone::CyclonePlugin)
-            .add(pyre::PyrePlugin)
-            .add(zephyr::ZephyrPlugin)
-            .add(gatling::GatlingPlugin)
-            .add(cannon::CannonPlugin)
-            .add(sprayer::SprayerPlugin)
-            .add(sniper::SniperPlugin)
-            .add(golem::GolemPlugin)
-            .add(tree::TreePlugin)
-    }
 }

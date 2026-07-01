@@ -4,7 +4,7 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
 
 #[derive(Component)]
@@ -23,6 +23,7 @@ pub struct CatalystPlugin;
 
 impl Plugin for CatalystPlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_catalyst_marker.run_if(game_is_running));
         app.add_systems(Update, generate_spell.run_if(game_is_running));
         app.add_systems(Update, update_catalyst_progress_bar);
@@ -53,6 +54,8 @@ pub const TOWER_CATALYST: TowerDefinition = TowerDefinition {
     tooltip_config: TooltipConfig::UTILITY,
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_CATALYST);
+
 pub fn catalyst_seconds_per_spell(fire: f32) -> f32 {
     20.0 / (0.2 + 1.8 * fire / 100.0)
 }
@@ -62,7 +65,7 @@ fn attach_catalyst_marker(
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Catalyst {
+        if *kind == KIND {
             commands
                 .entity(entity)
                 .insert((CatalystTower { progress: 0.0 }, AuraTower, CustomTooltip::default()))
@@ -130,7 +133,7 @@ fn update_catalyst_tooltip(
     let static_extras = format!(
         "Generates a spell every {seconds_per_spell:.1}s\n(20 / (0.2 + fire × 1.8%) s/spell)",
     );
-    tooltip_texts.0.insert(TowerKind::Catalyst, static_extras.clone());
+    tooltip_texts.0.insert(KIND, static_extras.clone());
     for (mut tooltip, catalyst) in &mut towers {
         let pct = catalyst.progress * 100.0;
         tooltip.0 = format!("{static_extras}\nProgress: {pct:.0}%");

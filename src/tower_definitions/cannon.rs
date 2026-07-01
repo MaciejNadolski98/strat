@@ -2,13 +2,15 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerKind, TowerRegistry};
 use super::templates::{BASE_SIEGE, BARREL_CANNON, PALETTE_BRONZE};
 
 pub struct CannonPlugin;
 
 impl Plugin for CannonPlugin {
-    fn build(&self, _app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
+    }
 }
 
 pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
@@ -36,3 +38,5 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
     ],
     tooltip_config: TooltipConfig::STANDARD.with_splash(true),
 };
+
+pub const KIND: TowerKind = TowerKind(&TOWER_CANNON);

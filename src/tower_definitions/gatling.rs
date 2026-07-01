@@ -5,13 +5,14 @@ use crate::game::game_is_running;
 use crate::resources::{AttackSpeed, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
 use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
 use crate::tower_definitions::TowerKind;
-use super::{TowerDefinition, TooltipConfig};
+use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
 
 pub struct GatlingPlugin;
 
 impl Plugin for GatlingPlugin {
     fn build(&self, app: &mut App) {
+        app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(
             Update,
             (attach_gatling_tower, accelerate, reset).run_if(game_is_running),
@@ -56,6 +57,8 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
     tooltip_config: TooltipConfig::STANDARD,
 };
 
+pub const KIND: TowerKind = TowerKind(&TOWER_GATLING);
+
 const MAX_SHOTS: f32 = 8.0;
 const SPEED_PER_SHOT: f32 = 0.2;
 const SHOT_DECAY_RATE: f32 = 1.0;
@@ -84,7 +87,7 @@ fn attach_gatling_tower(
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
-        if *kind == TowerKind::Gatling {
+        if *kind == KIND {
             commands.entity(entity)
                 .insert((GatlingTower, GatlingWindUp::default(), CustomTooltip::default()))
                 .with_children(|parent| {
@@ -172,7 +175,7 @@ fn update_gatling_tooltip(
     let static_extras = format!(
         "Builds attack speed while firing, decays when idle\nMax wind-up: +{max_bonus:.1}x atk speed ({MAX_SHOTS:.0} shots)\nBase cooldown: {base_cooldown:.2}s  Min: {min_cooldown:.2}s\nDecay: {SHOT_DECAY_RATE:.0} shot/s",
     );
-    tooltip_texts.0.insert(TowerKind::Gatling, static_extras.clone());
+    tooltip_texts.0.insert(KIND, static_extras.clone());
 
     for (windup, mut tooltip) in &mut towers {
         let current_bonus = windup.shots * SPEED_PER_SHOT;
