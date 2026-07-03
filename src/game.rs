@@ -9,9 +9,9 @@ use crate::constants::{
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
-    EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, Loot, MaxHp,
-    Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused, Regeneration, Shop, SpawnTimer,
-    SpellShop, TowerDraft, WaterDamage, WaveNumber,
+    EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameRestartEvent, GameWon, KillCount,
+    Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused, Regeneration, Shop,
+    SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -80,6 +80,7 @@ pub fn restart_game(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut state: RestartState,
     mut new_round: EventWriter<NewRoundEvent>,
+    mut game_restart: EventWriter<GameRestartEvent>,
     mut cleanup: ParamSet<(
         Query<Entity, With<Tower>>,
         Query<Entity, With<Enemy>>,
@@ -142,5 +143,6 @@ pub fn restart_game(
         marker_transform.translation = state.path_tiles.end().extend(0.0);
     }
     new_round.write(NewRoundEvent);
+    game_restart.write(GameRestartEvent);
     state.paused.value = false;
 }

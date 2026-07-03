@@ -44,31 +44,31 @@ impl<'w> PlayerStatsMut<'w> {
                     (self.current_hp.amount + change).clamp(0, self.max_hp.value().round() as i32);
             }
             PlayerStatKind::Regeneration => {
-                self.regeneration.raw_value = (self.regeneration.raw_value + delta).max(0.0);
+                self.regeneration.raw_value += delta;
             }
             PlayerStatKind::AttackSpeed => {
-                self.attack_speed.raw_value = (self.attack_speed.raw_value + delta).max(0.1);
+                self.attack_speed.raw_value += delta;
             }
             PlayerStatKind::Loot => {
-                self.loot.raw_value = (self.loot.raw_value + delta).max(0.0);
+                self.loot.raw_value += delta;
             }
             PlayerStatKind::CriticalChance => {
-                self.critical_chance.raw_value = (self.critical_chance.raw_value + delta).clamp(0.0, 1.0);
+                self.critical_chance.raw_value += delta;
             }
             PlayerStatKind::ExplosionSize => {
-                self.explosion_size.raw_value = (self.explosion_size.raw_value + delta).max(0.0);
+                self.explosion_size.raw_value += delta;
             }
             PlayerStatKind::EarthDamage => {
-                self.earth_damage.raw_value = (self.earth_damage.raw_value + delta).max(0.0);
+                self.earth_damage.raw_value += delta;
             }
             PlayerStatKind::FireDamage => {
-                self.fire_damage.raw_value = (self.fire_damage.raw_value + delta).max(0.0);
+                self.fire_damage.raw_value += delta;
             }
             PlayerStatKind::AirDamage => {
-                self.air_damage.raw_value = (self.air_damage.raw_value + delta).max(0.0);
+                self.air_damage.raw_value += delta;
             }
             PlayerStatKind::WaterDamage => {
-                self.water_damage.raw_value = (self.water_damage.raw_value + delta).max(0.0);
+                self.water_damage.raw_value += delta;
             }
         }
     }

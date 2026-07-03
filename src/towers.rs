@@ -110,14 +110,14 @@ pub fn tower_tooltip(
     let mut lines = vec![kind.name().to_string()];
 
     if config.show_damage {
-        let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
+        let regular_damage = (damage_formula.calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
             false,
-        ) + temp_flat_damage;
-        let critical_damage = damage_formula.calculate_damage_with_elemental_multiplier(
+        ) + temp_flat_damage).max(1.0);
+        let critical_damage = (damage_formula.calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
             true,
-        ) + temp_flat_damage;
+        ) + temp_flat_damage).max(1.0);
 
         let mut active_parts: Vec<String> = Vec::new();
         if temp_flat_damage > 0.01 { active_parts.push(format!("+{temp_flat_damage:.1} dmg")); }
@@ -145,7 +145,7 @@ pub fn tower_tooltip(
         lines.push(format!("Projectile: {:.0}/s", kind.projectile_speed()));
     }
     if config.show_splash {
-        lines.push(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value())));
+        lines.push(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value().max(0.0))));
     }
     if config.show_turn_speed {
         lines.push(format!("Turn speed: {:.1}", kind.angular_speed()));
@@ -260,13 +260,13 @@ pub fn aim_towers(
 
         if ready_to_shoot && cooldown.timer.finished() {
             let is_critical = roll_critical_hit(critical_chance.value());
-            let damage = damage_formula.calculate_damage_with_elemental_multiplier(
+            let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
                 &earth_damage,
                 &fire_damage,
                 &air_damage,
                 &water_damage,
                 is_critical,
-            ) + damage_bonus.flat;
+            ) + damage_bonus.flat).max(1.0);
 
             cooldown.timer.reset();
             shoot_events.write(ShootEvent { source_tower: tower_entity });
@@ -291,7 +291,7 @@ pub fn aim_towers(
                 Damage { amount: damage },
                 IsCritical { value: is_critical },
                 ExplosionRadius {
-                    value: tower_kind.upgraded_explosion_radius(explosion_size.value()),
+                    value: tower_kind.upgraded_explosion_radius(explosion_size.value().max(0.0)),
                 },
             ));
         }

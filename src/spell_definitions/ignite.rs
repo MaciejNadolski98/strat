@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{Burning, Enemy};
+use crate::components::{Burning, Enemy, Health};
 use crate::resources::FireDamage;
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
@@ -29,14 +29,17 @@ fn on_cast(
     mut commands: Commands,
     mut events: EventReader<SpellCastEvent>,
     fire_damage: Res<FireDamage>,
-    enemies: Query<Entity, With<Enemy>>,
+    enemies: Query<(Entity, &Health), With<Enemy>>,
 ) {
     for event in events.read() {
         if event.kind != KIND {
             continue;
         }
         let damage_per_tick = BURN_DAMAGE_PER_TICK + fire_damage.value();
-        for enemy in &enemies {
+        for (enemy, health) in &enemies {
+            if health.current <= 0.0 {
+                continue;
+            }
             commands.entity(enemy).insert(Burning {
                 timer: Timer::from_seconds(BURN_DURATION, TimerMode::Once),
                 tick_timer: Timer::from_seconds(BURN_TICK, TimerMode::Repeating),

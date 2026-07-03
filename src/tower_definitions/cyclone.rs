@@ -118,7 +118,7 @@ fn apply_cyclone_burst(
         let is_critical = rand::random::<f32>() < critical_chance.value().clamp(0.0, 1.0);
         let base = formula.flat as f32
             + formula.air_multiplier * air_damage.value();
-        let dmg = if is_critical { base * formula.crit_multiplier } else { base };
+        let dmg = (if is_critical { base * formula.crit_multiplier } else { base }).max(1.0);
 
         let mut killed: Vec<(Entity, i32, Vec2, bool)> = Vec::new();
 
@@ -154,7 +154,7 @@ fn apply_cyclone_burst(
         }
 
         for (entity, reward_amount, position, drops_spell) in killed {
-            let kill_loot = reward_amount + loot.value().round() as i32;
+            let kill_loot = (reward_amount + loot.value().round() as i32).max(0);
             money.amount += kill_loot;
             kills.amount += 1;
             spawn_floating_text(

@@ -119,7 +119,7 @@ pub fn move_projectiles(
             }
 
             for (entity, reward, position, drops_spell) in killed {
-                let kill_loot = reward + loot.value().round() as i32;
+                let kill_loot = (reward + loot.value().round() as i32).max(0);
                 money.amount += kill_loot;
                 kills.amount += 1;
                 spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), kill_loot);

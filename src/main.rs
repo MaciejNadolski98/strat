@@ -38,7 +38,7 @@ use resources::{
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
     MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Regeneration, Shop, SpawnTimer, Stat,
     SpellShop, TowerDraft, WaterDamage, WaveNumber,
-    GamePhase, reset_stat_temporaries,
+    GamePhase, GameRestartEvent, reset_stat_temporaries,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
@@ -110,6 +110,7 @@ fn main() {
         .add_event::<EnemyKilledEvent>()
         .add_event::<ShootEvent>()
         .add_event::<NewRoundEvent>()
+        .add_event::<GameRestartEvent>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Simple Tower Defense".to_string(),

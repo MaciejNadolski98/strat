@@ -153,7 +153,7 @@ pub fn update_burning_enemies(
             }
 
             if health.current <= 0.0 {
-                let kill_loot = reward.amount + loot.value().round() as i32;
+                let kill_loot = (reward.amount + loot.value().round() as i32).max(0);
                 money.amount += kill_loot;
                 kills.amount += 1;
                 spawn_floating_text(

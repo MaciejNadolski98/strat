@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::resources::{FireDamage, ItemPurchasedEvent, PlayerStatKind};
+use crate::resources::{FireDamage, GameRestartEvent, ItemPurchasedEvent, PlayerStatKind};
 use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
@@ -21,7 +21,13 @@ impl Plugin for PyromaniaPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().resource_mut::<ItemRegistry>().kinds.push(KIND);
         app.init_resource::<PyromaniaStacks>();
-        app.add_systems(Update, on_item_purchased);
+        app.add_systems(Update, (on_item_purchased, on_restart));
+    }
+}
+
+fn on_restart(mut events: EventReader<GameRestartEvent>, mut stacks: ResMut<PyromaniaStacks>) {
+    if events.read().next().is_some() {
+        stacks.0 = 0;
     }
 }
 

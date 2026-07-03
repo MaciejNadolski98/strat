@@ -388,6 +388,9 @@ pub struct ShootEvent {
 #[derive(Event)]
 pub struct NewRoundEvent;
 
+#[derive(Event)]
+pub struct GameRestartEvent;
+
 #[derive(Resource)]
 pub struct Shop {
     pub offers: [Option<ShopOffer>; 3],
