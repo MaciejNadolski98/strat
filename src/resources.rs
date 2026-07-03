@@ -4,7 +4,7 @@ use crate::constants::{
     GRID_SIZE, INITIAL_PATH, PATH_EXTENSION_BASE_COST, PATH_EXTENSION_COST_STEP, PRICE_GROWTH,
     SHOP_REROLL_COST,
 };
-use crate::item_definitions::*;
+use crate::item_definitions::ItemKind;
 use crate::tower_definitions::TowerKind;
 
 #[derive(Resource)]
@@ -350,87 +350,6 @@ impl TowerStatEffect {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum StatUpgradeKind {
-    MaxHp,
-    Regeneration,
-    AttackSpeed,
-    Loot,
-    CriticalChance,
-    ExplosionSize,
-    EarthDamage,
-    FireDamage,
-    AirDamage,
-    WaterDamage,
-    Vitality,
-    Offense,
-    ElementalFocus,
-    Siege,
-}
-
-impl StatUpgradeKind {
-    pub fn random() -> Self {
-        match rand::random::<u8>() % 14 {
-            0 => Self::MaxHp,
-            1 => Self::Regeneration,
-            2 => Self::AttackSpeed,
-            3 => Self::Loot,
-            4 => Self::CriticalChance,
-            5 => Self::ExplosionSize,
-            6 => Self::EarthDamage,
-            7 => Self::FireDamage,
-            8 => Self::AirDamage,
-            9 => Self::WaterDamage,
-            10 => Self::Vitality,
-            11 => Self::Offense,
-            12 => Self::ElementalFocus,
-            _ => Self::Siege,
-        }
-    }
-
-    pub fn definition(self) -> &'static StatUpgradeDefinition {
-        match self {
-            Self::MaxHp => &ITEM_POTATO,
-            Self::Regeneration => &ITEM_MEDS,
-            Self::AttackSpeed => &ITEM_COFFEE,
-            Self::Loot => &ITEM_LOOT,
-            Self::CriticalChance => &ITEM_CRITICAL_CHANCE,
-            Self::ExplosionSize => &ITEM_EXPLOSION_SIZE,
-            Self::EarthDamage => &ITEM_EARTH_DAMAGE,
-            Self::FireDamage => &ITEM_FIRE_DAMAGE,
-            Self::AirDamage => &ITEM_AIR_DAMAGE,
-            Self::WaterDamage => &ITEM_WATER_DAMAGE,
-            Self::Vitality => &ITEM_VITALITY,
-            Self::Offense => &ITEM_OFFENSE,
-            Self::ElementalFocus => &ITEM_ELEMENTAL_FOCUS,
-            Self::Siege => &ITEM_SIEGE,
-        }
-    }
-
-    pub fn name(self) -> &'static str {
-        self.definition().name
-    }
-
-    pub fn effects(self) -> &'static [TowerStatEffect] {
-        self.definition().effects
-    }
-
-    pub fn effect_text(self) -> String {
-        self.effects()
-            .iter()
-            .map(|effect| effect.effect_text())
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-
-    pub fn cost(self) -> u32 {
-        self.definition().cost
-    }
-
-    pub fn icon_color(self) -> Color {
-        self.definition().icon_color
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TowerDraftPhase {
@@ -477,48 +396,14 @@ fn scale_price(base_price: u32, wave: u32) -> i32 {
 }
 
 #[derive(Clone, Copy)]
-pub enum ShopItem {
-    StatUpgrade(StatUpgradeKind),
-}
-
-impl ShopItem {
-    pub fn random() -> Self {
-        Self::StatUpgrade(StatUpgradeKind::random())
-    }
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::StatUpgrade(kind) => kind.name(),
-        }
-    }
-
-    pub fn stat_upgrade_kind(self) -> Option<StatUpgradeKind> {
-        match self {
-            Self::StatUpgrade(kind) => Some(kind),
-        }
-    }
-
-    pub fn cost(self, wave: u32) -> i32 {
-        match self {
-            Self::StatUpgrade(kind) => scale_price(kind.cost(), wave),
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
 pub struct ShopOffer {
-    pub item: ShopItem,
+    pub item: ItemKind,
     pub cost: i32,
 }
 
-impl ShopOffer {
-    pub fn random(wave: u32) -> Self {
-        let item = ShopItem::random();
-        Self {
-            item,
-            cost: item.cost(wave),
-        }
-    }
+#[derive(Event)]
+pub struct ItemPurchasedEvent {
+    pub kind: ItemKind,
 }
 
 #[derive(Event)]
@@ -538,18 +423,25 @@ pub struct NewRoundEvent;
 pub struct Shop {
     pub offers: [Option<ShopOffer>; 3],
     pub reroll_cost: i32,
+    pub(crate) known_kinds: Vec<ItemKind>,
 }
 
 impl Shop {
-    pub fn new(wave: u32) -> Self {
+    pub fn new_empty() -> Self {
         Self {
-            offers: Self::generate_offers(wave),
-            reroll_cost: scale_price(SHOP_REROLL_COST, wave),
+            offers: [None; 3],
+            reroll_cost: 0,
+            known_kinds: Vec::new(),
         }
     }
 
+    pub fn activate(&mut self, wave: u32) {
+        self.offers = Self::generate_offers(&self.known_kinds, wave);
+        self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
+    }
+
     pub fn reroll(&mut self, wave: u32) {
-        self.offers = Self::generate_offers(wave);
+        self.offers = Self::generate_offers(&self.known_kinds, wave);
         self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
     }
 
@@ -563,10 +455,17 @@ impl Shop {
         offer
     }
 
-    fn generate_offers(wave: u32) -> [Option<ShopOffer>; 3] {
+    fn generate_offers(kinds: &[ItemKind], wave: u32) -> [Option<ShopOffer>; 3] {
         let mut offers = [None; 3];
         for offer in &mut offers {
-            *offer = Some(ShopOffer::random(wave));
+            if kinds.is_empty() {
+                break;
+            }
+            let kind = kinds[rand::random::<usize>() % kinds.len()];
+            *offer = Some(ShopOffer {
+                item: kind,
+                cost: scale_price(kind.cost(), wave),
+            });
         }
         offers
     }

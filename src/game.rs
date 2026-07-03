@@ -133,7 +133,7 @@ pub fn restart_game(
     state.remaining.count = 0;
     state.spawn_timer.reset();
     state.next_wave_timer.timer.reset();
-    *state.shop = Shop::new(1);
+    state.shop.activate(1);
     *state.spell_shop = SpellShop::new();
     state.draft.activate();
     state.path_tiles.reset();

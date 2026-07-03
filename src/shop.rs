@@ -7,9 +7,10 @@ use crate::components::{
 };
 use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
+use crate::item_definitions::ItemKind;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameWon, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop, StatUpgradeKind,
+    GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop,
     TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage, WaveNumber,
 };
 
@@ -88,6 +89,7 @@ pub fn update_shop_input(
     wave_number: Res<WaveNumber>,
     draft: Res<TowerDraft>,
     mut stats: PlayerStatsMut,
+    mut item_purchased: EventWriter<ItemPurchasedEvent>,
 ) {
     if game_over.value || game_won.value || draft.phase == TowerDraftPhase::Picking {
         return;
@@ -121,18 +123,17 @@ pub fn update_shop_input(
             return;
         };
 
-        if let Some(upgrade) = offer.item.stat_upgrade_kind() {
-            money.amount -= offer.cost;
-            shop.take_offer(selected);
-            apply_stat_upgrade(upgrade, &mut stats);
-            spawn_floating_text(
-                &mut commands,
-                format!("-${}", offer.cost),
-                Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
-                Color::srgb(1.0, 0.86, 0.20),
-                20.0,
-            );
-        }
+        money.amount -= offer.cost;
+        shop.take_offer(selected);
+        apply_stat_upgrade(offer.item, &mut stats);
+        item_purchased.write(ItemPurchasedEvent { kind: offer.item });
+        spawn_floating_text(
+            &mut commands,
+            format!("-${}", offer.cost),
+            Vec2::new(-WINDOW_WIDTH * 0.5 + 420.0, -WINDOW_HEIGHT * 0.5 + 72.0),
+            Color::srgb(1.0, 0.86, 0.20),
+            20.0,
+        );
     }
 
     if keyboard.just_pressed(KeyCode::KeyE) && money.amount >= shop.reroll_cost {
@@ -200,12 +201,8 @@ pub fn update_shop_text(
             continue;
         };
 
-        if let Some(kind) = offer.item.stat_upgrade_kind() {
-            sprite.color = kind.icon_color();
-            *visibility = Visibility::Visible;
-        } else {
-            *visibility = Visibility::Hidden;
-        }
+        sprite.color = offer.item.icon_color();
+        *visibility = Visibility::Visible;
     }
 
     for (_, _, mut visibility) in &mut slots.p2() {
@@ -259,17 +256,14 @@ pub fn update_shop_tooltip(
             return;
         };
 
-        tooltip_text.0 = match offer.item.stat_upgrade_kind() {
-            Some(kind) => upgrade_tooltip(kind, offer.cost),
-            None => offer.item.name().to_string(),
-        };
+        tooltip_text.0 = upgrade_tooltip(offer.item, offer.cost);
         *tooltip_visibility = Visibility::Visible;
         return;
     }
 }
 
 
-fn upgrade_tooltip(kind: StatUpgradeKind, cost: i32) -> String {
+fn upgrade_tooltip(kind: ItemKind, cost: i32) -> String {
     format!(
         "{}  ${}\nPermanent upgrade\n{}",
         kind.name(),
@@ -278,7 +272,7 @@ fn upgrade_tooltip(kind: StatUpgradeKind, cost: i32) -> String {
     )
 }
 
-fn apply_stat_upgrade(kind: StatUpgradeKind, stats: &mut PlayerStatsMut) {
+fn apply_stat_upgrade(kind: ItemKind, stats: &mut PlayerStatsMut) {
     for effect in kind.effects() {
         stats.apply_tower_effect(*effect);
     }
