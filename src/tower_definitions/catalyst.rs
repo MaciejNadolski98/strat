@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::{AuraTower, CustomTooltip, DamageFormula};
 use crate::game::game_is_running;
-use crate::resources::{FireDamage, PlayerStatKind, SpellKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
+use crate::resources::{FireDamage, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
@@ -98,13 +98,13 @@ fn generate_spell(
     if draft.phase != TowerDraftPhase::WaveRunning {
         return;
     }
-    let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value);
+    let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value());
     let progress_per_second = 1.0 / seconds_per_spell;
     for mut catalyst in &mut catalyst_towers {
         catalyst.progress += progress_per_second * time.delta_secs();
         while catalyst.progress >= 1.0 {
             catalyst.progress -= 1.0;
-            spell_shop.store_spell(SpellKind::random());
+            spell_shop.store_random_spell();
         }
     }
 }
@@ -129,7 +129,7 @@ fn update_catalyst_tooltip(
     mut towers: Query<(&mut CustomTooltip, &CatalystTower)>,
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value);
+    let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value());
     let static_extras = format!(
         "Generates a spell every {seconds_per_spell:.1}s\n(20 / (0.2 + fire × 1.8%) s/spell)",
     );

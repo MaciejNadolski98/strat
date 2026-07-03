@@ -38,7 +38,7 @@ fn on_item_purchased(
             matches!(e.kind, PlayerStatKind::FireDamage) && e.amount > 0.0
         });
         if boosts_fire && stacks.0 > 0 {
-            fire_damage.value += stacks.0 as f32;
+            fire_damage.raw_value += stacks.0 as f32;
         }
     }
 }

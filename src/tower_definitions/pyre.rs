@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryDamageBonus, Tower};
 use crate::game::game_is_running;
-use crate::resources::{FireDamage, PlayerStatKind, TowerStatEffect};
+use crate::resources::{FireDamage, PlayerStatKind, TowerStatEffect, after_temporary_effects, before_temporary_effects};
 use crate::tower_definitions::TowerKind;
 use crate::towers::{aim_towers, reset_temporary_damage_bonus};
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
@@ -19,8 +19,8 @@ impl Plugin for PyrePlugin {
         app.add_systems(Update, attach_pyre_marker.run_if(game_is_running));
         app.add_systems(Update, 
             apply_pyre_aura
-                .after(reset_temporary_damage_bonus)
-                .before(aim_towers)
+                .after(before_temporary_effects)
+                .before(after_temporary_effects)
                 .run_if(game_is_running));
         app.add_systems(Update, update_pyre_tooltip);
     }
@@ -76,7 +76,7 @@ fn apply_pyre_aura(
     >,
     fire_damage: Res<FireDamage>,
 ) {
-    let bonus = pyre_damage_bonus(fire_damage.value);
+    let bonus = pyre_damage_bonus(fire_damage.value());
     if bonus <= 0.0 {
         return;
     }
@@ -96,7 +96,7 @@ fn update_pyre_tooltip(
     mut towers: Query<&mut CustomTooltip, With<PyreTower>>,
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    let bonus = pyre_damage_bonus(fire_damage.value);
+    let bonus = pyre_damage_bonus(fire_damage.value());
     let extras = format!("Boosts adjacent tower damage\n+{bonus:.1} flat damage (fire × 0.5)");
     tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {

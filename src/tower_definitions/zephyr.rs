@@ -63,11 +63,13 @@ fn update_zephyr_tooltip(
     mut towers: Query<&mut CustomTooltip, With<ZephyrTower>>,
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    let bonus = zephyr_speed_bonus(air_damage.value, earth_damage.value);
+    let eff_air = air_damage.value();
+    let eff_earth = earth_damage.value();
+    let bonus = zephyr_speed_bonus(eff_air, eff_earth);
     let extras = format!(
         "Boosts adjacent tower attack speed\nAir: +{:.2}  Earth: -{:.2}\nTotal: {:+.2}x atk speed",
-        air_damage.value * 0.04,
-        earth_damage.value * 0.06,
+        eff_air * 0.04,
+        eff_earth * 0.06,
         bonus,
     );
     tooltip_texts.0.insert(KIND, extras.clone());
@@ -96,7 +98,7 @@ fn apply_zephyr_aura(
     air_damage: Res<AirDamage>,
     earth_damage: Res<EarthDamage>,
 ) {
-    let bonus = zephyr_speed_bonus(air_damage.value, earth_damage.value);
+    let bonus = zephyr_speed_bonus(air_damage.value(), earth_damage.value());
     if bonus <= 0.0 {
         return;
     }

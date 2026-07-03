@@ -73,8 +73,8 @@ fn update_tree_tooltip(
     mut towers: Query<&mut CustomTooltip, With<TreeTower>>,
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value)) * 100.0;
-    let income = tree_income_per_enemy(water_damage.value);
+    let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value())) * 100.0;
+    let income = tree_income_per_enemy(water_damage.value());
     let extras = format!(
         "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s (1 + water × 0.015)",
     );
@@ -103,8 +103,8 @@ fn apply_tree_aura(
     mut tree_towers: Query<(&Transform, &mut FireCooldown), With<TreeTower>>,
     mut enemies: Query<(&Transform, &Health, &mut TemporaryEnemySpeed), With<Enemy>>,
 ) {
-    let slow_mult = tree_slow_multiplier(earth_damage.value);
-    let income_per_enemy = tree_income_per_enemy(water_damage.value);
+    let slow_mult = tree_slow_multiplier(earth_damage.value());
+    let income_per_enemy = tree_income_per_enemy(water_damage.value());
 
     for (tree_transform, mut cooldown) in &mut tree_towers {
         let tree_pos = tree_transform.translation.truncate();

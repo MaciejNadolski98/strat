@@ -5,8 +5,9 @@ use crate::components::{
     TemporaryEnemySpeed, Waypoint,
 };
 use crate::resources::{
-    ActiveSpellEffects, CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NewRoundEvent, PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
+    CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NewRoundEvent, PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
 };
+use crate::spell_definitions::SlowActive;
 use crate::waves::{RunMode, wave};
 
 pub fn reset_temporary_enemy_speed(mut enemies: Query<&mut TemporaryEnemySpeed, With<Enemy>>) {
@@ -28,7 +29,6 @@ pub fn spawn_enemies(
     regeneration: Res<Regeneration>,
     run_mode: Res<RunMode>,
     path_tiles: Res<PathTiles>,
-    mut active_spell_effects: ResMut<ActiveSpellEffects>,
     mut draft: ResMut<TowerDraft>,
     enemies: Query<(), With<Enemy>>,
     mut new_round_events: EventWriter<NewRoundEvent>,
@@ -40,7 +40,6 @@ pub fn spawn_enemies(
     if remaining.count == 0 {
         if enemies.is_empty() && draft.phase == TowerDraftPhase::WaveRunning {
             new_round_events.write(NewRoundEvent);
-            active_spell_effects.reset_for_wave();
 
             if wave_number.value >= run_mode.final_wave() {
                 game_won.value = true;
@@ -48,8 +47,9 @@ pub fn spawn_enemies(
             }
 
             wave_number.value += 1;
-            if regeneration.amount > 0 {
-                hp.amount = (hp.amount + regeneration.amount).min(max_hp.amount);
+            let regen = regeneration.value().round() as i32;
+            if regen > 0 {
+                hp.amount = (hp.amount + regen).min(max_hp.value().round() as i32);
             }
             draft.activate();
         }
@@ -110,7 +110,7 @@ pub fn move_enemies(
     time: Res<Time>,
     mut hp: ResMut<CurrentHp>,
     mut game_over: ResMut<GameOver>,
-    active_spell_effects: Res<ActiveSpellEffects>,
+    slow: Res<SlowActive>,
     path_tiles: Res<PathTiles>,
     mut enemies: Query<
         (
@@ -144,7 +144,7 @@ pub fn move_enemies(
         };
         let position = transform.translation.truncate();
         let to_target = target - position;
-        let step = speed.value * temp_speed.multiplier * active_spell_effects.enemy_speed_multiplier * time.delta_secs();
+        let step = speed.value * temp_speed.multiplier * slow.multiplier * time.delta_secs();
         progress.distance += step;
 
         if to_target.length() <= step {

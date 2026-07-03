@@ -8,10 +8,10 @@ use crate::constants::{
 };
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
-    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
+    AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameWon, KillCount, Loot, MaxHp,
-    Money, NextWaveTimer, PathTiles, Paused, Regeneration, Shop, SpawnTimer, SpellShop,
-    TowerDraft, WaterDamage, WaveNumber,
+    Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused, Regeneration, Shop, SpawnTimer,
+    SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -29,7 +29,6 @@ pub struct RestartState<'w> {
     shop: ResMut<'w, Shop>,
     spell_shop: ResMut<'w, SpellShop>,
     draft: ResMut<'w, TowerDraft>,
-    active_spell_effects: ResMut<'w, ActiveSpellEffects>,
     paused: ResMut<'w, Paused>,
     path_tiles: ResMut<'w, PathTiles>,
     regeneration: ResMut<'w, Regeneration>,
@@ -80,6 +79,7 @@ pub fn restart_game(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut state: RestartState,
+    mut new_round: EventWriter<NewRoundEvent>,
     mut cleanup: ParamSet<(
         Query<Entity, With<Tower>>,
         Query<Entity, With<Enemy>>,
@@ -113,34 +113,34 @@ pub fn restart_game(
         commands.entity(entity).despawn();
     }
 
-    state.max_hp.amount = PLAYER_BASE_MAX_HP;
+    state.max_hp.raw_value = PLAYER_BASE_MAX_HP as f32;
     state.money.amount = STARTING_MONEY;
     state.hp.amount = PLAYER_BASE_MAX_HP;
     state.kills.amount = 0;
     state.game_over.value = false;
     state.game_won.value = false;
-    state.regeneration.amount = BASE_REGENERATION;
-    state.attack_speed.value = BASE_ATTACK_SPEED;
-    state.loot.amount = BASE_LOOT;
-    state.critical_chance.value = BASE_CRITICAL_CHANCE;
-    state.explosion_size.value = 0.0;
-    state.earth_damage.value = 0.0;
-    state.fire_damage.value = 0.0;
-    state.air_damage.value = 0.0;
-    state.water_damage.value = 0.0;
+    state.regeneration.raw_value = BASE_REGENERATION as f32;
+    state.attack_speed.raw_value = BASE_ATTACK_SPEED;
+    state.loot.raw_value = BASE_LOOT as f32;
+    state.critical_chance.raw_value = BASE_CRITICAL_CHANCE;
+    state.explosion_size.raw_value = 0.0;
+    state.earth_damage.raw_value = 0.0;
+    state.fire_damage.raw_value = 0.0;
+    state.air_damage.raw_value = 0.0;
+    state.water_damage.raw_value = 0.0;
 
     state.wave_number.value = 1;
     state.remaining.count = 0;
     state.spawn_timer.reset();
     state.next_wave_timer.timer.reset();
     state.shop.activate(1);
-    *state.spell_shop = SpellShop::new();
+    state.spell_shop.reset();
     state.draft.activate();
     state.path_tiles.reset();
     spawn_path_visuals(&mut commands, &state.path_tiles, &[]);
     if let Ok(mut marker_transform) = end_marker.single_mut() {
         marker_transform.translation = state.path_tiles.end().extend(0.0);
     }
-    state.active_spell_effects.reset_for_wave();
+    new_round.write(NewRoundEvent);
     state.paused.value = false;
 }

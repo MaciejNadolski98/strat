@@ -6,8 +6,8 @@ use crate::components::{
 use crate::effects::{spawn_floating_text, spawn_pulse};
 use crate::game::game_is_running;
 use crate::resources::{
-    ActiveSpellEffects, AirDamage, CriticalChance, EnemyKilledEvent, GameOver, KillCount, Loot,
-    Money, PlayerStatKind, SpellKind, SpellShop, TowerStatEffect,
+    AirDamage, CriticalChance, EnemyKilledEvent, GameOver, KillCount, Loot,
+    Money, PlayerStatKind, SpellShop, TowerStatEffect,
 };
 use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
@@ -82,7 +82,6 @@ fn apply_cyclone_burst(
     game_over: Res<GameOver>,
     air_damage: Res<AirDamage>,
     critical_chance: Res<CriticalChance>,
-    active_spell_effects: Res<ActiveSpellEffects>,
     mut kill_events: EventWriter<EnemyKilledEvent>,
     mut cyclone_towers: Query<(Entity, &Transform, &mut FireCooldown, &DamageFormula), With<CycloneTower>>,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, Option<&DropsSpell>), With<Enemy>>,
@@ -116,9 +115,9 @@ fn apply_cyclone_burst(
             &mut materials,
         );
 
-        let is_critical = rand::random::<f32>() < critical_chance.value.clamp(0.0, 1.0);
+        let is_critical = rand::random::<f32>() < critical_chance.value().clamp(0.0, 1.0);
         let base = formula.flat as f32
-            + formula.air_multiplier * air_damage.value * active_spell_effects.elemental_multiplier;
+            + formula.air_multiplier * air_damage.value();
         let dmg = if is_critical { base * formula.crit_multiplier } else { base };
 
         let mut killed: Vec<(Entity, i32, Vec2, bool)> = Vec::new();
@@ -155,7 +154,7 @@ fn apply_cyclone_burst(
         }
 
         for (entity, reward_amount, position, drops_spell) in killed {
-            let kill_loot = reward_amount + loot.amount;
+            let kill_loot = reward_amount + loot.value().round() as i32;
             money.amount += kill_loot;
             kills.amount += 1;
             spawn_floating_text(
@@ -166,7 +165,7 @@ fn apply_cyclone_burst(
                 19.0,
             );
             if drops_spell {
-                spell_shop.store_spell(SpellKind::random());
+                spell_shop.store_random_spell();
                 spawn_floating_text(
                     &mut commands,
                     "Spell!".to_string(),

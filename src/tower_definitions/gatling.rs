@@ -2,8 +2,8 @@ use bevy::prelude::*;
 
 use crate::components::{CustomTooltip, DamageFormula, TemporaryAttackSpeed};
 use crate::game::game_is_running;
-use crate::resources::{AttackSpeed, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
-use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
+use crate::resources::{AttackSpeed, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect, after_temporary_effects, before_temporary_effects};
+use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
@@ -20,13 +20,15 @@ impl Plugin for GatlingPlugin {
         app.add_systems(
             Update,
             decelerate
-                .after(reset_temporary_attack_speed)
-                .before(progress_cooldown)
+                .after(before_temporary_effects)
+                .before(after_temporary_effects)
                 .run_if(game_is_running),
         );
         app.add_systems(
             Update,
-            update_windup_bar.after(decelerate).run_if(game_is_running),
+            update_windup_bar
+                .after(after_temporary_effects)
+                .run_if(game_is_running),
         );
         app.add_systems(Update, update_gatling_tooltip);
     }
@@ -168,7 +170,7 @@ fn update_gatling_tooltip(
     mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let max_bonus = MAX_SHOTS * SPEED_PER_SHOT;
-    let effective_speed = attack_speed.value.max(0.1);
+    let effective_speed = attack_speed.value().max(0.1);
     let base_cooldown = TOWER_GATLING.cooldown / effective_speed;
     let min_cooldown = TOWER_GATLING.cooldown / (effective_speed + max_bonus);
 

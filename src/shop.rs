@@ -31,7 +31,7 @@ pub struct PlayerStatsMut<'w> {
 
 impl<'w> PlayerStatsMut<'w> {
     pub fn attack_speed_value(&self) -> f32 {
-        self.attack_speed.value
+        self.attack_speed.value()
     }
 
     pub fn apply_tower_effect(&mut self, effect: TowerStatEffect) {
@@ -39,37 +39,36 @@ impl<'w> PlayerStatsMut<'w> {
         match effect.kind {
             PlayerStatKind::MaxHp => {
                 let change = delta.round() as i32;
-                self.max_hp.amount = (self.max_hp.amount + change).max(1);
+                self.max_hp.raw_value = (self.max_hp.raw_value + delta).max(1.0);
                 self.current_hp.amount =
-                    (self.current_hp.amount + change).clamp(0, self.max_hp.amount);
+                    (self.current_hp.amount + change).clamp(0, self.max_hp.value().round() as i32);
             }
             PlayerStatKind::Regeneration => {
-                self.regeneration.amount = (self.regeneration.amount + delta.round() as i32).max(0);
+                self.regeneration.raw_value = (self.regeneration.raw_value + delta).max(0.0);
             }
             PlayerStatKind::AttackSpeed => {
-                self.attack_speed.value = (self.attack_speed.value + delta).max(0.1);
+                self.attack_speed.raw_value = (self.attack_speed.raw_value + delta).max(0.1);
             }
             PlayerStatKind::Loot => {
-                self.loot.amount =
-                    (self.loot.amount + delta.round() as i32).max(0);
+                self.loot.raw_value = (self.loot.raw_value + delta).max(0.0);
             }
             PlayerStatKind::CriticalChance => {
-                self.critical_chance.value = (self.critical_chance.value + delta).clamp(0.0, 1.0);
+                self.critical_chance.raw_value = (self.critical_chance.raw_value + delta).clamp(0.0, 1.0);
             }
             PlayerStatKind::ExplosionSize => {
-                self.explosion_size.value = (self.explosion_size.value + delta).max(0.0);
+                self.explosion_size.raw_value = (self.explosion_size.raw_value + delta).max(0.0);
             }
             PlayerStatKind::EarthDamage => {
-                self.earth_damage.value = (self.earth_damage.value + delta).max(0.0);
+                self.earth_damage.raw_value = (self.earth_damage.raw_value + delta).max(0.0);
             }
             PlayerStatKind::FireDamage => {
-                self.fire_damage.value = (self.fire_damage.value + delta).max(0.0);
+                self.fire_damage.raw_value = (self.fire_damage.raw_value + delta).max(0.0);
             }
             PlayerStatKind::AirDamage => {
-                self.air_damage.value = (self.air_damage.value + delta).max(0.0);
+                self.air_damage.raw_value = (self.air_damage.raw_value + delta).max(0.0);
             }
             PlayerStatKind::WaterDamage => {
-                self.water_damage.value = (self.water_damage.value + delta).max(0.0);
+                self.water_damage.raw_value = (self.water_damage.raw_value + delta).max(0.0);
             }
         }
     }

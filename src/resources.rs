@@ -5,6 +5,7 @@ use crate::constants::{
     SHOP_REROLL_COST,
 };
 use crate::item_definitions::ItemKind;
+pub use crate::spell_definitions::SpellKind;
 use crate::tower_definitions::TowerKind;
 
 #[derive(Resource)]
@@ -14,11 +15,6 @@ pub struct Money {
 
 #[derive(Resource)]
 pub struct CurrentHp {
-    pub amount: i32,
-}
-
-#[derive(Resource)]
-pub struct MaxHp {
     pub amount: i32,
 }
 
@@ -42,49 +38,85 @@ pub struct Paused {
     pub value: bool,
 }
 
-#[derive(Resource)]
-pub struct Regeneration {
-    pub amount: i32,
+pub struct Stat {
+    pub raw_value: f32,
+    pub permanent_multiplier: f32,
+    pub temporary_boost: f32,
+    pub temporary_multiplier: f32,
 }
 
-#[derive(Resource)]
-pub struct AttackSpeed {
-    pub value: f32,
+impl Stat {
+    pub fn new(raw_value: f32) -> Self {
+        Self {
+            raw_value,
+            permanent_multiplier: 1.0,
+            temporary_boost: 0.0,
+            temporary_multiplier: 0.0,
+        }
+    }
+
+    pub fn value(&self) -> f32 {
+        (self.raw_value + self.temporary_boost) * (self.permanent_multiplier + self.temporary_multiplier)
+    }
+
+    pub fn reset_temporary(&mut self) {
+        self.temporary_boost = 0.0;
+        self.temporary_multiplier = 0.0;
+    }
 }
 
-#[derive(Resource)]
-pub struct Loot {
-    pub amount: i32,
+macro_rules! stat_resource {
+    ($name:ident) => {
+        #[derive(Resource)]
+        pub struct $name(pub Stat);
+
+        impl std::ops::Deref for $name {
+            type Target = Stat;
+            fn deref(&self) -> &Self::Target { &self.0 }
+        }
+
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+        }
+    };
 }
 
-#[derive(Resource)]
-pub struct CriticalChance {
-    pub value: f32,
-}
+stat_resource!(Regeneration);
+stat_resource!(AttackSpeed);
+stat_resource!(Loot);
+stat_resource!(CriticalChance);
+stat_resource!(ExplosionSize);
+stat_resource!(EarthDamage);
+stat_resource!(FireDamage);
+stat_resource!(AirDamage);
+stat_resource!(WaterDamage);
+stat_resource!(MaxHp);
 
-#[derive(Resource)]
-pub struct ExplosionSize {
-    pub value: f32,
-}
+pub fn before_temporary_effects() {}
+pub fn after_temporary_effects() {}
 
-#[derive(Resource)]
-pub struct EarthDamage {
-    pub value: f32,
-}
-
-#[derive(Resource)]
-pub struct FireDamage {
-    pub value: f32,
-}
-
-#[derive(Resource)]
-pub struct AirDamage {
-    pub value: f32,
-}
-
-#[derive(Resource)]
-pub struct WaterDamage {
-    pub value: f32,
+pub fn reset_stat_temporaries(
+    mut earth: ResMut<EarthDamage>,
+    mut fire: ResMut<FireDamage>,
+    mut air: ResMut<AirDamage>,
+    mut water: ResMut<WaterDamage>,
+    mut attack_speed: ResMut<AttackSpeed>,
+    mut loot: ResMut<Loot>,
+    mut critical_chance: ResMut<CriticalChance>,
+    mut explosion_size: ResMut<ExplosionSize>,
+    mut regeneration: ResMut<Regeneration>,
+    mut max_hp: ResMut<MaxHp>,
+) {
+    earth.reset_temporary();
+    fire.reset_temporary();
+    air.reset_temporary();
+    water.reset_temporary();
+    attack_speed.reset_temporary();
+    loot.reset_temporary();
+    critical_chance.reset_temporary();
+    explosion_size.reset_temporary();
+    regeneration.reset_temporary();
+    max_hp.reset_temporary();
 }
 
 #[derive(Resource)]
@@ -178,78 +210,22 @@ impl PathTiles {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum SpellKind {
-    Ignite,
-    ElementalSurge,
-    Slow,
-}
-
-#[derive(Clone, Copy)]
-pub struct SpellDefinition {
-    pub name: &'static str,
-    pub description: &'static str,
-    pub icon_color: Color,
-}
-
-const IGNITE_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
-    name: "Ignite",
-    description: "Sets all enemies on fire, scaling with fire damage",
-    icon_color: Color::srgb(0.92, 0.26, 0.12),
-};
-
-const ELEMENTAL_SURGE_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
-    name: "Surge",
-    description: "Doubles elemental damage until wave end",
-    icon_color: Color::srgb(0.30, 0.62, 0.92),
-};
-
-const SLOW_SPELL_DEFINITION: SpellDefinition = SpellDefinition {
-    name: "Slow",
-    description: "Slows all enemies until wave end",
-    icon_color: Color::srgb(0.42, 0.82, 0.92),
-};
-
-impl SpellKind {
-    pub fn random() -> Self {
-        match rand::random::<u8>() % 3 {
-            0 => Self::Ignite,
-            1 => Self::ElementalSurge,
-            _ => Self::Slow,
-        }
-    }
-
-    pub fn definition(self) -> &'static SpellDefinition {
-        match self {
-            Self::Ignite => &IGNITE_SPELL_DEFINITION,
-            Self::ElementalSurge => &ELEMENTAL_SURGE_SPELL_DEFINITION,
-            Self::Slow => &SLOW_SPELL_DEFINITION,
-        }
-    }
-
-    pub fn name(self) -> &'static str {
-        self.definition().name
-    }
-
-    pub fn description(self) -> &'static str {
-        self.definition().description
-    }
-
-    pub fn icon_color(self) -> Color {
-        self.definition().icon_color
-    }
-}
-
 #[derive(Resource)]
 pub struct SpellShop {
     pub slots: [Option<SpellKind>; 3],
+    pub(crate) known_kinds: Vec<SpellKind>,
 }
 
 impl SpellShop {
-    pub fn new() -> Self {
+    pub fn new_empty() -> Self {
         Self {
-            slots: [None, None, None],
+            slots: [None; 3],
+            known_kinds: Vec::new(),
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.slots = [None; 3];
     }
 
     pub fn store_spell(&mut self, spell: SpellKind) -> bool {
@@ -260,31 +236,19 @@ impl SpellShop {
         true
     }
 
-    pub fn take_spell(&mut self, index: usize) -> Option<SpellKind> {
-        let spell = self.slots.get_mut(index)?;
-        spell.take()
-    }
-}
-
-#[derive(Resource)]
-pub struct ActiveSpellEffects {
-    pub elemental_multiplier: f32,
-    pub enemy_speed_multiplier: f32,
-}
-
-impl ActiveSpellEffects {
-    pub fn new() -> Self {
-        Self {
-            elemental_multiplier: 1.0,
-            enemy_speed_multiplier: 1.0,
+    pub fn store_random_spell(&mut self) -> bool {
+        if self.known_kinds.is_empty() {
+            return false;
         }
+        let kind = self.known_kinds[rand::random::<usize>() % self.known_kinds.len()];
+        self.store_spell(kind)
     }
 
-    pub fn reset_for_wave(&mut self) {
-        self.elemental_multiplier = 1.0;
-        self.enemy_speed_multiplier = 1.0;
+    pub fn take_spell(&mut self, index: usize) -> Option<SpellKind> {
+        self.slots.get_mut(index)?.take()
     }
 }
+
 
 #[derive(Clone, Copy)]
 pub enum PlayerStatKind {

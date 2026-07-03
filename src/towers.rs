@@ -13,7 +13,7 @@ use crate::components::{
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
-    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
+    AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
     FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
@@ -28,7 +28,6 @@ pub struct TowerTooltipStats<'w> {
     fire_damage: Res<'w, FireDamage>,
     air_damage: Res<'w, AirDamage>,
     water_damage: Res<'w, WaterDamage>,
-    active_spell_effects: Res<'w, ActiveSpellEffects>,
 }
 
 
@@ -106,19 +105,18 @@ pub fn tower_tooltip(
     temp_speed_bonus: f32,
 ) -> String {
     let config = kind.definition().tooltip_config;
-    let elemental_multiplier = stats.active_spell_effects.elemental_multiplier;
-    let effective_speed = (stats.attack_speed.value + temp_speed_bonus).max(0.1);
+    let effective_speed = (stats.attack_speed.value() + temp_speed_bonus).max(0.1);
 
     let mut lines = vec![kind.name().to_string()];
 
     if config.show_damage {
         let regular_damage = damage_formula.calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
-            false, elemental_multiplier,
+            false,
         ) + temp_flat_damage;
         let critical_damage = damage_formula.calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
-            true, elemental_multiplier,
+            true,
         ) + temp_flat_damage;
 
         let mut active_parts: Vec<String> = Vec::new();
@@ -141,13 +139,13 @@ pub fn tower_tooltip(
         lines.push(format!("Cooldown: {:.2}s", kind.cooldown() / effective_speed));
     }
     if config.show_crit {
-        lines.push(format!("Crit: {:.0}%", stats.critical_chance.value * 100.0));
+        lines.push(format!("Crit: {:.0}%", stats.critical_chance.value() * 100.0));
     }
     if config.show_projectile {
         lines.push(format!("Projectile: {:.0}/s", kind.projectile_speed()));
     }
     if config.show_splash {
-        lines.push(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value)));
+        lines.push(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value())));
     }
     if config.show_turn_speed {
         lines.push(format!("Turn speed: {:.1}", kind.angular_speed()));
@@ -184,7 +182,7 @@ pub fn progress_cooldown(
     let delta = time.delta();
     for (mut cooldown, temp_speed) in &mut towers {
         let base_cooldown = cooldown.base_cooldown;
-        let effective_speed = (attack_speed.value + temp_speed.bonus).max(0.1);
+        let effective_speed = (attack_speed.value() + temp_speed.bonus).max(0.1);
         cooldown.timer.set_duration(Duration::from_secs_f32(
             base_cooldown / effective_speed,
         ));
@@ -215,7 +213,6 @@ pub fn aim_towers(
     fire_damage: Res<FireDamage>,
     air_damage: Res<AirDamage>,
     water_damage: Res<WaterDamage>,
-    active_spell_effects: Res<ActiveSpellEffects>,
     mut shoot_events: EventWriter<ShootEvent>,
 ) {
     if game_over.value {
@@ -262,14 +259,13 @@ pub fn aim_towers(
             .rotate_towards(target_rotation, step);
 
         if ready_to_shoot && cooldown.timer.finished() {
-            let is_critical = roll_critical_hit(critical_chance.value);
+            let is_critical = roll_critical_hit(critical_chance.value());
             let damage = damage_formula.calculate_damage_with_elemental_multiplier(
                 &earth_damage,
                 &fire_damage,
                 &air_damage,
                 &water_damage,
                 is_critical,
-                active_spell_effects.elemental_multiplier,
             ) + damage_bonus.flat;
 
             cooldown.timer.reset();
@@ -295,7 +291,7 @@ pub fn aim_towers(
                 Damage { amount: damage },
                 IsCritical { value: is_critical },
                 ExplosionRadius {
-                    value: tower_kind.upgraded_explosion_radius(explosion_size.value),
+                    value: tower_kind.upgraded_explosion_radius(explosion_size.value()),
                 },
             ));
         }

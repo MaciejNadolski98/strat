@@ -84,7 +84,7 @@ fn golem_kill_tracking(
             let prev = kc.kills / 10;
             kc.kills += 1;
             let gained = kc.kills / 10 - prev;
-            earth_damage.value += gained as f32;
+            earth_damage.raw_value += gained as f32;
         }
     }
 }

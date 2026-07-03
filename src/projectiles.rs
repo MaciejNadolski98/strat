@@ -5,7 +5,7 @@ use crate::components::{
     Reward, SourceTower, Speed, Target, Tower,
 };
 use crate::effects::{spawn_explosion_effect, spawn_floating_text};
-use crate::resources::{EnemyKilledEvent, KillCount, Money, Loot, SpellKind, SpellShop};
+use crate::resources::{EnemyKilledEvent, KillCount, Money, Loot, SpellShop};
 
 pub fn move_projectiles(
     mut commands: Commands,
@@ -119,12 +119,12 @@ pub fn move_projectiles(
             }
 
             for (entity, reward, position, drops_spell) in killed {
-                let kill_loot = reward + loot.amount;
+                let kill_loot = reward + loot.value().round() as i32;
                 money.amount += kill_loot;
                 kills.amount += 1;
                 spawn_money_text(&mut commands, position + Vec2::new(34.0, 30.0), kill_loot);
                 if drops_spell {
-                    spell_shop.store_spell(SpellKind::random());
+                    spell_shop.store_random_spell();
                     spawn_floating_text(
                         &mut commands,
                         "Spell!".to_string(),

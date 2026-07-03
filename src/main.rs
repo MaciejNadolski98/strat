@@ -11,6 +11,7 @@ mod projectiles;
 mod resources;
 mod setup;
 mod shop;
+mod spell_definitions;
 mod spells;
 mod tower_definitions;
 mod towers;
@@ -27,15 +28,17 @@ use effects::{update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, pan_camera, restart_game, toggle_pause};
 use item_definitions::{ItemPlugins, ItemRegistry};
+use spell_definitions::{SpellPlugins, SpellRegistry};
 use tower_definitions::{CustomTooltipTexts, TowerPlugins, TowerRegistry};
 use hud::update_hud;
 use pathing::{update_path_hints, update_path_input};
 use projectiles::move_projectiles;
 use resources::{
-    ActiveSpellEffects, AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
+    AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
-    MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Regeneration, Shop, SpawnTimer,
+    MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Regeneration, Shop, SpawnTimer, Stat,
     SpellShop, TowerDraft, WaterDamage, WaveNumber,
+    reset_stat_temporaries, before_temporary_effects, after_temporary_effects,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
@@ -60,6 +63,10 @@ fn initialize_shop(registry: Res<ItemRegistry>, mut shop: ResMut<Shop>) {
     shop.activate(1);
 }
 
+fn initialize_spell_shop(registry: Res<SpellRegistry>, mut spell_shop: ResMut<SpellShop>) {
+    spell_shop.known_kinds = registry.kinds.clone();
+}
+
 fn main() {
     let run_mode = RunMode::from_args(std::env::args());
 
@@ -72,26 +79,24 @@ fn main() {
         .insert_resource(CurrentHp {
             amount: PLAYER_BASE_MAX_HP,
         })
-        .insert_resource(MaxHp {
-            amount: PLAYER_BASE_MAX_HP,
-        })
+        .insert_resource(MaxHp(Stat::new(PLAYER_BASE_MAX_HP as f32)))
         .insert_resource(KillCount { amount: 0 })
         .insert_resource(GameOver { value: false })
         .insert_resource(GameWon { value: false })
         .insert_resource(Paused { value: false })
-        .insert_resource(Regeneration { amount: BASE_REGENERATION })
-        .insert_resource(AttackSpeed { value: BASE_ATTACK_SPEED })
-        .insert_resource(Loot { amount: BASE_LOOT })
-        .insert_resource(CriticalChance { value: BASE_CRITICAL_CHANCE })
-        .insert_resource(ExplosionSize { value: 0.0 })
-        .insert_resource(EarthDamage { value: 0.0 })
-        .insert_resource(FireDamage { value: 0.0 })
-        .insert_resource(AirDamage { value: 0.0 })
-        .insert_resource(WaterDamage { value: 0.0 })
-        .insert_resource(ActiveSpellEffects::new())
+        .insert_resource(Regeneration(Stat::new(BASE_REGENERATION as f32)))
+        .insert_resource(AttackSpeed(Stat::new(BASE_ATTACK_SPEED)))
+        .insert_resource(Loot(Stat::new(BASE_LOOT as f32)))
+        .insert_resource(CriticalChance(Stat::new(BASE_CRITICAL_CHANCE)))
+        .insert_resource(ExplosionSize(Stat::new(0.0)))
+        .insert_resource(EarthDamage(Stat::new(0.0)))
+        .insert_resource(FireDamage(Stat::new(0.0)))
+        .insert_resource(AirDamage(Stat::new(0.0)))
+        .insert_resource(WaterDamage(Stat::new(0.0)))
         .insert_resource(WaveNumber { value: 1 })
         .insert_resource(EnemiesRemaining { count: 0 })
         .insert_resource(ItemRegistry::default())
+        .insert_resource(SpellRegistry::default())
         .insert_resource(TowerRegistry::default())
         .insert_resource(TowerDraft::new_empty())
         .insert_resource(SpawnTimer::new())
@@ -100,7 +105,7 @@ fn main() {
         })
         .insert_resource(PathTiles::new())
         .insert_resource(Shop::new_empty())
-        .insert_resource(SpellShop::new())
+        .insert_resource(SpellShop::new_empty())
         .add_event::<ItemPurchasedEvent>()
         .add_event::<EnemyKilledEvent>()
         .add_event::<ShootEvent>()
@@ -115,13 +120,17 @@ fn main() {
             ..default()
         }))
         .add_plugins(ItemPlugins)
+        .add_plugins(SpellPlugins)
         .add_plugins(TowerPlugins)
         .init_resource::<CustomTooltipTexts>()
-        .add_systems(Startup, (setup, initialize_draft, initialize_shop).chain())
+        .add_systems(Startup, (setup, initialize_draft, initialize_shop, initialize_spell_shop).chain())
         .add_systems(Update, toggle_pause)
         .add_systems(
             Update,
             (
+                reset_stat_temporaries,
+                before_temporary_effects,
+                after_temporary_effects,
                 reset_temporary_attack_speed,
                 reset_temporary_damage_bonus,
                 progress_cooldown,

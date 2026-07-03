@@ -6,25 +6,15 @@ use crate::components::{
     SpellSlotLabel,
 };
 use crate::effects::spawn_floating_text;
-use crate::resources::{
-    ActiveSpellEffects, FireDamage, GameOver, GameWon, KillCount, Money, Loot, SpellKind,
-    SpellShop,
-};
-
-const BURN_DURATION: f32 = 6.0;
-const BURN_TICK: f32 = 0.5;
-const BURN_DAMAGE_PER_TICK: f32 = 8.0;
-const SLOW_MULTIPLIER: f32 = 0.5;
+use crate::resources::{GameOver, GameWon, KillCount, Money, Loot, SpellShop};
+use crate::spell_definitions::SpellCastEvent;
 
 pub fn update_spell_input(
-    mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut spell_shop: ResMut<SpellShop>,
-    mut active_effects: ResMut<ActiveSpellEffects>,
     game_over: Res<GameOver>,
     game_won: Res<GameWon>,
-    fire_damage: Res<FireDamage>,
-    enemies: Query<Entity, With<Enemy>>,
+    mut spell_cast: EventWriter<SpellCastEvent>,
 ) {
     if game_over.value || game_won.value {
         return;
@@ -46,13 +36,7 @@ pub fn update_spell_input(
     let Some(spell) = spell_shop.take_spell(slot) else {
         return;
     };
-    cast_spell(
-        &mut commands,
-        spell,
-        &mut active_effects,
-        &fire_damage,
-        &enemies,
-    );
+    spell_cast.write(SpellCastEvent { kind: spell });
 }
 
 pub fn update_spell_slots(
@@ -169,7 +153,7 @@ pub fn update_burning_enemies(
             }
 
             if health.current <= 0.0 {
-                let kill_loot = reward.amount + loot.amount;
+                let kill_loot = reward.amount + loot.value().round() as i32;
                 money.amount += kill_loot;
                 kills.amount += 1;
                 spawn_floating_text(
@@ -180,7 +164,7 @@ pub fn update_burning_enemies(
                     19.0,
                 );
                 if drops_spell.is_some() {
-                    spell_shop.store_spell(SpellKind::random());
+                    spell_shop.store_random_spell();
                     spawn_floating_text(
                         &mut commands,
                         "Spell!".to_string(),
@@ -196,33 +180,6 @@ pub fn update_burning_enemies(
 
         if burning.timer.finished() {
             commands.entity(entity).remove::<Burning>();
-        }
-    }
-}
-
-fn cast_spell(
-    commands: &mut Commands,
-    spell: SpellKind,
-    active_effects: &mut ActiveSpellEffects,
-    fire_damage: &FireDamage,
-    enemies: &Query<Entity, With<Enemy>>,
-) {
-    match spell {
-        SpellKind::Ignite => {
-            let damage_per_tick = BURN_DAMAGE_PER_TICK + fire_damage.value;
-            for enemy in enemies {
-                commands.entity(enemy).insert(Burning {
-                    timer: Timer::from_seconds(BURN_DURATION, TimerMode::Once),
-                    tick_timer: Timer::from_seconds(BURN_TICK, TimerMode::Repeating),
-                    damage_per_tick,
-                });
-            }
-        }
-        SpellKind::ElementalSurge => {
-            active_effects.elemental_multiplier = 2.0;
-        }
-        SpellKind::Slow => {
-            active_effects.enemy_speed_multiplier = SLOW_MULTIPLIER;
         }
     }
 }
