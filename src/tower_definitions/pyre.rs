@@ -2,9 +2,8 @@ use bevy::prelude::*;
 
 use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryDamageBonus, Tower};
 use crate::game::game_is_running;
-use crate::resources::{FireDamage, PlayerStatKind, TowerStatEffect, after_temporary_effects, before_temporary_effects};
+use crate::resources::{FireDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
-use crate::towers::{aim_towers, reset_temporary_damage_bonus};
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_TRIANGLE_M, BARREL_NONE};
 
@@ -17,11 +16,7 @@ impl Plugin for PyrePlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_pyre_marker.run_if(game_is_running));
-        app.add_systems(Update, 
-            apply_pyre_aura
-                .after(before_temporary_effects)
-                .before(after_temporary_effects)
-                .run_if(game_is_running));
+        app.add_systems(Update, apply_pyre_aura.in_set(GamePhase::TemporaryTowerEffects));
         app.add_systems(Update, update_pyre_tooltip);
     }
 }

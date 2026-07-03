@@ -2,8 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::{CustomTooltip, DamageFormula, TemporaryAttackSpeed};
 use crate::game::game_is_running;
-use crate::resources::{AttackSpeed, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect, after_temporary_effects, before_temporary_effects};
-use crate::towers::progress_cooldown;
+use crate::resources::{AttackSpeed, GamePhase, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
@@ -17,19 +16,8 @@ impl Plugin for GatlingPlugin {
             Update,
             (attach_gatling_tower, accelerate, reset).run_if(game_is_running),
         );
-        app.add_systems(
-            Update,
-            decelerate
-                .after(before_temporary_effects)
-                .before(after_temporary_effects)
-                .run_if(game_is_running),
-        );
-        app.add_systems(
-            Update,
-            update_windup_bar
-                .after(after_temporary_effects)
-                .run_if(game_is_running),
-        );
+        app.add_systems(Update, decelerate.in_set(GamePhase::TemporaryTowerEffects));
+        app.add_systems(Update, update_windup_bar.in_set(GamePhase::Gameplay));
         app.add_systems(Update, update_gatling_tooltip);
     }
 }

@@ -2,9 +2,8 @@ use bevy::prelude::*;
 
 use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryAttackSpeed, Tower};
 use crate::game::game_is_running;
-use crate::resources::{AirDamage, EarthDamage, PlayerStatKind, TowerStatEffect};
+use crate::resources::{AirDamage, EarthDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tower_definitions::TowerKind;
-use crate::towers::{progress_cooldown, reset_temporary_attack_speed};
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_CIRCLE_M, BARREL_NONE};
 
@@ -17,13 +16,7 @@ impl Plugin for ZephyrPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_zephyr_marker.run_if(game_is_running));
-        app.add_systems(
-            Update,
-            apply_zephyr_aura
-                .after(reset_temporary_attack_speed)
-                .before(progress_cooldown)
-                .run_if(game_is_running),
-        );
+        app.add_systems(Update, apply_zephyr_aura.in_set(GamePhase::TemporaryTowerEffects));
         app.add_systems(Update, update_zephyr_tooltip);
     }
 }

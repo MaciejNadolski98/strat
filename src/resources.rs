@@ -92,8 +92,13 @@ stat_resource!(AirDamage);
 stat_resource!(WaterDamage);
 stat_resource!(MaxHp);
 
-pub fn before_temporary_effects() {}
-pub fn after_temporary_effects() {}
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum GamePhase {
+    ResetTemporaries,
+    TemporaryStatEffects,
+    TemporaryTowerEffects,
+    Gameplay,
+}
 
 pub fn reset_stat_temporaries(
     mut earth: ResMut<EarthDamage>,

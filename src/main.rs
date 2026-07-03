@@ -38,7 +38,7 @@ use resources::{
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
     MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Regeneration, Shop, SpawnTimer, Stat,
     SpellShop, TowerDraft, WaterDamage, WaveNumber,
-    reset_stat_temporaries, before_temporary_effects, after_temporary_effects,
+    GamePhase, reset_stat_temporaries,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
@@ -125,14 +125,30 @@ fn main() {
         .init_resource::<CustomTooltipTexts>()
         .add_systems(Startup, (setup, initialize_draft, initialize_shop, initialize_spell_shop).chain())
         .add_systems(Update, toggle_pause)
+        .configure_sets(
+            Update,
+            (
+                GamePhase::ResetTemporaries,
+                GamePhase::TemporaryStatEffects,
+                GamePhase::TemporaryTowerEffects,
+                GamePhase::Gameplay,
+            )
+                .chain()
+                .run_if(game_is_running)
+                .after(toggle_pause),
+        )
         .add_systems(
             Update,
             (
                 reset_stat_temporaries,
-                before_temporary_effects,
-                after_temporary_effects,
                 reset_temporary_attack_speed,
                 reset_temporary_damage_bonus,
+            )
+                .in_set(GamePhase::ResetTemporaries),
+        )
+        .add_systems(
+            Update,
+            (
                 progress_cooldown,
                 place_draft_tower,
                 update_draft_input,
@@ -148,8 +164,7 @@ fn main() {
                 update_floating_text,
             )
                 .chain()
-                .run_if(game_is_running)
-                .after(toggle_pause),
+                .in_set(GamePhase::Gameplay),
         )
         .add_systems(
             Update,

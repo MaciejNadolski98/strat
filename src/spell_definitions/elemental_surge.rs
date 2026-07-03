@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 
-use crate::game::game_is_running;
-use crate::resources::{AirDamage, EarthDamage, FireDamage, NewRoundEvent, WaterDamage,
-    before_temporary_effects, after_temporary_effects};
+use crate::resources::{AirDamage, EarthDamage, FireDamage, GamePhase, NewRoundEvent, WaterDamage};
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const SURGE_BONUS: f32 = 1.0;
@@ -25,13 +23,7 @@ impl Plugin for ElementalSurgePlugin {
         app.world_mut().resource_mut::<SpellRegistry>().kinds.push(KIND);
         app.init_resource::<SurgeActive>();
         app.add_systems(Update, (on_cast, deactivate_on_wave_end));
-        app.add_systems(
-            Update,
-            apply_elemental_surge
-                .after(before_temporary_effects)
-                .before(after_temporary_effects)
-                .run_if(game_is_running),
-        );
+        app.add_systems(Update, apply_elemental_surge.in_set(GamePhase::TemporaryStatEffects));
     }
 }
 
