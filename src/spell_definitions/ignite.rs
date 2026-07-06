@@ -40,7 +40,7 @@ fn on_cast(
             if health.current <= 0.0 {
                 continue;
             }
-            commands.entity(enemy).insert(Burning {
+            commands.entity(enemy).try_insert(Burning {
                 timer: Timer::from_seconds(BURN_DURATION, TimerMode::Once),
                 tick_timer: Timer::from_seconds(BURN_TICK, TimerMode::Repeating),
                 damage_per_tick,
