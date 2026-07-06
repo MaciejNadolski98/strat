@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Coffee",
+    description: "",
     effects: &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
         TowerStatEffect::new(PlayerStatKind::MaxHp, -1.0),

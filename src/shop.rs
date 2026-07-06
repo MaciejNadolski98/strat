@@ -263,12 +263,12 @@ pub fn update_shop_tooltip(
 
 
 fn upgrade_tooltip(kind: ItemKind, cost: i32) -> String {
-    format!(
-        "{}  ${}\nPermanent upgrade\n{}",
-        kind.name(),
-        cost,
-        kind.effect_text()
-    )
+    let mut parts: Vec<String> = Vec::new();
+    let effects = kind.effect_text();
+    if !effects.is_empty() { parts.push(effects); }
+    let desc = kind.description();
+    if !desc.is_empty() { parts.push(desc.to_string()); }
+    format!("{}  ${}\nPermanent upgrade\n{}", kind.name(), cost, parts.join("\n"))
 }
 
 fn apply_stat_upgrade(kind: ItemKind, stats: &mut PlayerStatsMut) {

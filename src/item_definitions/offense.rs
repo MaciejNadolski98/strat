@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Offense",
+    description: "",
     effects: &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04),

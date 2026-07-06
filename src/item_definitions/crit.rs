@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Crit",
+    description: "",
     effects: &[TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.04)],
     cost: 5,
     icon_color: Color::srgb(0.70, 0.22, 0.22),

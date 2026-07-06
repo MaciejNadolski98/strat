@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Earth",
+    description: "",
     effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 4.0)],
     cost: 3,
     icon_color: Color::srgb(0.46, 0.34, 0.22),

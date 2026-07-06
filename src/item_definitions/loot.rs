@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "loot",
+    description: "",
     effects: &[TowerStatEffect::new(PlayerStatKind::Loot, 1.0)],
     cost: 10,
     icon_color: Color::srgb(0.95, 0.78, 0.24),

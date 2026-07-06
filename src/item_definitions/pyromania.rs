@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Pyromania",
+    description: "Whenever you buy fire, +1 Fire",
     effects: &[],
     cost: 6,
     icon_color: Color::srgb(0.96, 0.44, 0.08),

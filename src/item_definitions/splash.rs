@@ -5,6 +5,7 @@ use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Splash",
+    description: "",
     effects: &[TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)],
     cost: 4,
     icon_color: Color::srgb(0.82, 0.44, 0.18),

@@ -21,6 +21,7 @@ use crate::resources::TowerStatEffect;
 #[derive(Clone, Copy)]
 pub struct ItemDefinition {
     pub name: &'static str,
+    pub description: &'static str,
     pub effects: &'static [TowerStatEffect],
     pub cost: u32,
     pub icon_color: Color,
@@ -32,6 +33,10 @@ pub struct ItemKind(pub &'static ItemDefinition);
 impl ItemKind {
     pub fn name(self) -> &'static str {
         self.0.name
+    }
+
+    pub fn description(self) -> &'static str {
+        self.0.description
     }
 
     pub fn effects(self) -> &'static [TowerStatEffect] {
