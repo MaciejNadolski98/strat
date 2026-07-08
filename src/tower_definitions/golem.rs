@@ -4,6 +4,7 @@ use crate::components::{CustomTooltip, DamageFormula, TowerKillCount};
 use crate::game::game_is_running;
 use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
+use crate::tags;
 use crate::tower_definitions::TowerKind;
 use crate::tower_definitions::templates::BASE_TRIANGLE_M;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
@@ -47,6 +48,7 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
     barrel: BARREL_HEAVY,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
     tooltip_config: TooltipConfig::STANDARD,
+    tags: &[tags::BIOTIC, tags::MECHANICAL],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_GOLEM);

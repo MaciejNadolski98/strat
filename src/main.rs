@@ -13,6 +13,7 @@ mod setup;
 mod shop;
 mod spell_definitions;
 mod spells;
+mod tags;
 mod tower_definitions;
 mod towers;
 mod waves;

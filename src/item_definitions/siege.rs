@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::resources::{PlayerStatKind, TowerStatEffect};
+use crate::tags;
 use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
@@ -12,6 +13,7 @@ pub const ITEM: ItemDefinition = ItemDefinition {
     ],
     cost: 8,
     icon_color: Color::srgb(0.74, 0.46, 0.20),
+    tags: &[tags::MECHANICAL, tags::BIOTIC],
 };
 
 pub const KIND: ItemKind = ItemKind(&ITEM);

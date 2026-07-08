@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryAttackSpeed, Tower};
 use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, GamePhase, PlayerStatKind, TowerStatEffect};
+use crate::tags;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_CIRCLE_M, BARREL_NONE};
@@ -42,6 +43,7 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
     tooltip_config: TooltipConfig::AURA,
+    tags: &[tags::BIOTIC],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);

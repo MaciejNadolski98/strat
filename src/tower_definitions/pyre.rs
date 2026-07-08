@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryDamageBonus, Tower};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, GamePhase, PlayerStatKind, TowerStatEffect};
+use crate::tags;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_TRIANGLE_M, BARREL_NONE};
@@ -42,6 +43,7 @@ pub const TOWER_PYRE: TowerDefinition = TowerDefinition {
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 3.0)],
     tooltip_config: TooltipConfig::AURA,
+    tags: &[tags::INFERNAL],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_PYRE);

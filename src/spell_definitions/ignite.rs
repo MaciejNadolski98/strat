@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::{Burning, Enemy, Health};
 use crate::resources::FireDamage;
+use crate::tags;
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const BURN_DURATION: f32 = 6.0;
@@ -12,6 +13,7 @@ pub const SPELL: SpellDefinition = SpellDefinition {
     name: "Ignite",
     description: "Sets all enemies on fire, scaling with fire damage",
     icon_color: Color::srgb(0.92, 0.26, 0.12),
+    tags: &[tags::INFERNAL],
 };
 
 pub const KIND: SpellKind = SpellKind(&SPELL);

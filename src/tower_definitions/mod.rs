@@ -19,6 +19,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::TowerStatEffect;
+use crate::tags::TagInfo;
 
 #[derive(Resource, Default)]
 pub struct CustomTooltipTexts(pub HashMap<TowerKind, String>);
@@ -90,6 +91,10 @@ impl TowerKind {
 
     pub fn stat_effects(self) -> &'static [TowerStatEffect] {
         self.0.stat_effects
+    }
+
+    pub fn tags_text(self) -> String {
+        crate::tags::tags_text(self.0.tags)
     }
 
     pub fn body_sprite(self, alpha: f32) -> Sprite {
@@ -220,4 +225,5 @@ pub struct TowerDefinition {
     pub barrel: BarrelTemplate,
     pub stat_effects: &'static [TowerStatEffect],
     pub tooltip_config: TooltipConfig,
+    pub tags: &'static [TagInfo],
 }

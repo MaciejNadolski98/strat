@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::components::{CustomTooltip, DamageFormula, TemporaryAttackSpeed};
 use crate::game::game_is_running;
 use crate::resources::{AttackSpeed, GamePhase, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
+use crate::tags;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
@@ -45,6 +46,7 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
     ],
     tooltip_config: TooltipConfig::STANDARD,
+    tags: &[],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_GATLING);

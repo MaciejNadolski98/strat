@@ -9,6 +9,7 @@ use crate::resources::{
     AirDamage, CriticalChance, EnemyKilledEvent, GameOver, KillCount, Loot,
     Money, PlayerStatKind, SpellShop, TowerStatEffect,
 };
+use crate::tags;
 use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
@@ -56,6 +57,7 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
     tooltip_config: TooltipConfig::STANDARD
         .with_turn_speed(false)
         .with_projectile(false),
+    tags: &[],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CYCLONE);

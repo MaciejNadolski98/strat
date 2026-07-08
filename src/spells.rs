@@ -111,10 +111,13 @@ pub fn update_spell_tooltip(
             return;
         };
 
+        let tags = spell.tags_text();
+        let tags_line = if tags.is_empty() { String::new() } else { format!("Tags: {tags}\n") };
         tooltip_text.0 = format!(
-            "{}\nOne use spell\n{}\nPress {} to cast",
+            "{}\nOne use spell\n{}\n{}Press {} to cast",
             spell.name(),
             spell.description(),
+            tags_line,
             spell_key(slot.index)
         );
         *tooltip_visibility = Visibility::Visible;

@@ -159,6 +159,11 @@ pub fn tower_tooltip(
         }
     }
 
+    let tags = kind.tags_text();
+    if !tags.is_empty() {
+        lines.push(format!("Tags: {tags}"));
+    }
+
     lines.join("\n")
 }
 

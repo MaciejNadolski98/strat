@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::resources::{AirDamage, EarthDamage, FireDamage, GamePhase, NewRoundEvent, WaterDamage};
+use crate::tags;
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const SURGE_BONUS: f32 = 1.0;
@@ -9,6 +10,7 @@ const SPELL: SpellDefinition = SpellDefinition {
     name: "Surge",
     description: "Doubles elemental damage until wave end",
     icon_color: Color::srgb(0.30, 0.62, 0.92),
+    tags: &[],
 };
 
 pub const KIND: SpellKind = SpellKind(&SPELL);

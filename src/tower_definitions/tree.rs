@@ -5,6 +5,7 @@ use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
+use crate::tags;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
@@ -55,6 +56,7 @@ pub const TOWER_TREE: TowerDefinition = TowerDefinition {
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)],
     tooltip_config: TooltipConfig::AURA
         .with_cooldown(true),
+    tags: &[tags::BIOTIC],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_TREE);

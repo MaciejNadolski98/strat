@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::resources::NewRoundEvent;
+use crate::tags;
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const SLOW_MULTIPLIER: f32 = 0.5;
@@ -9,6 +10,7 @@ pub const SPELL: SpellDefinition = SpellDefinition {
     name: "Slow",
     description: "Slows all enemies until wave end",
     icon_color: Color::srgb(0.42, 0.82, 0.92),
+    tags: &[],
 };
 
 pub const KIND: SpellKind = SpellKind(&SPELL);

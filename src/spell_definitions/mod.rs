@@ -4,6 +4,8 @@ pub mod slow;
 
 use bevy::prelude::*;
 
+use crate::tags::TagInfo;
+
 pub use slow::SlowActive;
 
 #[derive(Clone, Copy)]
@@ -11,6 +13,7 @@ pub struct SpellDefinition {
     pub name: &'static str,
     pub description: &'static str,
     pub icon_color: Color,
+    pub tags: &'static [TagInfo],
 }
 
 #[derive(Clone, Copy)]
@@ -27,6 +30,10 @@ impl SpellKind {
 
     pub fn icon_color(self) -> Color {
         self.0.icon_color
+    }
+
+    pub fn tags_text(self) -> String {
+        crate::tags::tags_text(self.0.tags)
     }
 }
 

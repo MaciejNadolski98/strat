@@ -268,6 +268,8 @@ fn upgrade_tooltip(kind: ItemKind, cost: i32) -> String {
     if !effects.is_empty() { parts.push(effects); }
     let desc = kind.description();
     if !desc.is_empty() { parts.push(desc.to_string()); }
+    let tags = kind.tags_text();
+    if !tags.is_empty() { parts.push(format!("Tags: {tags}")); }
     format!("{}  ${}\nPermanent upgrade\n{}", kind.name(), cost, parts.join("\n"))
 }
 

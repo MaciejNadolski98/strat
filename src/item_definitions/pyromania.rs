@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::resources::{FireDamage, GameRestartEvent, ItemPurchasedEvent, PlayerStatKind};
+use crate::tags;
 use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
@@ -9,6 +10,7 @@ pub const ITEM: ItemDefinition = ItemDefinition {
     effects: &[],
     cost: 6,
     icon_color: Color::srgb(0.96, 0.44, 0.08),
+    tags: &[tags::INFERNAL],
 };
 
 pub const KIND: ItemKind = ItemKind(&ITEM);

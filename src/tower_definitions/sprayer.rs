@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
+use crate::tags;
 use super::{TowerDefinition, TooltipConfig, TowerKind, TowerRegistry};
 use super::templates::{BASE_LIGHT, BARREL_LIGHT, PALETTE_TEAL};
 
@@ -37,6 +38,7 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::Loot, 1.0),
     ],
     tooltip_config: TooltipConfig::STANDARD,
+    tags: &[tags::MECHANICAL],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_SPRAYER);

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::components::{AuraTower, CustomTooltip, DamageFormula};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
+use crate::tags;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
@@ -52,6 +53,7 @@ pub const TOWER_CATALYST: TowerDefinition = TowerDefinition {
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)],
     tooltip_config: TooltipConfig::UTILITY,
+    tags: &[tags::INFERNAL],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CATALYST);

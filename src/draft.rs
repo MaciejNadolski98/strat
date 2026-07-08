@@ -202,6 +202,10 @@ pub fn place_draft_tower(
         TemporaryDamageBonus::default(),
     ));
 
+    for tag in tower_kind.definition().tags {
+        tag.insert(&mut spawner);
+    }
+
     if tower_kind.base_shape().is_rectangle() {
         spawner.insert(tower_kind.body_sprite(1.0));
     } else {

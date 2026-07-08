@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
+use crate::tags;
 use super::{TowerDefinition, TooltipConfig, TowerKind, TowerRegistry};
 use super::templates::{BASE_SIEGE, BARREL_CANNON, PALETTE_BRONZE};
 
@@ -37,6 +38,7 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
     ],
     tooltip_config: TooltipConfig::STANDARD.with_splash(true),
+    tags: &[tags::MECHANICAL],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CANNON);

@@ -17,6 +17,7 @@ pub mod siege;
 use bevy::prelude::*;
 
 use crate::resources::TowerStatEffect;
+use crate::tags::TagInfo;
 
 #[derive(Clone, Copy)]
 pub struct ItemDefinition {
@@ -25,6 +26,7 @@ pub struct ItemDefinition {
     pub effects: &'static [TowerStatEffect],
     pub cost: u32,
     pub icon_color: Color,
+    pub tags: &'static [TagInfo],
 }
 
 #[derive(Clone, Copy)]
@@ -57,6 +59,10 @@ impl ItemKind {
             .map(|e| e.effect_text())
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    pub fn tags_text(self) -> String {
+        crate::tags::tags_text(self.0.tags)
     }
 }
 
