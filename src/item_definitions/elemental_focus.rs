@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use crate::tags;
 use super::{ItemDefinition, ItemKind, ItemRegistry};
 
 pub const ITEM: ItemDefinition = ItemDefinition {

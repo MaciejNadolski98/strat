@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::resources::NewRoundEvent;
-use crate::tags;
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const SLOW_MULTIPLIER: f32 = 0.5;

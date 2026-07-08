@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::resources::{AirDamage, EarthDamage, FireDamage, GamePhase, NewRoundEvent, WaterDamage};
-use crate::tags;
 use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const SURGE_BONUS: f32 = 1.0;

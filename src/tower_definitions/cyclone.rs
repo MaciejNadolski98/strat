@@ -9,7 +9,6 @@ use crate::resources::{
     AirDamage, CriticalChance, EnemyKilledEvent, GameOver, KillCount, Loot,
     Money, PlayerStatKind, SpellShop, TowerStatEffect,
 };
-use crate::tags;
 use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
