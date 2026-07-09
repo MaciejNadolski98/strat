@@ -5,6 +5,7 @@ use crate::game::game_is_running;
 use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
 use crate::tags;
+use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use crate::tower_definitions::templates::BASE_TRIANGLE_M;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
@@ -66,13 +67,11 @@ fn attach_golem_kill_count(
 
 fn update_golem_tooltip(
     mut golems: Query<(&TowerKillCount, &mut CustomTooltip)>,
-    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
-    tooltip_texts.0.insert(KIND, "Every 10 kills: +1 Earth Damage".to_string());
     for (kc, mut tooltip) in &mut golems {
         let bonus = kc.kills / 10;
         let progress = kc.kills % 10;
-        tooltip.0 = format!("Every 10 kills: +1 Earth Damage\nProduced: +{bonus} Earth\nProgress: {progress}/10 kills");
+        tooltip.0 = vec![plain(format!("Every 10 kills: +1 Earth Damage\nProduced: +{bonus} Earth\nProgress: {progress}/10 kills"))];
     }
 }
 

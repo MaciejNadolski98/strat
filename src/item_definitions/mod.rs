@@ -61,8 +61,8 @@ impl ItemKind {
             .join("\n")
     }
 
-    pub fn tags_text(self) -> String {
-        crate::tags::tags_text(self.0.tags)
+    pub fn tags(self) -> &'static [TagInfo] {
+        self.0.tags
     }
 }
 

@@ -4,6 +4,7 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryDamage
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tags;
+use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_TRIANGLE_M, BARREL_NONE};
@@ -91,12 +92,10 @@ fn apply_pyre_aura(
 fn update_pyre_tooltip(
     fire_damage: Res<FireDamage>,
     mut towers: Query<&mut CustomTooltip, With<PyreTower>>,
-    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let bonus = pyre_damage_bonus(fire_damage.value());
     let extras = format!("Boosts adjacent tower damage\n+{bonus:.1} flat damage (fire × 0.5)");
-    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&extras);
+        tooltip.0 = vec![plain(extras.clone())];
     }
 }

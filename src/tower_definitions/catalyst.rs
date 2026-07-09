@@ -4,6 +4,7 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tags;
+use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
@@ -129,15 +130,13 @@ fn update_catalyst_progress_bar(
 fn update_catalyst_tooltip(
     fire_damage: Res<FireDamage>,
     mut towers: Query<(&mut CustomTooltip, &CatalystTower)>,
-    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value());
     let static_extras = format!(
         "Generates a spell every {seconds_per_spell:.1}s\n(20 / (0.2 + fire × 1.8%) s/spell)",
     );
-    tooltip_texts.0.insert(KIND, static_extras.clone());
     for (mut tooltip, catalyst) in &mut towers {
         let pct = catalyst.progress * 100.0;
-        tooltip.0 = format!("{static_extras}\nProgress: {pct:.0}%");
+        tooltip.0 = vec![plain(format!("{static_extras}\nProgress: {pct:.0}%"))];
     }
 }

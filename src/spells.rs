@@ -8,6 +8,7 @@ use crate::components::{
 use crate::effects::spawn_floating_text;
 use crate::resources::{GameOver, GameWon, KillCount, Money, Loot, SpellShop};
 use crate::spell_definitions::SpellCastEvent;
+use crate::tooltip::{plain, tag_segments};
 
 pub fn update_spell_input(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -80,9 +81,10 @@ pub fn update_spell_tooltip(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     slots: Query<(&SpellSlot, &GlobalTransform)>,
-    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut tooltip: Query<(Entity, &mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut commands: Commands,
 ) {
-    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+    let Ok((tooltip_entity, mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
         return;
     };
 
@@ -111,15 +113,16 @@ pub fn update_spell_tooltip(
             return;
         };
 
-        let tags = spell.tags_text();
-        let tags_line = if tags.is_empty() { String::new() } else { format!("Tags: {tags}\n") };
-        tooltip_text.0 = format!(
-            "{}\nOne use spell\n{}\n{}Press {} to cast",
-            spell.name(),
-            spell.description(),
-            tags_line,
-            spell_key(slot.index)
-        );
+        let tags = spell.tags();
+        let mut segments = vec![plain(format!("{}\nOne use spell\n{}\n", spell.name(), spell.description()))];
+        if tags.is_empty() {
+            segments.push(plain(format!("Press {} to cast", spell_key(slot.index))));
+        } else {
+            segments.push(plain("Tags: "));
+            segments.extend(tag_segments(tags));
+            segments.push(plain(format!("\nPress {} to cast", spell_key(slot.index))));
+        }
+        crate::tooltip::set_tooltip_segments(&mut commands, tooltip_entity, &mut tooltip_text, segments);
         *tooltip_visibility = Visibility::Visible;
         return;
     }

@@ -4,6 +4,7 @@ use std::fmt;
 use crate::{
     constants::MAX_HEALTH_GROWTH,
     resources::{AirDamage, EarthDamage, FireDamage, WaterDamage},
+    tooltip::Segment,
 };
 
 #[derive(Component)]
@@ -16,7 +17,7 @@ pub struct Enemy;
 pub struct Projectile;
 
 #[derive(Component, Default)]
-pub struct CustomTooltip(pub String);
+pub struct CustomTooltip(pub Vec<Segment>);
 
 #[derive(Component)]
 pub struct PathTile;
@@ -125,6 +126,12 @@ pub struct DraftSlotLabel {
 
 #[derive(Component)]
 pub struct DraftHeaderText;
+
+/// Marks a hidden, off-field entity that mirrors a `TowerDraft` offer so the
+/// same `Added<TowerKind>` attach systems that populate a placed tower's
+/// `CustomTooltip` also populate one for its not-yet-placed draft preview.
+#[derive(Component)]
+pub struct DraftPreview;
 
 #[derive(Component, Clone, Copy)]
 pub enum EnemyKind {

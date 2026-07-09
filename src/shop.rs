@@ -8,6 +8,7 @@ use crate::components::{
 use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::item_definitions::ItemKind;
+use crate::tooltip::{plain, tag_segments};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop,
@@ -222,9 +223,10 @@ pub fn update_shop_tooltip(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     slots: Query<(&ShopSlot, &GlobalTransform)>,
-    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut tooltip: Query<(Entity, &mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut commands: Commands,
 ) {
-    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+    let Ok((tooltip_entity, mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
         return;
     };
 
@@ -255,7 +257,13 @@ pub fn update_shop_tooltip(
             return;
         };
 
-        tooltip_text.0 = upgrade_tooltip(offer.item, offer.cost);
+        let mut segments = vec![plain(upgrade_tooltip(offer.item, offer.cost))];
+        let tags = offer.item.tags();
+        if !tags.is_empty() {
+            segments.push(plain("\nTags: "));
+            segments.extend(tag_segments(tags));
+        }
+        crate::tooltip::set_tooltip_segments(&mut commands, tooltip_entity, &mut tooltip_text, segments);
         *tooltip_visibility = Visibility::Visible;
         return;
     }
@@ -268,8 +276,6 @@ fn upgrade_tooltip(kind: ItemKind, cost: i32) -> String {
     if !effects.is_empty() { parts.push(effects); }
     let desc = kind.description();
     if !desc.is_empty() { parts.push(desc.to_string()); }
-    let tags = kind.tags_text();
-    if !tags.is_empty() { parts.push(format!("Tags: {tags}")); }
     format!("{}  ${}\nPermanent upgrade\n{}", kind.name(), cost, parts.join("\n"))
 }
 

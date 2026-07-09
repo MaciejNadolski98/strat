@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, DraftSlot, Enemy,
+    AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, DraftPreview, DraftSlot, Enemy,
     ExplosionRadius, FireCooldown, Health, IsCritical, PathProgress, Projectile, ShopTooltip,
     SourceTower, Speed, Target, TemporaryAttackSpeed, TemporaryDamageBonus, Tower,
     TowerRangeIndicator,
@@ -17,6 +17,7 @@ use crate::resources::{
     FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
+use crate::tooltip::{colored, plain, tag_segments, Segment};
 use crate::tower_definitions::TowerKind;
 
 #[derive(SystemParam)]
@@ -49,9 +50,10 @@ pub fn update_tower_tooltip(
         Option<&TemporaryDamageBonus>,
     ), With<Tower>>,
     stats: TowerTooltipStats,
-    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut tooltip: Query<(Entity, &mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut commands: Commands,
 ) {
-    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+    let Ok((tooltip_entity, mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
         return;
     };
 
@@ -87,14 +89,55 @@ pub fn update_tower_tooltip(
     let temp_speed_val = temp_speed.map(|ts| ts.bonus).unwrap_or(0.0);
     let temp_damage_val = temp_damage.map(|td| td.flat).unwrap_or(0.0);
 
-    let base = tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val);
-    let text = match custom {
-        Some(ct) if !ct.0.is_empty() => format!("{base}\n{}", ct.0),
-        _ => base,
-    };
+    let mut segments = tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val);
+    if let Some(ct) = custom {
+        if !ct.0.is_empty() {
+            segments.push(plain("\n"));
+            segments.extend(ct.0.iter().cloned());
+        }
+    }
 
-    tooltip_text.0 = text;
+    let tags = kind.tags();
+    if !tags.is_empty() {
+        segments.push(plain("\nTags: "));
+        segments.extend(tag_segments(tags));
+    }
+    crate::tooltip::set_tooltip_segments(&mut commands, tooltip_entity, &mut tooltip_text, segments);
     *tooltip_visibility = Visibility::Visible;
+}
+
+pub const EARTH_COLOR: Color = Color::srgb(0.62, 0.46, 0.28);
+pub const FIRE_COLOR: Color = Color::srgb(0.95, 0.45, 0.15);
+pub const AIR_COLOR: Color = Color::srgb(0.62, 0.82, 0.95);
+pub const WATER_COLOR: Color = Color::srgb(0.30, 0.55, 0.92);
+
+fn damage_formula_segments(formula: &DamageFormula) -> Vec<Segment> {
+    let mut segs = vec![plain(formula.flat.to_string())];
+    if formula.earth_multiplier != 0.0 {
+        segs.push(plain(" + "));
+        segs.push(colored(format!("{} earth", formula.earth_multiplier), EARTH_COLOR));
+    }
+    if formula.air_multiplier != 0.0 {
+        segs.push(plain(" + "));
+        segs.push(colored(format!("{} air", formula.air_multiplier), AIR_COLOR));
+    }
+    if formula.fire_multiplier != 0.0 {
+        segs.push(plain(" + "));
+        segs.push(colored(format!("{} fire", formula.fire_multiplier), FIRE_COLOR));
+    }
+    if formula.water_multiplier != 0.0 {
+        segs.push(plain(" + "));
+        segs.push(colored(format!("{} water", formula.water_multiplier), WATER_COLOR));
+    }
+    segs
+}
+
+fn push_line(segments: &mut Vec<Segment>, first: &mut bool, line: Vec<Segment>) {
+    if !*first {
+        segments.push(plain("\n"));
+    }
+    segments.extend(line);
+    *first = false;
 }
 
 pub fn tower_tooltip(
@@ -103,11 +146,13 @@ pub fn tower_tooltip(
     stats: &TowerTooltipStats,
     temp_flat_damage: f32,
     temp_speed_bonus: f32,
-) -> String {
+) -> Vec<Segment> {
     let config = kind.definition().tooltip_config;
     let effective_speed = (stats.attack_speed.value() + temp_speed_bonus).max(0.1);
 
-    let mut lines = vec![kind.name().to_string()];
+    let mut segments = Vec::new();
+    let mut first = true;
+    push_line(&mut segments, &mut first, vec![plain(kind.name().to_string())]);
 
     if config.show_damage {
         let regular_damage = (damage_formula.calculate_damage_with_elemental_multiplier(
@@ -128,43 +173,42 @@ pub fn tower_tooltip(
             format!(" [Active: {}]", active_parts.join(", "))
         };
 
-        lines.push(format!("Damage: {regular_damage:.0} ({critical_damage:.0} crit)"));
-        lines.push(format!("Formula: {damage_formula}{active_suffix}"));
+        push_line(&mut segments, &mut first, vec![plain(format!("Damage: {regular_damage:.0} ({critical_damage:.0} crit)"))]);
+
+        let mut formula_line = vec![plain("Formula: ")];
+        formula_line.extend(damage_formula_segments(damage_formula));
+        formula_line.push(plain(active_suffix));
+        push_line(&mut segments, &mut first, formula_line);
     }
 
     if config.show_range {
-        lines.push(format!("Range: {:.0}", kind.range()));
+        push_line(&mut segments, &mut first, vec![plain(format!("Range: {:.0}", kind.range()))]);
     }
     if config.show_cooldown {
-        lines.push(format!("Cooldown: {:.2}s", kind.cooldown() / effective_speed));
+        push_line(&mut segments, &mut first, vec![plain(format!("Cooldown: {:.2}s", kind.cooldown() / effective_speed))]);
     }
     if config.show_crit {
-        lines.push(format!("Crit: {:.0}%", stats.critical_chance.value() * 100.0));
+        push_line(&mut segments, &mut first, vec![plain(format!("Crit: {:.0}%", stats.critical_chance.value() * 100.0))]);
     }
     if config.show_projectile {
-        lines.push(format!("Projectile: {:.0}/s", kind.projectile_speed()));
+        push_line(&mut segments, &mut first, vec![plain(format!("Projectile: {:.0}/s", kind.projectile_speed()))]);
     }
     if config.show_splash {
-        lines.push(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value().max(0.0))));
+        push_line(&mut segments, &mut first, vec![plain(format!("Splash: {:.0}", kind.upgraded_explosion_radius(stats.explosion_size.value().max(0.0))))]);
     }
     if config.show_turn_speed {
-        lines.push(format!("Turn speed: {:.1}", kind.angular_speed()));
+        push_line(&mut segments, &mut first, vec![plain(format!("Turn speed: {:.1}", kind.angular_speed()))]);
     }
 
     let stat_effects = kind.stat_effects();
     if !stat_effects.is_empty() {
-        lines.push("Stat effects:".to_string());
+        push_line(&mut segments, &mut first, vec![plain("Stat effects:")]);
         for effect in stat_effects {
-            lines.push(effect.effect_text());
+            push_line(&mut segments, &mut first, vec![plain(effect.effect_text())]);
         }
     }
 
-    let tags = kind.tags_text();
-    if !tags.is_empty() {
-        lines.push(format!("Tags: {tags}"));
-    }
-
-    lines.join("\n")
+    segments
 }
 
 pub fn reset_temporary_attack_speed(mut towers: Query<&mut TemporaryAttackSpeed, With<Tower>>) {
@@ -359,16 +403,18 @@ pub fn update_draft_tooltip(
     draft: Res<TowerDraft>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    slots: Query<(&DraftSlot, &Transform)>,
+    slots: Query<(Entity, &DraftSlot, &Transform)>,
+    slot_children: Query<&Children>,
+    previews: Query<Option<&CustomTooltip>, With<DraftPreview>>,
     stats: TowerTooltipStats,
-    custom_tooltips: Res<crate::tower_definitions::CustomTooltipTexts>,
-    mut tooltip: Query<(&mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut tooltip: Query<(Entity, &mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut commands: Commands,
 ) {
     if draft.phase != TowerDraftPhase::Picking {
         return;
     }
 
-    let Ok((mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+    let Ok((tooltip_entity, mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
         return;
     };
     *tooltip_visibility = Visibility::Hidden;
@@ -381,16 +427,29 @@ pub fn update_draft_tooltip(
         return;
     };
 
-    for (slot, transform) in &slots {
+    for (slot_entity, slot, transform) in &slots {
         let pos = transform.translation.truncate();
         if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
             let kind = draft.offers[slot.index];
             let damage_formula = kind.damage_formula();
-            let base = tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0);
-            tooltip_text.0 = match custom_tooltips.0.get(&kind).filter(|s| !s.is_empty()) {
-                Some(extras) => format!("{base}\n{extras}"),
-                None => base,
-            };
+            let mut segments = tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0);
+            let extras = slot_children
+                .get(slot_entity)
+                .ok()
+                .and_then(|children| children.iter().find_map(|child| previews.get(child).ok()))
+                .flatten();
+            if let Some(ct) = extras {
+                if !ct.0.is_empty() {
+                    segments.push(plain("\n"));
+                    segments.extend(ct.0.iter().cloned());
+                }
+            }
+            let tags = kind.tags();
+            if !tags.is_empty() {
+                segments.push(plain("\nTags: "));
+                segments.extend(tag_segments(tags));
+            }
+            crate::tooltip::set_tooltip_segments(&mut commands, tooltip_entity, &mut tooltip_text, segments);
             *tooltip_visibility = Visibility::Visible;
             return;
         }

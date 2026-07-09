@@ -9,6 +9,7 @@ use crate::resources::{
     AirDamage, CriticalChance, EnemyKilledEvent, GameOver, KillCount, Loot,
     Money, PlayerStatKind, SpellShop, TowerStatEffect,
 };
+use crate::tooltip::plain;
 use crate::towers::progress_cooldown;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
@@ -183,11 +184,9 @@ fn apply_cyclone_burst(
 
 fn update_cyclone_tooltip(
     mut towers: Query<&mut CustomTooltip, With<CycloneTower>>,
-    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let extras = "Hits all enemies in range simultaneously".to_string();
-    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&extras);
+        tooltip.0 = vec![plain(extras.clone())];
     }
 }

@@ -13,16 +13,11 @@ pub mod sniper;
 pub mod sprayer;
 pub mod tree;
 
-use std::collections::HashMap;
-
 use bevy::prelude::*;
 
 use crate::components::DamageFormula;
 use crate::resources::TowerStatEffect;
 use crate::tags::TagInfo;
-
-#[derive(Resource, Default)]
-pub struct CustomTooltipTexts(pub HashMap<TowerKind, String>);
 
 #[derive(Component, Clone, Copy)]
 pub struct TowerKind(pub &'static TowerDefinition);
@@ -93,8 +88,8 @@ impl TowerKind {
         self.0.stat_effects
     }
 
-    pub fn tags_text(self) -> String {
-        crate::tags::tags_text(self.0.tags)
+    pub fn tags(self) -> &'static [TagInfo] {
+        self.0.tags
     }
 
     pub fn body_sprite(self, alpha: f32) -> Sprite {

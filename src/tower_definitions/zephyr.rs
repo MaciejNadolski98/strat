@@ -4,7 +4,9 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryAttack
 use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tags;
+use crate::tooltip::{colored, plain};
 use crate::tower_definitions::TowerKind;
+use crate::towers::{AIR_COLOR, EARTH_COLOR};
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_CIRCLE_M, BARREL_NONE};
 
@@ -48,28 +50,29 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
 
 pub const KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);
 
+const AIR_SCALING: f32 = 0.04;
+const EARTH_SCALING: f32 = 0.06;
+
 pub fn zephyr_speed_bonus(air: f32, earth: f32) -> f32 {
-    air * 0.04 - earth * 0.06
+    air * AIR_SCALING + earth * EARTH_SCALING
 }
 
 fn update_zephyr_tooltip(
     air_damage: Res<AirDamage>,
     earth_damage: Res<EarthDamage>,
     mut towers: Query<&mut CustomTooltip, With<ZephyrTower>>,
-    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let eff_air = air_damage.value();
     let eff_earth = earth_damage.value();
     let bonus = zephyr_speed_bonus(eff_air, eff_earth);
-    let extras = format!(
-        "Boosts adjacent tower attack speed\nAir: +{:.2}  Earth: -{:.2}\nTotal: {:+.2}x atk speed",
-        eff_air * 0.04,
-        eff_earth * 0.06,
-        bonus,
-    );
-    tooltip_texts.0.insert(KIND, extras.clone());
+    let extras = vec![
+        plain("Boosts adjacent tower attack speed\n"),
+        colored(format!("Air: {:.2} ", eff_air * AIR_SCALING), AIR_COLOR),
+        colored(format!("Earth: {:.2}\n", eff_earth * EARTH_SCALING), EARTH_COLOR),
+        plain(format!("Total: {:+.2}x atk speed", bonus)),
+    ];
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&extras);
+        tooltip.0 = extras.clone();
     }
 }
 

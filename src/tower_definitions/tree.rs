@@ -6,6 +6,7 @@ use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tags;
+use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
@@ -73,16 +74,14 @@ fn update_tree_tooltip(
     earth_damage: Res<EarthDamage>,
     water_damage: Res<WaterDamage>,
     mut towers: Query<&mut CustomTooltip, With<TreeTower>>,
-    mut tooltip_texts: ResMut<super::CustomTooltipTexts>,
 ) {
     let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value())) * 100.0;
     let income = tree_income_per_enemy(water_damage.value());
     let extras = format!(
         "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s (1 + water × 0.015)",
     );
-    tooltip_texts.0.insert(KIND, extras.clone());
     for mut tooltip in &mut towers {
-        tooltip.0.clone_from(&extras);
+        tooltip.0 = vec![plain(extras.clone())];
     }
 }
 

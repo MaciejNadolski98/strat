@@ -14,6 +14,7 @@ mod shop;
 mod spell_definitions;
 mod spells;
 mod tags;
+mod tooltip;
 mod tower_definitions;
 mod towers;
 mod waves;
@@ -24,13 +25,13 @@ use constants::{
     BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_REGENERATION, PLAYER_BASE_MAX_HP,
     STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH,
 };
-use draft::{place_draft_tower, update_draft_input, update_draft_ui, update_tower_phantom};
+use draft::{place_draft_tower, sync_draft_previews, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, pan_camera, restart_game, toggle_pause};
 use item_definitions::{ItemPlugins, ItemRegistry};
 use spell_definitions::{SpellPlugins, SpellRegistry};
-use tower_definitions::{CustomTooltipTexts, TowerPlugins, TowerRegistry};
+use tower_definitions::{TowerPlugins, TowerRegistry};
 use hud::update_hud;
 use pathing::{update_path_hints, update_path_input};
 use projectiles::move_projectiles;
@@ -124,7 +125,6 @@ fn main() {
         .add_plugins(ItemPlugins)
         .add_plugins(SpellPlugins)
         .add_plugins(TowerPlugins)
-        .init_resource::<CustomTooltipTexts>()
         .add_systems(Startup, (setup, initialize_draft, initialize_shop, initialize_spell_shop).chain())
         .add_systems(Update, toggle_pause)
         .configure_sets(
@@ -183,6 +183,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                sync_draft_previews,
                 update_shop_tooltip,
                 update_spell_tooltip,
                 update_tower_tooltip,

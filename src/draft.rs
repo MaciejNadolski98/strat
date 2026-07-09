@@ -6,11 +6,11 @@ use bevy::window::PrimaryWindow;
 use bevy::sprite::ColorMaterial;
 
 use crate::components::{
-    AngularSpeed, DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel,
+    AngularSpeed, DraftHeaderText, DraftPanel, DraftPreview, DraftSlot, DraftSlotBarrel,
     DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, TemporaryDamageBonus,
     Tower, TowerPhantom, TowerPhantomBarrel, TowerRangeIndicator,
 };
-use crate::tower_definitions::BarrelTemplate;
+use crate::tower_definitions::{BarrelTemplate, TowerKind};
 use crate::constants::GRID_SIZE;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::resources::{
@@ -331,4 +331,29 @@ pub fn update_tower_phantom(
     i_transform.translation = grid_pos.extend(1.5);
     i_transform.scale = Vec3::splat(kind.range());
     *i_visibility = Visibility::Visible;
+}
+
+pub fn sync_draft_previews(
+    draft: Res<TowerDraft>,
+    mut commands: Commands,
+    slots: Query<(Entity, &DraftSlot)>,
+    previews: Query<Entity, With<DraftPreview>>,
+    mut last_offers: Local<Vec<TowerKind>>,
+) {
+    if *last_offers == draft.offers {
+        return;
+    }
+
+    for entity in &previews {
+        commands.entity(entity).despawn();
+    }
+
+    for (slot_entity, slot) in &slots {
+        let Some(&kind) = draft.offers.get(slot.index) else { continue; };
+        commands.entity(slot_entity).with_children(|parent| {
+            parent.spawn((kind, DraftPreview, Visibility::Hidden));
+        });
+    }
+
+    *last_offers = draft.offers.clone();
 }
