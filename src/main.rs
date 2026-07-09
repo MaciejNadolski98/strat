@@ -22,8 +22,8 @@ mod waves;
 use bevy::prelude::*;
 
 use constants::{
-    BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_REGENERATION, PLAYER_BASE_MAX_HP,
-    STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH,
+    BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_PIERCING_DAMAGE, BASE_REGENERATION,
+    PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH,
 };
 use draft::{place_draft_tower, sync_draft_previews, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_explosion_effects, update_floating_text, update_pulses};
@@ -38,8 +38,8 @@ use projectiles::move_projectiles;
 use resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
-    MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Regeneration, Shop, SpawnTimer, Stat,
-    SpellShop, TowerDraft, WaterDamage, WaveNumber,
+    MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Piercing, PiercingDamage, Regeneration,
+    Shop, SpawnTimer, Stat, SpellShop, TowerDraft, WaterDamage, WaveNumber,
     GamePhase, GameRestartEvent, reset_stat_temporaries,
 };
 use setup::setup;
@@ -95,6 +95,8 @@ fn main() {
         .insert_resource(FireDamage(Stat::new(0.0)))
         .insert_resource(AirDamage(Stat::new(0.0)))
         .insert_resource(WaterDamage(Stat::new(0.0)))
+        .insert_resource(Piercing(Stat::new(0.0)))
+        .insert_resource(PiercingDamage(Stat::new(BASE_PIERCING_DAMAGE)))
         .insert_resource(WaveNumber { value: 1 })
         .insert_resource(EnemiesRemaining { count: 0 })
         .insert_resource(ItemRegistry::default())

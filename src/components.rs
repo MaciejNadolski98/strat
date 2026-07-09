@@ -284,9 +284,36 @@ pub struct PathProgress {
     pub distance: f32,
 }
 
+/// A projectile's fixed unit-vector heading, set once when fired.
 #[derive(Component)]
-pub struct Target {
-    pub entity: Entity,
+pub struct Direction {
+    pub value: Vec2,
+}
+
+/// How much farther a projectile can travel before it despawns unfired-and-forgotten.
+#[derive(Component)]
+pub struct RemainingRange {
+    pub value: f32,
+}
+
+/// How many more enemies this projectile can pierce through after its next hit.
+#[derive(Component)]
+pub struct Pierce {
+    pub remaining: u32,
+}
+
+/// This shot's damage falloff per pierce, as a negative-or-zero fraction
+/// (e.g. `-0.2` means each successive hit deals 20% less than the last).
+#[derive(Component)]
+pub struct PiercingFalloff {
+    pub value: f32,
+}
+
+/// Enemies this projectile has already hit, so a piercing shot doesn't keep
+/// re-hitting the same enemy while it's still within hit range.
+#[derive(Component, Default)]
+pub struct Pierced {
+    pub entities: Vec<Entity>,
 }
 
 #[derive(Component)]

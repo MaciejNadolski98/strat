@@ -11,6 +11,7 @@ pub const BASE_REGENERATION: i32 = 1;
 pub const BASE_ATTACK_SPEED: f32 = 1.0;
 pub const BASE_LOOT: i32 = 2;
 pub const BASE_CRITICAL_CHANCE: f32 = 0.12;
+pub const BASE_PIERCING_DAMAGE: f32 = -0.20;
 pub const GRID_SIZE: f32 = 48.0;
 pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
 

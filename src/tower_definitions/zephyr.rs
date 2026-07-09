@@ -39,6 +39,9 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
     projectile_speed: 0.0,
     explosion_radius: 0.0,
     angular_speed: 0.0,
+    spread: 0.0,
+    piercing: 0,
+    piercing_damage: 0.0,
     base_color: Color::srgb(0.72, 0.88, 0.96),
     barrel_color: Color::srgb(0.72, 0.88, 0.96),
     base: BASE_CIRCLE_M,
@@ -51,7 +54,7 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
 pub const KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);
 
 const AIR_SCALING: f32 = 0.04;
-const EARTH_SCALING: f32 = 0.06;
+const EARTH_SCALING: f32 = -0.06;
 
 pub fn zephyr_speed_bonus(air: f32, earth: f32) -> f32 {
     air * AIR_SCALING + earth * EARTH_SCALING

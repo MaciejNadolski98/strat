@@ -11,8 +11,9 @@ use crate::item_definitions::ItemKind;
 use crate::tooltip::{plain, tag_segments};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, PlayerStatKind, Regeneration, Shop,
-    TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage, WaveNumber,
+    GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, Piercing, PiercingDamage,
+    PlayerStatKind, Regeneration, Shop, TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage,
+    WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -28,6 +29,8 @@ pub struct PlayerStatsMut<'w> {
     fire_damage: ResMut<'w, FireDamage>,
     air_damage: ResMut<'w, AirDamage>,
     water_damage: ResMut<'w, WaterDamage>,
+    piercing: ResMut<'w, Piercing>,
+    piercing_damage: ResMut<'w, PiercingDamage>,
 }
 
 impl<'w> PlayerStatsMut<'w> {
@@ -70,6 +73,12 @@ impl<'w> PlayerStatsMut<'w> {
             }
             PlayerStatKind::WaterDamage => {
                 self.water_damage.raw_value += delta;
+            }
+            PlayerStatKind::Piercing => {
+                self.piercing.raw_value += delta;
+            }
+            PlayerStatKind::PiercingDamage => {
+                self.piercing_damage.raw_value += delta;
             }
         }
     }

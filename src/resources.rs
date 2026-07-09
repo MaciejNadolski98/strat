@@ -91,6 +91,8 @@ stat_resource!(FireDamage);
 stat_resource!(AirDamage);
 stat_resource!(WaterDamage);
 stat_resource!(MaxHp);
+stat_resource!(Piercing);
+stat_resource!(PiercingDamage);
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum GamePhase {
@@ -111,6 +113,8 @@ pub fn reset_stat_temporaries(
     mut explosion_size: ResMut<ExplosionSize>,
     mut regeneration: ResMut<Regeneration>,
     mut max_hp: ResMut<MaxHp>,
+    mut piercing: ResMut<Piercing>,
+    mut piercing_damage: ResMut<PiercingDamage>,
 ) {
     earth.reset_temporary();
     fire.reset_temporary();
@@ -122,6 +126,8 @@ pub fn reset_stat_temporaries(
     explosion_size.reset_temporary();
     regeneration.reset_temporary();
     max_hp.reset_temporary();
+    piercing.reset_temporary();
+    piercing_damage.reset_temporary();
 }
 
 #[derive(Resource)]
@@ -267,6 +273,8 @@ pub enum PlayerStatKind {
     FireDamage,
     AirDamage,
     WaterDamage,
+    Piercing,
+    PiercingDamage,
 }
 
 impl PlayerStatKind {
@@ -282,11 +290,13 @@ impl PlayerStatKind {
             Self::FireDamage => "Fire",
             Self::AirDamage => "Air",
             Self::WaterDamage => "Water",
+            Self::Piercing => "Piercing",
+            Self::PiercingDamage => "Piercing Damage",
         }
     }
 
     fn is_percent(self) -> bool {
-        matches!(self, Self::AttackSpeed | Self::CriticalChance)
+        matches!(self, Self::AttackSpeed | Self::CriticalChance | Self::PiercingDamage)
     }
 }
 

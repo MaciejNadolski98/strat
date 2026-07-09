@@ -6,15 +6,16 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, DraftPreview, DraftSlot, Enemy,
-    ExplosionRadius, FireCooldown, Health, IsCritical, PathProgress, Projectile, ShopTooltip,
-    SourceTower, Speed, Target, TemporaryAttackSpeed, TemporaryDamageBonus, Tower,
-    TowerRangeIndicator,
+    AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, Direction, DraftPreview,
+    DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical, PathProgress, Pierce,
+    Pierced, PiercingFalloff, Projectile, RemainingRange, ShopTooltip, SourceTower, Speed,
+    TemporaryAttackSpeed, TemporaryDamageBonus, Tower, TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, PlayerStatKind, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
+    FireDamage, GameOver, Piercing, PiercingDamage, PlayerStatKind, ShootEvent, TowerDraft,
+    TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
 use crate::tooltip::{colored, plain, tag_segments, Segment};
@@ -29,6 +30,19 @@ pub struct TowerTooltipStats<'w> {
     fire_damage: Res<'w, FireDamage>,
     air_damage: Res<'w, AirDamage>,
     water_damage: Res<'w, WaterDamage>,
+    piercing: Res<'w, Piercing>,
+    piercing_damage: Res<'w, PiercingDamage>,
+}
+
+/// Combines a tower's own piercing count with the global `Piercing` stat.
+fn effective_piercing(tower_piercing: u32, global_piercing: f32) -> u32 {
+    (tower_piercing as f32 + global_piercing).max(0.0).round() as u32
+}
+
+/// Combines a tower's own piercing-damage adjustment with the global
+/// `PiercingDamage` stat, clamped to a 0%-100% decrease.
+fn effective_piercing_falloff(tower_piercing_damage: f32, global_piercing_damage: f32) -> f32 {
+    (tower_piercing_damage + global_piercing_damage).clamp(-1.0, 0.0)
 }
 
 
@@ -200,6 +214,16 @@ pub fn tower_tooltip(
         push_line(&mut segments, &mut first, vec![plain(format!("Turn speed: {:.1}", kind.angular_speed()))]);
     }
 
+    let piercing_total = effective_piercing(kind.definition().piercing, stats.piercing.value());
+    if piercing_total > 0 {
+        let falloff = effective_piercing_falloff(kind.definition().piercing_damage, stats.piercing_damage.value());
+        push_line(
+            &mut segments,
+            &mut first,
+            vec![plain(format!("Piercing: {piercing_total} (each hit -{:.0}% dmg)", -falloff * 100.0))],
+        );
+    }
+
     let stat_effects = kind.stat_effects();
     if !stat_effects.is_empty() {
         push_line(&mut segments, &mut first, vec![plain("Stat effects:")]);
@@ -278,6 +302,8 @@ pub fn aim_towers(
     fire_damage: Res<FireDamage>,
     air_damage: Res<AirDamage>,
     water_damage: Res<WaterDamage>,
+    piercing: Res<Piercing>,
+    piercing_damage: Res<PiercingDamage>,
     mut shoot_events: EventWriter<ShootEvent>,
 ) {
     if game_over.value {
@@ -295,20 +321,16 @@ pub fn aim_towers(
     ) in &mut towers
     {
         let tower_position = tower_transform.translation.truncate();
-        let Some((target, target_position)) = enemies
+        let Some(target_position) = enemies
             .iter()
             .filter(|(_, _, health, _)| health.current > 0.0)
-            .filter_map(|(entity, transform, _, progress)| {
+            .filter_map(|(_, transform, _, progress)| {
                 let enemy_position = transform.translation.truncate();
                 let distance = enemy_position.distance(tower_position);
-                (distance <= tower_kind.range()).then_some((
-                    entity,
-                    enemy_position,
-                    progress.distance,
-                ))
+                (distance <= tower_kind.range()).then_some((enemy_position, progress.distance))
             })
-            .max_by(|a, b| a.2.total_cmp(&b.2))
-            .map(|(entity, position, _)| (entity, position))
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|(position, _)| position)
         else {
             continue;
         };
@@ -335,6 +357,22 @@ pub fn aim_towers(
 
             cooldown.timer.reset();
             shoot_events.write(ShootEvent { source_tower: tower_entity });
+
+            let spread = tower_kind.definition().spread;
+            let aim_direction = direction.normalize_or_zero();
+            let fire_direction = if spread > 0.0 {
+                let angle_offset = (rand::random::<f32>() - 0.5) * spread;
+                Vec2::from_angle(angle_offset).rotate(aim_direction)
+            } else {
+                aim_direction
+            };
+
+            let piercing_total = effective_piercing(tower_kind.definition().piercing, piercing.value());
+            let piercing_falloff = effective_piercing_falloff(
+                tower_kind.definition().piercing_damage,
+                piercing_damage.value(),
+            );
+
             commands.spawn((
                 Projectile,
                 Sprite::from_color(
@@ -346,7 +384,11 @@ pub fn aim_towers(
                     },
                 ),
                 Transform::from_translation(tower_position.extend(4.0)),
-                Target { entity: target },
+                Direction { value: fire_direction },
+                RemainingRange { value: tower_kind.range() },
+                Pierce { remaining: piercing_total },
+                PiercingFalloff { value: piercing_falloff },
+                Pierced::default(),
                 SourceTower {
                     entity: tower_entity,
                 },
