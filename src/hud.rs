@@ -44,11 +44,11 @@ pub fn update_hud(
     };
 
     let status = if stats.game_won.value {
-        Some("Victory — press R to restart")
+        Some("Victory - press R to restart")
     } else if stats.game_over.value {
-        Some("Game over — press R to restart")
+        Some("Game over - press R to restart")
     } else if stats.paused.value {
-        Some("Paused — press Space to resume")
+        Some("Paused - press Space to resume")
     } else if matches!(stats.draft.phase, TowerDraftPhase::Placing(_)) {
         Some("Left click on the map to place your tower")
     } else {

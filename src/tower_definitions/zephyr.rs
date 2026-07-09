@@ -67,8 +67,14 @@ fn update_zephyr_tooltip(
     let bonus = zephyr_speed_bonus(eff_air, eff_earth);
     let extras = vec![
         plain("Boosts adjacent tower attack speed\n"),
-        colored(format!("Air: {:.2} ", eff_air * AIR_SCALING), AIR_COLOR),
-        colored(format!("Earth: {:.2}\n", eff_earth * EARTH_SCALING), EARTH_COLOR),
+        colored("Air", AIR_COLOR),
+        plain(": "),
+        colored(format!("{:.2}", eff_air * AIR_SCALING), AIR_COLOR),
+        plain("  "),
+        colored("Earth", EARTH_COLOR),
+        plain(": "),
+        colored(format!("{:.2}", eff_earth * EARTH_SCALING), EARTH_COLOR),
+        plain("\n"),
         plain(format!("Total: {:+.2}x atk speed", bonus)),
     ];
     for mut tooltip in &mut towers {

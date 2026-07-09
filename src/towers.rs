@@ -14,7 +14,7 @@ use crate::components::{
 use crate::projectiles::projectile_color;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
+    FireDamage, GameOver, PlayerStatKind, ShootEvent, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
 use crate::tooltip::{colored, plain, tag_segments, Segment};
@@ -204,11 +204,27 @@ pub fn tower_tooltip(
     if !stat_effects.is_empty() {
         push_line(&mut segments, &mut first, vec![plain("Stat effects:")]);
         for effect in stat_effects {
-            push_line(&mut segments, &mut first, vec![plain(effect.effect_text())]);
+            let line = match element_color(effect.kind) {
+                Some(color) => vec![colored(effect.effect_text(), color)],
+                None => vec![plain(effect.effect_text())],
+            };
+            push_line(&mut segments, &mut first, line);
         }
     }
 
     segments
+}
+
+/// The element color for a stat that boosts elemental damage, or `None` for
+/// stats with no elemental association (crit, attack speed, loot, etc).
+pub fn element_color(kind: PlayerStatKind) -> Option<Color> {
+    match kind {
+        PlayerStatKind::EarthDamage => Some(EARTH_COLOR),
+        PlayerStatKind::FireDamage => Some(FIRE_COLOR),
+        PlayerStatKind::AirDamage => Some(AIR_COLOR),
+        PlayerStatKind::WaterDamage => Some(WATER_COLOR),
+        _ => None,
+    }
 }
 
 pub fn reset_temporary_attack_speed(mut towers: Query<&mut TemporaryAttackSpeed, With<Tower>>) {

@@ -4,7 +4,8 @@ use crate::components::{AuraTower, CustomTooltip, DamageFormula};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tags;
-use crate::tooltip::plain;
+use crate::tooltip::{colored, plain};
+use crate::towers::FIRE_COLOR;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
@@ -132,11 +133,17 @@ fn update_catalyst_tooltip(
     mut towers: Query<(&mut CustomTooltip, &CatalystTower)>,
 ) {
     let seconds_per_spell = catalyst_seconds_per_spell(fire_damage.value());
-    let static_extras = format!(
-        "Generates a spell every {seconds_per_spell:.1}s\n(20 / (0.2 + fire × 1.8%) s/spell)",
-    );
+    let static_extras = vec![
+        plain("Generates a spell every "),
+        colored(format!("{seconds_per_spell:.1}s"), FIRE_COLOR),
+        plain("\n(20 / (0.2 + "),
+        colored("fire", FIRE_COLOR),
+        plain(" x 1.8%) s/spell)"),
+    ];
     for (mut tooltip, catalyst) in &mut towers {
         let pct = catalyst.progress * 100.0;
-        tooltip.0 = vec![plain(format!("{static_extras}\nProgress: {pct:.0}%"))];
+        let mut segments = static_extras.clone();
+        segments.push(plain(format!("\nProgress: {pct:.0}%")));
+        tooltip.0 = segments;
     }
 }

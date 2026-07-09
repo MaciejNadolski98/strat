@@ -6,7 +6,8 @@ use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
 use crate::resources::{EarthDamage, Money, PlayerStatKind, TowerStatEffect, WaterDamage};
 use crate::tags;
-use crate::tooltip::plain;
+use crate::tooltip::{colored, plain};
+use crate::towers::{EARTH_COLOR, WATER_COLOR};
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_HEX_M, BARREL_NONE, PALETTE_FOREST};
@@ -77,11 +78,20 @@ fn update_tree_tooltip(
 ) {
     let slow_pct = (1.0 - tree_slow_multiplier(earth_damage.value())) * 100.0;
     let income = tree_income_per_enemy(water_damage.value());
-    let extras = format!(
-        "Aura slow: {slow_pct:.0}% (→70% as earth→∞)\nIncome: ${income:.1} per enemy every 4s (1 + water × 0.015)",
-    );
+    let extras = vec![
+        plain("Aura slow: "),
+        colored(format!("{slow_pct:.0}%"), EARTH_COLOR),
+        plain(" (-> 70% as "),
+        colored("earth", EARTH_COLOR),
+        plain(" -> infinity)\n"),
+        plain("Income: "),
+        colored(format!("${income:.1}"), WATER_COLOR),
+        plain(" per enemy every 4s (1 + "),
+        colored("water", WATER_COLOR),
+        plain(" x 0.015)"),
+    ];
     for mut tooltip in &mut towers {
-        tooltip.0 = vec![plain(extras.clone())];
+        tooltip.0 = extras.clone();
     }
 }
 

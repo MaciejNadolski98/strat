@@ -80,7 +80,7 @@ pub fn update_draft_ui(
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
             text.0 = if draft.phase == TowerDraftPhase::Picking {
-                format!("Wave {} — Click a tower to pick it", wave_number.value)
+                format!("Wave {} - Click a tower to pick it", wave_number.value)
             } else {
                 "Click on the map to place your tower".to_string()
             };

@@ -5,7 +5,8 @@ use crate::game::game_is_running;
 use crate::projectiles::move_projectiles;
 use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
 use crate::tags;
-use crate::tooltip::plain;
+use crate::tooltip::{colored, plain};
+use crate::towers::EARTH_COLOR;
 use crate::tower_definitions::TowerKind;
 use crate::tower_definitions::templates::BASE_TRIANGLE_M;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
@@ -71,7 +72,13 @@ fn update_golem_tooltip(
     for (kc, mut tooltip) in &mut golems {
         let bonus = kc.kills / 10;
         let progress = kc.kills % 10;
-        tooltip.0 = vec![plain(format!("Every 10 kills: +1 Earth Damage\nProduced: +{bonus} Earth\nProgress: {progress}/10 kills"))];
+        tooltip.0 = vec![
+            plain("Every 10 kills: "),
+            colored("+1 Earth Damage", EARTH_COLOR),
+            plain("\nProduced: "),
+            colored(format!("+{bonus} Earth"), EARTH_COLOR),
+            plain(format!("\nProgress: {progress}/10 kills")),
+        ];
     }
 }
 
