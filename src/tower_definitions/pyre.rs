@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryDamageBonus, Tower};
+use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, TemporaryDamageBonus, Tower};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tags;
@@ -65,7 +65,8 @@ fn attach_pyre_marker(
         if *kind == KIND {
             commands
                 .entity(entity)
-                .insert((PyreTower, AuraTower, CustomTooltip::default()));
+                .insert((PyreTower, CustomTooltip::default()))
+                .remove::<(DefaultAim, DefaultFire)>();
         }
     }
 }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{AuraTower, CustomTooltip, DamageFormula, TemporaryAttackSpeed, Tower};
+use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, TemporaryAttackSpeed, Tower};
 use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tags;
@@ -91,7 +91,9 @@ fn attach_zephyr_marker(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == KIND {
-            commands.entity(entity).insert((ZephyrTower, AuraTower, CustomTooltip::default()));
+            commands.entity(entity)
+                .insert((ZephyrTower, CustomTooltip::default()))
+                .remove::<(DefaultAim, DefaultFire)>();
         }
     }
 }

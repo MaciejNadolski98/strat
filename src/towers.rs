@@ -6,10 +6,10 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    AngularSpeed, AuraTower, CustomTooltip, Damage, DamageFormula, Direction, DraftPreview,
-    DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical, PathProgress, Pierce,
-    Pierced, PiercingFalloff, Projectile, RemainingRange, ShopTooltip, SourceTower, Speed,
-    TemporaryAttackSpeed, TemporaryDamageBonus, Tower, TowerRangeIndicator,
+    Aim, AngularSpeed, CustomTooltip, Damage, DamageFormula, DefaultAim, DefaultFire, Direction,
+    DraftPreview, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical,
+    PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, RemainingRange, ShopTooltip,
+    SourceTower, Speed, TemporaryAttackSpeed, TemporaryDamageBonus, Tower, TowerRangeIndicator,
 };
 use crate::projectiles::projectile_color;
 use crate::resources::{
@@ -280,22 +280,64 @@ pub fn progress_cooldown(
 }
 
 pub fn aim_towers(
-    mut commands: Commands,
     mut towers: Query<
-        (
-            Entity,
-            &mut Transform,
-            &TowerKind,
-            &DamageFormula,
-            &mut FireCooldown,
-            &AngularSpeed,
-            &TemporaryDamageBonus,
-        ),
-        (With<Tower>, Without<AuraTower>),
+        (&mut Transform, &TowerKind, &AngularSpeed, &mut Aim),
+        (With<Tower>, With<DefaultAim>),
     >,
     enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
     game_over: Res<GameOver>,
     time: Res<Time>,
+) {
+    if game_over.value {
+        return;
+    }
+
+    for (mut tower_transform, tower_kind, rotation_speed, mut aim) in &mut towers {
+        let tower_position = tower_transform.translation.truncate();
+        let Some(target_position) = enemies
+            .iter()
+            .filter(|(_, _, health, _)| health.current > 0.0)
+            .filter_map(|(_, transform, _, progress)| {
+                let enemy_position = transform.translation.truncate();
+                let distance = enemy_position.distance(tower_position);
+                (distance <= tower_kind.range()).then_some((enemy_position, progress.distance))
+            })
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|(position, _)| position)
+        else {
+            aim.ready = false;
+            aim.direction = Vec2::ZERO;
+            continue;
+        };
+
+        let direction = target_position - tower_position;
+        let target_rotation = Quat::from_rotation_z(direction.y.atan2(direction.x) - PI / 2.0);
+        let current_rotation = tower_transform.rotation;
+        let step = time.delta_secs() * rotation_speed.value;
+
+        aim.ready = current_rotation.angle_between(target_rotation) <= step;
+        aim.direction = direction.normalize_or_zero();
+        tower_transform.rotation = tower_transform
+            .rotation
+            .rotate_towards(target_rotation, step);
+    }
+}
+
+pub fn fire_towers(
+    mut commands: Commands,
+    mut towers: Query<
+        (
+            Entity,
+            &Transform,
+            &TowerKind,
+            &DamageFormula,
+            &mut FireCooldown,
+            &TemporaryDamageBonus,
+            &Aim,
+        ),
+        (With<Tower>, With<DefaultFire>),
+    >,
+    game_over: Res<GameOver>,
     critical_chance: Res<CriticalChance>,
     explosion_size: Res<ExplosionSize>,
     earth_damage: Res<EarthDamage>,
@@ -312,96 +354,73 @@ pub fn aim_towers(
 
     for (
         tower_entity,
-        mut tower_transform,
+        tower_transform,
         tower_kind,
         damage_formula,
         mut cooldown,
-        rotation_speed,
         damage_bonus,
+        aim,
     ) in &mut towers
     {
-        let tower_position = tower_transform.translation.truncate();
-        let Some(target_position) = enemies
-            .iter()
-            .filter(|(_, _, health, _)| health.current > 0.0)
-            .filter_map(|(_, transform, _, progress)| {
-                let enemy_position = transform.translation.truncate();
-                let distance = enemy_position.distance(tower_position);
-                (distance <= tower_kind.range()).then_some((enemy_position, progress.distance))
-            })
-            .max_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(position, _)| position)
-        else {
+        if !(aim.ready && cooldown.timer.finished()) {
             continue;
+        }
+
+        let tower_position = tower_transform.translation.truncate();
+        let is_critical = roll_critical_hit(critical_chance.value());
+        let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
+            &earth_damage,
+            &fire_damage,
+            &air_damage,
+            &water_damage,
+            is_critical,
+        ) + damage_bonus.flat).max(1.0);
+
+        cooldown.timer.reset();
+        shoot_events.write(ShootEvent { source_tower: tower_entity });
+
+        let spread = tower_kind.definition().spread;
+        let fire_direction = if spread > 0.0 {
+            let angle_offset = (rand::random::<f32>() - 0.5) * spread;
+            Vec2::from_angle(angle_offset).rotate(aim.direction)
+        } else {
+            aim.direction
         };
 
-        let direction = target_position - tower_position;
-        let target_rotation = Quat::from_rotation_z(direction.y.atan2(direction.x) - PI / 2.0);
-        let current_rotation = tower_transform.rotation;
-        let step = time.delta_secs() * rotation_speed.value;
+        let piercing_total = effective_piercing(tower_kind.definition().piercing, piercing.value());
+        let piercing_falloff = effective_piercing_falloff(
+            tower_kind.definition().piercing_damage,
+            piercing_damage.value(),
+        );
 
-        let ready_to_shoot = current_rotation.angle_between(target_rotation) <= step;
-        tower_transform.rotation = tower_transform
-            .rotation
-            .rotate_towards(target_rotation, step);
-
-        if ready_to_shoot && cooldown.timer.finished() {
-            let is_critical = roll_critical_hit(critical_chance.value());
-            let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
-                &earth_damage,
-                &fire_damage,
-                &air_damage,
-                &water_damage,
-                is_critical,
-            ) + damage_bonus.flat).max(1.0);
-
-            cooldown.timer.reset();
-            shoot_events.write(ShootEvent { source_tower: tower_entity });
-
-            let spread = tower_kind.definition().spread;
-            let aim_direction = direction.normalize_or_zero();
-            let fire_direction = if spread > 0.0 {
-                let angle_offset = (rand::random::<f32>() - 0.5) * spread;
-                Vec2::from_angle(angle_offset).rotate(aim_direction)
-            } else {
-                aim_direction
-            };
-
-            let piercing_total = effective_piercing(tower_kind.definition().piercing, piercing.value());
-            let piercing_falloff = effective_piercing_falloff(
-                tower_kind.definition().piercing_damage,
-                piercing_damage.value(),
-            );
-
-            commands.spawn((
-                Projectile,
-                Sprite::from_color(
-                    projectile_color(is_critical),
-                    if is_critical {
-                        Vec2::new(13.0, 13.0)
-                    } else {
-                        Vec2::new(10.0, 10.0)
-                    },
-                ),
-                Transform::from_translation(tower_position.extend(4.0)),
-                Direction { value: fire_direction },
-                RemainingRange { value: tower_kind.range() },
-                Pierce { remaining: piercing_total },
-                PiercingFalloff { value: piercing_falloff },
-                Pierced::default(),
-                SourceTower {
-                    entity: tower_entity,
+        commands.spawn((
+            Projectile,
+            Sprite::from_color(
+                projectile_color(is_critical),
+                if is_critical {
+                    Vec2::new(13.0, 13.0)
+                } else {
+                    Vec2::new(10.0, 10.0)
                 },
-                Speed {
-                    value: tower_kind.projectile_speed(),
-                },
-                Damage { amount: damage },
-                IsCritical { value: is_critical },
-                ExplosionRadius {
-                    value: tower_kind.upgraded_explosion_radius(explosion_size.value().max(0.0)),
-                },
-            ));
-        }
+            ),
+            Transform::from_translation(tower_position.extend(4.0)),
+            Direction { value: fire_direction },
+            RemainingRange { value: tower_kind.range() },
+            Pierce { remaining: piercing_total },
+            PiercingFalloff { value: piercing_falloff },
+            Pierced::default(),
+            SourceTower {
+                entity: tower_entity,
+            },
+            Speed {
+                value: tower_kind.projectile_speed(),
+            },
+            Damage { amount: damage },
+            IsCritical { value: is_critical },
+            ExplosionRadius {
+                value: tower_kind.upgraded_explosion_radius(explosion_size.value().max(0.0)),
+            },
+        ));
     }
 }
 

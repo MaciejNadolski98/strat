@@ -6,9 +6,9 @@ use bevy::window::PrimaryWindow;
 use bevy::sprite::ColorMaterial;
 
 use crate::components::{
-    AngularSpeed, DraftHeaderText, DraftPanel, DraftPreview, DraftSlot, DraftSlotBarrel,
-    DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, TemporaryDamageBonus,
-    Tower, TowerPhantom, TowerPhantomBarrel, TowerRangeIndicator,
+    Aim, AngularSpeed, DefaultAim, DefaultFire, DraftHeaderText, DraftPanel, DraftPreview,
+    DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed,
+    TemporaryDamageBonus, Tower, TowerPhantom, TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::tower_definitions::{BarrelTemplate, TowerKind};
 use crate::constants::GRID_SIZE;
@@ -200,6 +200,9 @@ pub fn place_draft_tower(
         },
         TemporaryAttackSpeed::default(),
         TemporaryDamageBonus::default(),
+        Aim::default(),
+        DefaultAim,
+        DefaultFire,
     ));
 
     for tag in tower_kind.definition().tags {

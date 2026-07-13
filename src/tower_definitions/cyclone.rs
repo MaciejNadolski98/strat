@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    AuraTower, CustomTooltip, DamageFormula, DropsSpell, Enemy, FireCooldown, Health, Reward,
+    Aim, CustomTooltip, DamageFormula, DefaultAim, DefaultFire, DropsSpell, Enemy, FireCooldown,
+    Health, Reward,
 };
 use crate::effects::{spawn_floating_text, spawn_pulse};
 use crate::game::game_is_running;
@@ -26,7 +27,10 @@ impl Plugin for CyclonePlugin {
         app.add_systems(Update, attach_cyclone_tower.run_if(game_is_running));
         app.add_systems(
             Update,
-            apply_cyclone_burst
+            (
+                aim_cyclone_towers,
+                fire_cyclone_towers.after(aim_cyclone_towers),
+            )
                 .after(progress_cooldown)
                 .run_if(game_is_running),
         );
@@ -71,12 +75,27 @@ fn attach_cyclone_tower(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == KIND {
-            commands.entity(entity).insert((CycloneTower, AuraTower, CustomTooltip::default()));
+            commands.entity(entity)
+                .insert((CycloneTower, CustomTooltip::default()))
+                .remove::<(DefaultAim, DefaultFire)>();
         }
     }
 }
 
-fn apply_cyclone_burst(
+fn aim_cyclone_towers(
+    mut cyclone_towers: Query<(&Transform, &mut Aim), With<CycloneTower>>,
+    enemies: Query<(&Transform, &Health), With<Enemy>>,
+) {
+    for (tower_transform, mut aim) in &mut cyclone_towers {
+        let tower_pos = tower_transform.translation.truncate();
+        aim.direction = Vec2::ZERO;
+        aim.ready = enemies.iter().any(|(t, h)| {
+            h.current > 0.0 && t.translation.truncate().distance(tower_pos) <= TOWER_CYCLONE.range
+        });
+    }
+}
+
+fn fire_cyclone_towers(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -88,26 +107,19 @@ fn apply_cyclone_burst(
     air_damage: Res<AirDamage>,
     critical_chance: Res<CriticalChance>,
     mut kill_events: EventWriter<EnemyKilledEvent>,
-    mut cyclone_towers: Query<(Entity, &Transform, &mut FireCooldown, &DamageFormula), With<CycloneTower>>,
+    mut cyclone_towers: Query<(Entity, &Transform, &mut FireCooldown, &DamageFormula, &Aim), With<CycloneTower>>,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, Option<&DropsSpell>), With<Enemy>>,
 ) {
     if game_over.value {
         return;
     }
 
-    for (tower_entity, tower_transform, mut cooldown, formula) in &mut cyclone_towers {
-        if !cooldown.timer.finished() {
+    for (tower_entity, tower_transform, mut cooldown, formula, aim) in &mut cyclone_towers {
+        if !(aim.ready && cooldown.timer.finished()) {
             continue;
         }
 
         let tower_pos = tower_transform.translation.truncate();
-
-        let has_targets = enemies.iter().any(|(_, t, h, _, _)| {
-            h.current > 0.0 && t.translation.truncate().distance(tower_pos) <= TOWER_CYCLONE.range
-        });
-        if !has_targets {
-            continue;
-        }
 
         cooldown.timer.reset();
 

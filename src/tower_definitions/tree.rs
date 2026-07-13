@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{AuraTower, CustomTooltip, DamageFormula, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
+use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
 use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
@@ -104,7 +104,9 @@ fn attach_tree_marker(
 ) {
     for (entity, kind) in &new_towers {
         if *kind == KIND {
-            commands.entity(entity).insert((TreeTower, AuraTower, CustomTooltip::default()));
+            commands.entity(entity)
+                .insert((TreeTower, CustomTooltip::default()))
+                .remove::<(DefaultAim, DefaultFire)>();
         }
     }
 }

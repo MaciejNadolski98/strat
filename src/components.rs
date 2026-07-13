@@ -203,8 +203,15 @@ pub struct DropsSpell;
 #[derive(Component)]
 pub struct MainCamera;
 
+/// Marks a tower as using the default `towers::aim_towers` targeting/rotation
+/// system. Towers with their own aiming (e.g. Cyclone) don't get this.
 #[derive(Component)]
-pub struct AuraTower;
+pub struct DefaultAim;
+
+/// Marks a tower as using the default `towers::fire_towers` firing system.
+/// Towers with their own firing (e.g. Cyclone) don't get this.
+#[derive(Component)]
+pub struct DefaultFire;
 
 #[derive(Component)]
 pub struct PulseEffect {
@@ -242,6 +249,20 @@ impl Default for TemporaryEnemySpeed {
 #[derive(Component)]
 pub struct AngularSpeed {
     pub value: f32,
+}
+
+/// A tower's current targeting state, written by an aiming system (default:
+/// `towers::aim_towers`) and read by a firing system (default:
+/// `towers::fire_towers`). Separating the two lets a tower swap out just one
+/// half of the default behavior - e.g. a different aiming system that skips
+/// rotation for an omnidirectional tower, while still using the default fire
+/// logic, or vice versa.
+#[derive(Component, Default)]
+pub struct Aim {
+    /// Unit vector toward the current target; `Vec2::ZERO` if untargeted.
+    pub direction: Vec2,
+    /// True once the tower is aimed closely enough to fire this frame.
+    pub ready: bool,
 }
 
 #[derive(Component)]

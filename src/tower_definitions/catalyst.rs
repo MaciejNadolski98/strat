@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{AuraTower, CustomTooltip, DamageFormula};
+use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tags;
@@ -75,7 +75,8 @@ fn attach_catalyst_marker(
         if *kind == KIND {
             commands
                 .entity(entity)
-                .insert((CatalystTower { progress: 0.0 }, AuraTower, CustomTooltip::default()))
+                .insert((CatalystTower { progress: 0.0 }, CustomTooltip::default()))
+                .remove::<(DefaultAim, DefaultFire)>()
                 .with_children(|parent| {
                     let width = 40.0;
                     let height = 5.0;
