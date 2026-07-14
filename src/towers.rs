@@ -2,7 +2,9 @@ use std::f32::consts::PI;
 use std::time::Duration;
 
 use bevy::ecs::system::SystemParam;
+use bevy::math::primitives::Ellipse;
 use bevy::prelude::*;
+use bevy::sprite::ColorMaterial;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
@@ -352,6 +354,8 @@ pub fn fire_towers(
     piercing: Res<Piercing>,
     piercing_damage: Res<PiercingDamage>,
     mut shoot_events: EventWriter<ShootEvent>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     if game_over.value {
         return;
@@ -398,17 +402,15 @@ pub fn fire_towers(
             piercing_damage.value(),
         );
 
+        let (proj_length, proj_width) = if is_critical { (18.0, 8.0) } else { (14.0, 6.0) };
+        let proj_angle = fire_direction.y.atan2(fire_direction.x);
+
         commands.spawn((
             Projectile,
-            Sprite::from_color(
-                projectile_color(is_critical),
-                if is_critical {
-                    Vec2::new(13.0, 13.0)
-                } else {
-                    Vec2::new(10.0, 10.0)
-                },
-            ),
-            Transform::from_translation(tower_position.extend(4.0)),
+            Mesh2d(meshes.add(Ellipse::new(proj_length * 0.5, proj_width * 0.5))),
+            MeshMaterial2d(materials.add(projectile_color(is_critical))),
+            Transform::from_translation(tower_position.extend(4.0))
+                .with_rotation(Quat::from_rotation_z(proj_angle)),
             Direction { value: fire_direction },
             RemainingRange { value: tower_kind.range() },
             Pierce { remaining: piercing_total },
