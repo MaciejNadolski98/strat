@@ -6,20 +6,25 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    Aim, AngularSpeed, CustomTooltip, Damage, DamageFormula, DefaultAim, DefaultFire, Direction,
-    DraftPreview, DraftSlot, Enemy, ExplosionRadius, FireCooldown, Health, IsCritical,
-    PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, RemainingRange, ShopTooltip,
-    SourceTower, Speed, TemporaryAttackSpeed, TemporaryDamageBonus, Tower, TowerRangeIndicator,
+    Aim, AngularSpeed, BeamFire, CustomTooltip, Damage, DamageFormula, DefaultAim, DefaultFire,
+    Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius, FireCooldown, Health,
+    IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, RemainingRange,
+    Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed, TemporaryDamageBonus, Tower,
+    TowerRangeIndicator,
 };
+use crate::effects::{spawn_beam_effect, spawn_floating_text};
 use crate::projectiles::projectile_color;
 use crate::resources::{
-    AirDamage, AttackSpeed, CriticalChance, EarthDamage, ExplosionSize,
-    FireDamage, GameOver, Piercing, PiercingDamage, PlayerStatKind, ShootEvent, TowerDraft,
-    TowerDraftPhase, WaterDamage,
+    AirDamage, AttackSpeed, CriticalChance, EarthDamage, EnemyKilledEvent, ExplosionSize,
+    FireDamage, GameOver, KillCount, Loot, Money, Piercing, PiercingDamage, PlayerStatKind,
+    ShootEvent, SpellShop, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
 use crate::tooltip::{colored, plain, tag_segments, Segment};
 use crate::tower_definitions::TowerKind;
+
+/// Half-width of a beam tower's hit capsule (see `fire_beam_towers`).
+const BEAM_HALF_WIDTH: f32 = 10.0;
 
 #[derive(SystemParam)]
 pub struct TowerTooltipStats<'w> {
@@ -421,6 +426,142 @@ pub fn fire_towers(
                 value: tower_kind.upgraded_explosion_radius(explosion_size.value().max(0.0)),
             },
         ));
+    }
+}
+
+pub fn fire_beam_towers(
+    mut commands: Commands,
+    game_over: Res<GameOver>,
+    critical_chance: Res<CriticalChance>,
+    earth_damage: Res<EarthDamage>,
+    fire_damage: Res<FireDamage>,
+    air_damage: Res<AirDamage>,
+    water_damage: Res<WaterDamage>,
+    mut money: ResMut<Money>,
+    mut kills: ResMut<KillCount>,
+    loot: Res<Loot>,
+    mut spell_shop: ResMut<SpellShop>,
+    mut shoot_events: EventWriter<ShootEvent>,
+    mut kill_events: EventWriter<EnemyKilledEvent>,
+    mut towers: Query<
+        (
+            Entity,
+            &Transform,
+            &TowerKind,
+            &DamageFormula,
+            &mut FireCooldown,
+            &TemporaryDamageBonus,
+            &Aim,
+        ),
+        (With<Tower>, With<BeamFire>),
+    >,
+    mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, Option<&DropsSpell>), With<Enemy>>,
+) {
+    if game_over.value {
+        return;
+    }
+
+    for (
+        tower_entity,
+        tower_transform,
+        tower_kind,
+        formula,
+        mut cooldown,
+        damage_bonus,
+        aim,
+    ) in &mut towers
+    {
+        if !(aim.ready && cooldown.timer.finished()) {
+            continue;
+        }
+
+        cooldown.timer.reset();
+        shoot_events.write(ShootEvent { source_tower: tower_entity });
+
+        let tower_pos = tower_transform.translation.truncate();
+        let beam_end = tower_pos + aim.direction * tower_kind.range();
+
+        let is_critical = roll_critical_hit(critical_chance.value());
+
+        spawn_beam_effect(
+            &mut commands,
+            tower_pos,
+            beam_end,
+            BEAM_HALF_WIDTH * 2.0,
+            projectile_color(is_critical),
+        );
+
+        let base = formula.calculate_damage_with_elemental_multiplier(
+            &earth_damage, &fire_damage, &air_damage, &water_damage, is_critical,
+        );
+        let dmg = (base + damage_bonus.flat).max(1.0);
+
+        let segment = beam_end - tower_pos;
+        let segment_len_sq = segment.length_squared();
+
+        let mut killed: Vec<(Entity, i32, Vec2, bool)> = Vec::new();
+
+        for (enemy_entity, enemy_transform, mut health, reward, drops_spell) in &mut enemies {
+            if health.current <= 0.0 {
+                continue;
+            }
+            let enemy_pos = enemy_transform.translation.truncate();
+            let t = if segment_len_sq > f32::EPSILON {
+                ((enemy_pos - tower_pos).dot(segment) / segment_len_sq).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let closest = tower_pos + segment * t;
+            if enemy_pos.distance(closest) > BEAM_HALF_WIDTH {
+                continue;
+            }
+
+            let hp_lost = dmg.min(health.current).max(0.0);
+            health.current -= dmg;
+
+            if hp_lost > 0.0 {
+                spawn_floating_text(
+                    &mut commands,
+                    format!("-{:.0}", hp_lost),
+                    enemy_pos + Vec2::new(0.0, 20.0),
+                    if is_critical {
+                        Color::srgb(1.0, 0.16, 0.12)
+                    } else {
+                        Color::srgb(1.0, 1.0, 1.0)
+                    },
+                    if is_critical { 23.0 } else { 20.0 },
+                );
+            }
+
+            if health.current <= 0.0 {
+                killed.push((enemy_entity, reward.amount, enemy_pos, drops_spell.is_some()));
+            }
+        }
+
+        for (entity, reward_amount, position, drops_spell) in killed {
+            let kill_loot = (reward_amount + loot.value().round() as i32).max(0);
+            money.amount += kill_loot;
+            kills.amount += 1;
+            spawn_floating_text(
+                &mut commands,
+                format!("+${kill_loot}"),
+                position + Vec2::new(34.0, 30.0),
+                Color::srgb(1.0, 0.86, 0.20),
+                19.0,
+            );
+            if drops_spell {
+                spell_shop.store_random_spell();
+                spawn_floating_text(
+                    &mut commands,
+                    "Spell!".to_string(),
+                    position + Vec2::new(-20.0, 52.0),
+                    Color::srgb(0.72, 0.30, 0.92),
+                    22.0,
+                );
+            }
+            commands.entity(entity).despawn();
+            kill_events.write(EnemyKilledEvent { source_tower: tower_entity });
+        }
     }
 }
 

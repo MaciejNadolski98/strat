@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::math::primitives::Circle;
 
-use crate::components::{ExplosionEffect, FloatingText, PulseEffect};
+use crate::components::{BeamEffect, ExplosionEffect, FloatingText, PulseEffect};
 
 pub fn spawn_floating_text(
     commands: &mut Commands,
@@ -109,6 +109,46 @@ pub fn update_pulses(
         }
 
         if pulse.lifetime.finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub fn spawn_beam_effect(
+    commands: &mut Commands,
+    origin: Vec2,
+    end: Vec2,
+    width: f32,
+    color: Color,
+) {
+    let delta = end - origin;
+    let length = delta.length();
+    if length <= 0.0 {
+        return;
+    }
+    let angle = delta.y.atan2(delta.x);
+    let midpoint = origin + delta * 0.5;
+    commands.spawn((
+        Sprite::from_color(color, Vec2::new(length, width)),
+        Transform::from_translation(midpoint.extend(6.5))
+            .with_rotation(Quat::from_rotation_z(angle)),
+        BeamEffect {
+            lifetime: Timer::from_seconds(0.15, TimerMode::Once),
+        },
+    ));
+}
+
+pub fn update_beam_effects(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut beams: Query<(Entity, &mut BeamEffect, &mut Sprite)>,
+) {
+    for (entity, mut beam, mut sprite) in &mut beams {
+        beam.lifetime.tick(time.delta());
+        let alpha = 1.0 - beam.lifetime.fraction();
+        sprite.color = sprite.color.with_alpha(alpha);
+
+        if beam.lifetime.finished() {
             commands.entity(entity).despawn();
         }
     }

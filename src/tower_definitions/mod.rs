@@ -9,6 +9,7 @@ pub mod zephyr;
 pub mod gatling;
 pub mod cannon;
 pub mod golem;
+pub mod laser;
 pub mod sniper;
 pub mod sprayer;
 pub mod tree;
@@ -123,7 +124,7 @@ impl Plugin for TowerPlugins {
             ballista::BallistaPlugin, catalyst::CatalystPlugin, cyclone::CyclonePlugin,
             pyre::PyrePlugin, zephyr::ZephyrPlugin, gatling::GatlingPlugin,
             cannon::CannonPlugin, sprayer::SprayerPlugin, sniper::SniperPlugin,
-            golem::GolemPlugin, tree::TreePlugin,
+            golem::GolemPlugin, tree::TreePlugin, laser::LaserPlugin,
         ));
     }
 }

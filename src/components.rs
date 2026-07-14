@@ -214,9 +214,17 @@ pub struct DefaultAim;
 pub struct DefaultFire;
 
 #[derive(Component)]
+pub struct BeamFire;
+
+#[derive(Component)]
 pub struct PulseEffect {
     pub lifetime: Timer,
     pub max_radius: f32,
+}
+
+#[derive(Component)]
+pub struct BeamEffect {
+    pub lifetime: Timer,
 }
 
 #[derive(Component)]
@@ -251,17 +259,9 @@ pub struct AngularSpeed {
     pub value: f32,
 }
 
-/// A tower's current targeting state, written by an aiming system (default:
-/// `towers::aim_towers`) and read by a firing system (default:
-/// `towers::fire_towers`). Separating the two lets a tower swap out just one
-/// half of the default behavior - e.g. a different aiming system that skips
-/// rotation for an omnidirectional tower, while still using the default fire
-/// logic, or vice versa.
 #[derive(Component, Default)]
 pub struct Aim {
-    /// Unit vector toward the current target; `Vec2::ZERO` if untargeted.
     pub direction: Vec2,
-    /// True once the tower is aimed closely enough to fire this frame.
     pub ready: bool,
 }
 
