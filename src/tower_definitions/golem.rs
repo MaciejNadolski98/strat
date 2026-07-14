@@ -73,14 +73,14 @@ fn update_golem_tooltip(
     mut golems: Query<(&TowerKillCount, &mut CustomTooltip)>,
 ) {
     for (kc, mut tooltip) in &mut golems {
-        let bonus = kc.kills / 10;
-        let progress = kc.kills % 10;
+        let bonus = kc.kills / 3;
+        let progress = kc.kills % 3;
         tooltip.0 = vec![
-            plain("Every 10 kills: "),
+            plain("Every 3 kills: "),
             colored("+1 Earth Damage", EARTH_COLOR),
             plain("\nProduced: "),
             colored(format!("+{bonus} Earth"), EARTH_COLOR),
-            plain(format!("\nProgress: {progress}/10 kills")),
+            plain(format!("\nProgress: {progress}/3 kills")),
         ];
     }
 }
