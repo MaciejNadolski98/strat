@@ -2,6 +2,7 @@ pub mod templates;
 pub use templates::{BarrelTemplate, BaseTemplate, TowerShape};
 
 pub mod ballista;
+pub mod brimstone;
 pub mod catalyst;
 pub mod cyclone;
 pub mod pyre;
@@ -125,6 +126,7 @@ impl Plugin for TowerPlugins {
             pyre::PyrePlugin, zephyr::ZephyrPlugin, gatling::GatlingPlugin,
             cannon::CannonPlugin, sprayer::SprayerPlugin, sniper::SniperPlugin,
             golem::GolemPlugin, tree::TreePlugin, laser::LaserPlugin,
+            brimstone::BrimstonePlugin,
         ));
     }
 }
