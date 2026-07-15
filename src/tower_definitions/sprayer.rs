@@ -16,8 +16,8 @@ impl Plugin for SprayerPlugin {
 
 pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
     name: "Sprayer",
-    range: 125.0,
-    cooldown: 0.24,
+    range: 100.0,
+    cooldown: 0.16,
     damage_formula: DamageFormula {
         flat: 11,
         crit_multiplier: 2.0,
@@ -26,10 +26,10 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
         air_multiplier: 0.0,
         water_multiplier: 1.0,
     },
-    projectile_speed: 520.0,
+    projectile_speed: 260.0,
     explosion_radius: 0.0,
     angular_speed: 4.2,
-    spread: 0.35,
+    spread: 0.7,
     piercing: 0,
     piercing_damage: 0.0,
     base_color: PALETTE_TEAL.base,

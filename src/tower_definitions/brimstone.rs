@@ -43,7 +43,7 @@ pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition {
         flat: 250,
         crit_multiplier: 2.0,
         earth_multiplier: 0.0,
-        fire_multiplier: 3.0,
+        fire_multiplier: 300.0,
         air_multiplier: 0.0,
         water_multiplier: 0.0,
     },
