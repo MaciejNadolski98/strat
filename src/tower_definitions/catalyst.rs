@@ -36,7 +36,7 @@ impl Plugin for CatalystPlugin {
 
 pub const TOWER_CATALYST: TowerDefinition = TowerDefinition {
     name: "Catalyst",
-    range: 0.0,
+    range: 260.0,
     cooldown: 999.0,
     damage_formula: DamageFormula {
         flat: 0,
