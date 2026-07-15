@@ -1,3 +1,4 @@
+mod charges;
 mod components;
 mod constants;
 mod draft;
@@ -21,6 +22,7 @@ mod waves;
 
 use bevy::prelude::*;
 
+use charges::advance_charges;
 use constants::{
     BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_PIERCING_DAMAGE, BASE_REGENERATION,
     PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH,
@@ -53,7 +55,7 @@ use towers::{
 };
 use waves::RunMode;
 
-use crate::resources::{ItemPurchasedEvent, NewRoundEvent, ShootEvent};
+use crate::resources::{ChargeConsumedEvent, ItemPurchasedEvent, NewRoundEvent, ShootEvent};
 
 fn initialize_draft(registry: Res<TowerRegistry>, mut draft: ResMut<TowerDraft>) {
     draft.known_kinds = registry.kinds.clone();
@@ -113,6 +115,7 @@ fn main() {
         .add_event::<ItemPurchasedEvent>()
         .add_event::<EnemyKilledEvent>()
         .add_event::<ShootEvent>()
+        .add_event::<ChargeConsumedEvent>()
         .add_event::<NewRoundEvent>()
         .add_event::<GameRestartEvent>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -164,6 +167,7 @@ fn main() {
                 aim_towers,
                 fire_towers,
                 fire_beam_towers,
+                advance_charges,
                 move_projectiles,
                 update_explosion_effects,
                 update_pulses,

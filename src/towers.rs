@@ -10,9 +10,9 @@ use bevy::window::PrimaryWindow;
 use crate::components::{
     Aim, AngularSpeed, BeamFire, CustomTooltip, Damage, DamageFormula, DefaultAim, DefaultFire,
     Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius, FireCooldown, Health,
-    IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, RemainingRange,
-    Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed, TemporaryDamageBonus, Tower,
-    TowerRangeIndicator,
+    IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, RangeBoost,
+    RemainingRange, Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed,
+    TemporaryDamageBonus, Tower, TowerRangeIndicator,
 };
 use crate::effects::{spawn_beam_effect, spawn_floating_text};
 use crate::projectiles::projectile_color;
@@ -25,7 +25,6 @@ use crate::shop::PlayerStatsMut;
 use crate::tooltip::{colored, plain, tag_segments, Segment};
 use crate::tower_definitions::TowerKind;
 
-/// Half-width of a beam tower's hit capsule (see `fire_beam_towers`).
 const BEAM_HALF_WIDTH: f32 = 10.0;
 
 #[derive(SystemParam)]
@@ -41,13 +40,10 @@ pub struct TowerTooltipStats<'w> {
     piercing_damage: Res<'w, PiercingDamage>,
 }
 
-/// Combines a tower's own piercing count with the global `Piercing` stat.
 fn effective_piercing(tower_piercing: u32, global_piercing: f32) -> u32 {
     (tower_piercing as f32 + global_piercing).max(0.0).round() as u32
 }
 
-/// Combines a tower's own piercing-damage adjustment with the global
-/// `PiercingDamage` stat, clamped to a 0%-100% decrease.
 fn effective_piercing_falloff(tower_piercing_damage: f32, global_piercing_damage: f32) -> f32 {
     (tower_piercing_damage + global_piercing_damage).clamp(-1.0, 0.0)
 }
@@ -246,8 +242,6 @@ pub fn tower_tooltip(
     segments
 }
 
-/// The element color for a stat that boosts elemental damage, or `None` for
-/// stats with no elemental association (crit, attack speed, loot, etc).
 pub fn element_color(kind: PlayerStatKind) -> Option<Color> {
     match kind {
         PlayerStatKind::EarthDamage => Some(EARTH_COLOR),
@@ -288,7 +282,7 @@ pub fn progress_cooldown(
 
 pub fn aim_towers(
     mut towers: Query<
-        (&mut Transform, &TowerKind, &AngularSpeed, &mut Aim),
+        (&mut Transform, &TowerKind, &AngularSpeed, &mut Aim, Option<&RangeBoost>),
         (With<Tower>, With<DefaultAim>),
     >,
     enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
@@ -299,15 +293,16 @@ pub fn aim_towers(
         return;
     }
 
-    for (mut tower_transform, tower_kind, rotation_speed, mut aim) in &mut towers {
+    for (mut tower_transform, tower_kind, rotation_speed, mut aim, range_boost) in &mut towers {
         let tower_position = tower_transform.translation.truncate();
+        let effective_range = tower_kind.range() * range_boost.map_or(1.0, |b| b.multiplier);
         let Some(target_position) = enemies
             .iter()
             .filter(|(_, _, health, _)| health.current > 0.0)
             .filter_map(|(_, transform, _, progress)| {
                 let enemy_position = transform.translation.truncate();
                 let distance = enemy_position.distance(tower_position);
-                (distance <= tower_kind.range()).then_some((enemy_position, progress.distance))
+                (distance <= effective_range).then_some((enemy_position, progress.distance))
             })
             .max_by(|a, b| a.1.total_cmp(&b.1))
             .map(|(position, _)| position)
@@ -454,6 +449,7 @@ pub fn fire_beam_towers(
             &mut FireCooldown,
             &TemporaryDamageBonus,
             &Aim,
+            Option<&mut RangeBoost>,
         ),
         (With<Tower>, With<BeamFire>),
     >,
@@ -471,6 +467,7 @@ pub fn fire_beam_towers(
         mut cooldown,
         damage_bonus,
         aim,
+        mut range_boost,
     ) in &mut towers
     {
         if !(aim.ready && cooldown.timer.finished()) {
@@ -480,8 +477,13 @@ pub fn fire_beam_towers(
         cooldown.timer.reset();
         shoot_events.write(ShootEvent { source_tower: tower_entity });
 
+        let effective_range = tower_kind.range() * range_boost.as_deref().map_or(1.0, |b| b.multiplier);
+        if let Some(boost) = range_boost.as_deref_mut() {
+            boost.multiplier = 1.0;
+        }
+
         let tower_pos = tower_transform.translation.truncate();
-        let beam_end = tower_pos + aim.direction * tower_kind.range();
+        let beam_end = tower_pos + aim.direction * effective_range;
 
         let is_critical = roll_critical_hit(critical_chance.value());
 

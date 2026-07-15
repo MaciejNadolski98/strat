@@ -5,6 +5,7 @@ pub mod ballista;
 pub mod brimstone;
 pub mod catalyst;
 pub mod cyclone;
+pub mod dynamo;
 pub mod pyre;
 pub mod zephyr;
 pub mod gatling;
@@ -126,7 +127,7 @@ impl Plugin for TowerPlugins {
             pyre::PyrePlugin, zephyr::ZephyrPlugin, gatling::GatlingPlugin,
             cannon::CannonPlugin, sprayer::SprayerPlugin, sniper::SniperPlugin,
             golem::GolemPlugin, tree::TreePlugin, laser::LaserPlugin,
-            brimstone::BrimstonePlugin,
+            brimstone::BrimstonePlugin, dynamo::DynamoPlugin,
         ));
     }
 }

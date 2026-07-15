@@ -58,7 +58,7 @@ pub const TOWER_CATALYST: TowerDefinition = TowerDefinition {
     barrel: BARREL_NONE,
     stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)],
     tooltip_config: TooltipConfig::UTILITY,
-    tags: &[tags::INFERNAL],
+    tags: &[tags::INFERNAL, tags::CONDUIT],
 };
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CATALYST);

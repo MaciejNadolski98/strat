@@ -395,6 +395,13 @@ pub struct ShootEvent {
     pub source_tower: Entity,
 }
 
+/// Fired when a `Charge` reaches a tower with `ChargeConsumer`, so that
+/// tower's own systems can react with whatever effect it provides.
+#[derive(Event)]
+pub struct ChargeConsumedEvent {
+    pub tower: Entity,
+}
+
 #[derive(Event)]
 pub struct NewRoundEvent;
 

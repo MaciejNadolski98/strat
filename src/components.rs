@@ -203,13 +203,9 @@ pub struct DropsSpell;
 #[derive(Component)]
 pub struct MainCamera;
 
-/// Marks a tower as using the default `towers::aim_towers` targeting/rotation
-/// system. Towers with their own aiming (e.g. Cyclone) don't get this.
 #[derive(Component)]
 pub struct DefaultAim;
 
-/// Marks a tower as using the default `towers::fire_towers` firing system.
-/// Towers with their own firing (e.g. Cyclone) don't get this.
 #[derive(Component)]
 pub struct DefaultFire;
 
@@ -233,9 +229,25 @@ pub struct FireCooldown {
     pub timer: Timer,
 }
 
+#[derive(Component)]
+pub struct ChargeConsumer;
+
+#[derive(Component)]
+pub struct Charge {
+    pub from: Entity,
+    pub to: Entity,
+    pub travel: Timer,
+    pub jumps_left: u32,
+}
+
 #[derive(Component, Default)]
 pub struct TemporaryAttackSpeed {
     pub bonus: f32,
+}
+
+#[derive(Component)]
+pub struct RangeBoost {
+    pub multiplier: f32,
 }
 
 #[derive(Component, Default)]
@@ -311,27 +323,21 @@ pub struct Direction {
     pub value: Vec2,
 }
 
-/// How much farther a projectile can travel before it despawns unfired-and-forgotten.
 #[derive(Component)]
 pub struct RemainingRange {
     pub value: f32,
 }
 
-/// How many more enemies this projectile can pierce through after its next hit.
 #[derive(Component)]
 pub struct Pierce {
     pub remaining: u32,
 }
 
-/// This shot's damage falloff per pierce, as a negative-or-zero fraction
-/// (e.g. `-0.2` means each successive hit deals 20% less than the last).
 #[derive(Component)]
 pub struct PiercingFalloff {
     pub value: f32,
 }
 
-/// Enemies this projectile has already hit, so a piercing shot doesn't keep
-/// re-hitting the same enemy while it's still within hit range.
 #[derive(Component, Default)]
 pub struct Pierced {
     pub entities: Vec<Entity>,
