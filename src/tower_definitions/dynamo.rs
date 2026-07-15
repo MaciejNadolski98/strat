@@ -19,6 +19,7 @@ impl Plugin for DynamoPlugin {
         app.add_systems(Update, attach_dynamo_marker.run_if(game_is_running));
         app.add_systems(Update, apply_dynamo_aura.in_set(GamePhase::TemporaryTowerEffects));
         app.add_systems(Update, accumulate_dynamo_charges.in_set(GamePhase::Gameplay));
+        app.add_systems(Update, update_dynamo_charge_bar.after(accumulate_dynamo_charges));
         app.add_systems(Update, update_dynamo_tooltip);
     }
 }
@@ -55,9 +56,20 @@ pub const KIND: TowerKind = TowerKind(&TOWER_DYNAMO);
 const SPEED_PENALTY: f32 = 0.35;
 const CHARGE_PER_SHOT: f32 = 1.0 / 200.0;
 
+const BAR_WIDTH: f32 = 32.0;
+const BAR_HEIGHT: f32 = 4.0;
+const BAR_Y: f32 = -24.0;
+
 #[derive(Component, Default)]
 struct DynamoTower {
     charge_progress: f32,
+}
+
+#[derive(Component)]
+struct DynamoChargeBar {
+    owner: Entity,
+    width: f32,
+    fill: bool,
 }
 
 fn attach_dynamo_marker(
@@ -68,7 +80,39 @@ fn attach_dynamo_marker(
         if *kind == KIND {
             commands.entity(entity)
                 .insert((DynamoTower::default(), CustomTooltip::default()))
-                .remove::<(DefaultAim, DefaultFire)>();
+                .remove::<(DefaultAim, DefaultFire)>()
+                .with_children(|parent| {
+                    parent.spawn((
+                        Sprite::from_color(
+                            Color::srgb(0.08, 0.08, 0.12),
+                            Vec2::new(BAR_WIDTH + 2.0, BAR_HEIGHT + 2.0),
+                        ),
+                        Transform::from_translation(Vec3::new(0.0, BAR_Y, 2.0)),
+                        DynamoChargeBar { owner: entity, width: BAR_WIDTH, fill: false },
+                    ));
+                    parent.spawn((
+                        Sprite::from_color(
+                            Color::srgb(0.55, 0.90, 0.98),
+                            Vec2::new(BAR_WIDTH, BAR_HEIGHT),
+                        ),
+                        Transform::from_translation(Vec3::new(0.0, BAR_Y, 3.0)),
+                        DynamoChargeBar { owner: entity, width: BAR_WIDTH, fill: true },
+                    ));
+                });
+        }
+    }
+}
+
+fn update_dynamo_charge_bar(
+    towers: Query<&DynamoTower>,
+    mut bars: Query<(&DynamoChargeBar, &mut Transform)>,
+) {
+    for (bar, mut transform) in &mut bars {
+        let Ok(dynamo) = towers.get(bar.owner) else { continue; };
+        let ratio = dynamo.charge_progress.clamp(0.0, 1.0);
+        if bar.fill {
+            transform.scale.x = ratio;
+            transform.translation.x = -bar.width * (1.0 - ratio) * 0.5;
         }
     }
 }
