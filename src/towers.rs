@@ -625,7 +625,7 @@ pub fn update_draft_tooltip(
     draft: Res<TowerDraft>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    slots: Query<(Entity, &DraftSlot, &Transform)>,
+    slots: Query<(Entity, &DraftSlot, &GlobalTransform)>,
     slot_children: Query<&Children>,
     previews: Query<Option<&CustomTooltip>, With<DraftPreview>>,
     stats: TowerTooltipStats,
@@ -650,7 +650,7 @@ pub fn update_draft_tooltip(
     };
 
     for (slot_entity, slot, transform) in &slots {
-        let pos = transform.translation.truncate();
+        let pos = transform.translation().truncate();
         if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
             let kind = draft.offers[slot.index];
             let damage_formula = kind.damage_formula();
