@@ -154,6 +154,7 @@ pub fn place_draft_tower(
     mut remaining: ResMut<EnemiesRemaining>,
     mut spawn_timer: ResMut<SpawnTimer>,
     mut stats: PlayerStatsMut,
+    mut cooldowns: Query<&mut FireCooldown, With<Tower>>,
 ) {
     if game_over.value || !matches!(draft.phase, TowerDraftPhase::Placing(_)) {
         return;
@@ -188,12 +189,14 @@ pub fn place_draft_tower(
         tower_kind.damage_formula(),
         FireCooldown {
             base_cooldown: tower_kind.cooldown(),
-            timer: Timer::new(
-                Duration::from_secs_f32(
+            timer: {
+                let duration = Duration::from_secs_f32(
                     tower_kind.cooldown() / stats.attack_speed_value().max(0.1),
-                ),
-                TimerMode::Once,
-            ),
+                );
+                let mut timer = Timer::new(duration, TimerMode::Once);
+                timer.set_elapsed(duration);
+                timer
+            },
         },
         AngularSpeed {
             value: tower_kind.angular_speed(),
@@ -242,6 +245,11 @@ pub fn place_draft_tower(
     draft.phase = TowerDraftPhase::WaveRunning;
     remaining.count = enemies_in_wave(wave_number.value);
     spawn_timer.reset();
+
+    for mut cooldown in &mut cooldowns {
+        let duration = cooldown.timer.duration();
+        cooldown.timer.set_elapsed(duration);
+    }
 }
 
 pub fn update_tower_phantom(
