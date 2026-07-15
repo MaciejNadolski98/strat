@@ -5,7 +5,8 @@ use crate::components::{
     TemporaryEnemySpeed, Waypoint,
 };
 use crate::resources::{
-    CurrentHp, EnemiesRemaining, GameOver, GameWon, MaxHp, NewRoundEvent, PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
+    CurrentHp, EnemiesRemaining, ForcedTowerOffers, GameOver, GameWon, MaxHp, NewRoundEvent,
+    PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
 };
 use crate::spell_definitions::SlowActive;
 use crate::waves::{RunMode, wave};
@@ -30,6 +31,7 @@ pub fn spawn_enemies(
     run_mode: Res<RunMode>,
     path_tiles: Res<PathTiles>,
     mut draft: ResMut<TowerDraft>,
+    mut forced_towers: ResMut<ForcedTowerOffers>,
     enemies: Query<(), With<Enemy>>,
     mut new_round_events: EventWriter<NewRoundEvent>,
 ) {
@@ -51,7 +53,7 @@ pub fn spawn_enemies(
             if regen > 0 {
                 hp.amount = (hp.amount + regen).min(max_hp.value().round() as i32);
             }
-            draft.activate();
+            draft.activate(&mut forced_towers);
         }
         return;
     }

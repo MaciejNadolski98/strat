@@ -9,9 +9,9 @@ use crate::constants::{
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
-    EnemiesRemaining, ExplosionSize, FireDamage, GameOver, GameRestartEvent, GameWon, KillCount,
-    Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused, Regeneration, Shop,
-    SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
+    EnemiesRemaining, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver, GameRestartEvent,
+    GameWon, KillCount, Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused,
+    Regeneration, Shop, SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -29,6 +29,7 @@ pub struct RestartState<'w> {
     shop: ResMut<'w, Shop>,
     spell_shop: ResMut<'w, SpellShop>,
     draft: ResMut<'w, TowerDraft>,
+    forced_towers: ResMut<'w, ForcedTowerOffers>,
     paused: ResMut<'w, Paused>,
     path_tiles: ResMut<'w, PathTiles>,
     regeneration: ResMut<'w, Regeneration>,
@@ -136,7 +137,8 @@ pub fn restart_game(
     state.next_wave_timer.timer.reset();
     state.shop.activate(1);
     state.spell_shop.reset();
-    state.draft.activate();
+    state.forced_towers.reset();
+    state.draft.activate(&mut state.forced_towers);
     state.path_tiles.reset();
     spawn_path_visuals(&mut commands, &state.path_tiles, &[]);
     if let Ok(mut marker_transform) = end_marker.single_mut() {

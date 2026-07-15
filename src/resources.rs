@@ -353,19 +353,66 @@ impl TowerDraft {
         }
     }
 
-    pub fn activate(&mut self) {
-        self.offers = Self::generate_offers(&self.known_kinds);
+    pub fn activate(&mut self, forced: &mut ForcedTowerOffers) {
+        self.offers = Self::generate_offers(&self.known_kinds, forced);
         self.phase = TowerDraftPhase::Picking;
     }
 
-    fn generate_offers(kinds: &[TowerKind]) -> Vec<TowerKind> {
+    fn generate_offers(kinds: &[TowerKind], forced: &mut ForcedTowerOffers) -> Vec<TowerKind> {
         let mut kinds = kinds.to_vec();
         let n = kinds.len();
-        for i in 0..3.min(n) {
+
+        let mut start = 0;
+        if n > 0 && !forced.queue.is_empty() {
+            let forced_kind = forced.queue.remove(0);
+            if let Some(idx) = kinds.iter().position(|k| *k == forced_kind) {
+                kinds.swap(0, idx);
+                start = 1;
+            }
+        }
+
+        for i in start..3.min(n) {
             let j = i + rand::random::<usize>() % (n - i);
             kinds.swap(i, j);
         }
         kinds[..3].to_vec()
+    }
+}
+
+/// Queue of towers (from `--towers=a,b,c`) to force into slot 0 of the next
+/// rounds' draft offers, one consumed per round, oldest first. Names are
+/// resolved against the tower registry at startup so a typo fails fast
+/// instead of silently never triggering.
+#[derive(Resource, Default)]
+pub struct ForcedTowerOffers {
+    pub queue: Vec<TowerKind>,
+    original: Vec<TowerKind>,
+}
+
+impl ForcedTowerOffers {
+    pub fn from_args(args: impl IntoIterator<Item = String>, known_kinds: &[TowerKind]) -> Self {
+        for arg in args {
+            if let Some(list) = arg.strip_prefix("--towers=") {
+                let queue: Vec<TowerKind> = list
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|name| !name.is_empty())
+                    .map(|name| {
+                        known_kinds
+                            .iter()
+                            .find(|kind| kind.name().eq_ignore_ascii_case(name))
+                            .copied()
+                            .unwrap_or_else(|| panic!("Unknown tower name in --towers: {name}"))
+                    })
+                    .collect();
+                return Self { queue: queue.clone(), original: queue };
+            }
+        }
+        Self::default()
+    }
+
+    pub fn reset(&mut self) {
+        self.queue = self.original.clone();
     }
 }
 

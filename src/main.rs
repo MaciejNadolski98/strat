@@ -39,10 +39,10 @@ use pathing::{update_path_hints, update_path_input};
 use projectiles::move_projectiles;
 use resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
-    EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, GameOver, GameWon, KillCount,
-    MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Piercing, PiercingDamage, Regeneration,
-    Shop, SpawnTimer, Stat, SpellShop, TowerDraft, WaterDamage, WaveNumber,
-    GamePhase, GameRestartEvent, reset_stat_temporaries,
+    EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver,
+    GameWon, KillCount, MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Piercing,
+    PiercingDamage, Regeneration, Shop, SpawnTimer, Stat, SpellShop, TowerDraft, WaterDamage,
+    WaveNumber, GamePhase, GameRestartEvent, reset_stat_temporaries,
 };
 use setup::setup;
 use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
@@ -57,9 +57,13 @@ use waves::RunMode;
 
 use crate::resources::{ChargeConsumedEvent, ItemPurchasedEvent, NewRoundEvent, ShootEvent};
 
-fn initialize_draft(registry: Res<TowerRegistry>, mut draft: ResMut<TowerDraft>) {
+fn initialize_draft(
+    registry: Res<TowerRegistry>,
+    mut draft: ResMut<TowerDraft>,
+    mut forced_towers: ResMut<ForcedTowerOffers>,
+) {
     draft.known_kinds = registry.kinds.clone();
-    draft.activate();
+    draft.activate(&mut forced_towers);
 }
 
 fn initialize_shop(registry: Res<ItemRegistry>, mut shop: ResMut<Shop>) {
@@ -74,7 +78,8 @@ fn initialize_spell_shop(registry: Res<SpellRegistry>, mut spell_shop: ResMut<Sp
 fn main() {
     let run_mode = RunMode::from_args(std::env::args());
 
-    App::new()
+    let mut app = App::new();
+    app
         .insert_resource(ClearColor(Color::srgb(0.07, 0.09, 0.11)))
         .insert_resource(run_mode)
         .insert_resource(Money {
@@ -129,7 +134,15 @@ fn main() {
         }))
         .add_plugins(ItemPlugins)
         .add_plugins(SpellPlugins)
-        .add_plugins(TowerPlugins)
+        .add_plugins(TowerPlugins);
+
+    let forced_towers = ForcedTowerOffers::from_args(
+        std::env::args(),
+        &app.world().resource::<TowerRegistry>().kinds,
+    );
+    app.insert_resource(forced_towers);
+
+    app
         .add_systems(Startup, (setup, initialize_draft, initialize_shop, initialize_spell_shop).chain())
         .add_systems(Update, toggle_pause)
         .configure_sets(
