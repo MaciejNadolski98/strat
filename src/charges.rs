@@ -9,7 +9,12 @@ use crate::tower_definitions::TowerKind;
 
 const MAX_JUMPS: u32 = 3;
 const CHARGE_SPEED: f32 = 320.0;
-const CHARGE_COLOR: Color = Color::srgb(0.55, 0.90, 0.98);
+const CHARGE_RADIUS: f32 = 10.0;
+const CHARGE_GLOW_RADIUS: f32 = 22.0;
+const CHARGE_COLOR: Color = Color::srgb(0.85, 0.99, 1.0);
+const CHARGE_GLOW_COLOR: Color = Color::srgba(0.55, 0.90, 0.98, 0.45);
+const CHARGE_PULSE_SPEED: f32 = 12.0;
+const CHARGE_PULSE_AMOUNT: f32 = 0.2;
 
 pub fn try_emit_charge(
     commands: &mut Commands,
@@ -52,6 +57,8 @@ pub fn advance_charges(
         let from_pos = from_transform.translation.truncate();
         let to_pos = to_transform.translation.truncate();
         transform.translation = from_pos.lerp(to_pos, charge.travel.fraction()).extend(6.0);
+        let pulse = 1.0 + (time.elapsed_secs() * CHARGE_PULSE_SPEED).sin() * CHARGE_PULSE_AMOUNT;
+        transform.scale = Vec3::splat(pulse);
 
         if !charge.travel.finished() {
             continue;
@@ -113,7 +120,7 @@ fn spawn_charge(
 ) {
     let travel_secs = (from_pos.distance(to_pos) / CHARGE_SPEED).max(0.05);
     commands.spawn((
-        Mesh2d(meshes.add(Circle::new(5.0))),
+        Mesh2d(meshes.add(Circle::new(CHARGE_RADIUS))),
         MeshMaterial2d(materials.add(CHARGE_COLOR)),
         Transform::from_translation(from_pos.extend(6.0)),
         Charge {
@@ -122,5 +129,11 @@ fn spawn_charge(
             travel: Timer::from_seconds(travel_secs, TimerMode::Once),
             jumps_left,
         },
-    ));
+    )).with_children(|parent| {
+        parent.spawn((
+            Mesh2d(meshes.add(Circle::new(CHARGE_GLOW_RADIUS))),
+            MeshMaterial2d(materials.add(CHARGE_GLOW_COLOR)),
+            Transform::from_translation(Vec3::new(0.0, 0.0, -0.1)),
+        ));
+    });
 }
