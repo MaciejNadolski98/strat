@@ -6,7 +6,7 @@ use crate::components::{
     SpellSlotLabel,
 };
 use crate::effects::spawn_floating_text;
-use crate::resources::{GameOver, GameWon, KillCount, Money, Loot, SpellShop};
+use crate::resources::{EnemyKilledEvent, GameOver, GameWon, KillCount, Money, Loot, SpellShop};
 use crate::spell_definitions::SpellCastEvent;
 use crate::tooltip::{plain, tag_segments};
 
@@ -135,6 +135,7 @@ pub fn update_burning_enemies(
     mut kills: ResMut<KillCount>,
     loot: Res<Loot>,
     mut spell_shop: ResMut<SpellShop>,
+    mut kill_events: EventWriter<EnemyKilledEvent>,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, &mut Burning, Option<&DropsSpell>), With<Enemy>>,
 ) {
     for (entity, transform, mut health, reward, mut burning, drops_spell) in &mut enemies {
@@ -180,6 +181,10 @@ pub fn update_burning_enemies(
                     );
                 }
                 commands.entity(entity).despawn();
+                kill_events.write(EnemyKilledEvent {
+                    source_tower: Entity::PLACEHOLDER,
+                    position: transform.translation.truncate(),
+                });
                 continue;
             }
         }

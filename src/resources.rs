@@ -400,7 +400,7 @@ impl ForcedTowerOffers {
                     .map(|name| {
                         known_kinds
                             .iter()
-                            .find(|kind| kind.name().eq_ignore_ascii_case(name))
+                            .find(|kind| kind.name().eq_ignore_ascii_case(&name.replace("_", " ")))
                             .copied()
                             .unwrap_or_else(|| panic!("Unknown tower name in --towers: {name}"))
                     })
@@ -435,6 +435,7 @@ pub struct ItemPurchasedEvent {
 #[derive(Event)]
 pub struct EnemyKilledEvent {
     pub source_tower: Entity,
+    pub position: Vec2,
 }
 
 #[derive(Event)]

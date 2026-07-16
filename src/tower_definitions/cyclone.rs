@@ -192,7 +192,7 @@ fn fire_cyclone_towers(
                 );
             }
             commands.entity(entity).despawn();
-            kill_events.write(EnemyKilledEvent { source_tower: tower_entity });
+            kill_events.write(EnemyKilledEvent { source_tower: tower_entity, position });
         }
     }
 }

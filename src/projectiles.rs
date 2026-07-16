@@ -178,7 +178,7 @@ pub fn move_projectiles(
                 );
             }
             commands.entity(entity).despawn();
-            kill_events.write(EnemyKilledEvent { source_tower: source_tower.entity });
+            kill_events.write(EnemyKilledEvent { source_tower: source_tower.entity, position });
         }
     }
 }

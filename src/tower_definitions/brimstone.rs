@@ -213,7 +213,7 @@ fn trigger_brimstone(
                 );
             }
             commands.entity(entity).despawn();
-            rewards.kill_events.write(EnemyKilledEvent { source_tower: tower_entity });
+            rewards.kill_events.write(EnemyKilledEvent { source_tower: tower_entity, position });
         }
 
         return;
