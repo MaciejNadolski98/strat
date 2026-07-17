@@ -19,6 +19,13 @@ use bevy::prelude::*;
 use crate::resources::TowerStatEffect;
 use crate::tags::TagInfo;
 
+/// Systems that (re-)add an item's [`ItemKind`] to the [`crate::resources::Shop`]
+/// pool in response to [`crate::resources::GameRestartEvent`]. Ordered to run
+/// after `restart_game` and before the shop regenerates its offers, so every
+/// item plugin's kind is back in the pool by the time offers are rolled.
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Default)]
+pub struct ItemPoolRestoreSet;
+
 #[derive(Clone, Copy)]
 pub struct ItemDefinition {
     pub name: &'static str,
@@ -27,6 +34,7 @@ pub struct ItemDefinition {
     pub cost: u32,
     pub icon_color: Color,
     pub tags: &'static [TagInfo],
+    pub max_purchases: Option<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -64,6 +72,10 @@ impl ItemKind {
     pub fn tags(self) -> &'static [TagInfo] {
         self.0.tags
     }
+
+    pub fn max_purchases(self) -> Option<u32> {
+        self.0.max_purchases
+    }
 }
 
 impl PartialEq for ItemKind {
@@ -78,11 +90,6 @@ impl std::hash::Hash for ItemKind {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         (self.0 as *const ItemDefinition).hash(state);
     }
-}
-
-#[derive(Resource, Default)]
-pub struct ItemRegistry {
-    pub kinds: Vec<ItemKind>,
 }
 
 pub struct ItemPlugins;

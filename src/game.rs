@@ -11,7 +11,7 @@ use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver, GameRestartEvent,
     GameWon, KillCount, Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused,
-    Regeneration, Shop, SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
+    Regeneration, SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -26,7 +26,6 @@ pub struct RestartState<'w> {
     remaining: ResMut<'w, EnemiesRemaining>,
     spawn_timer: ResMut<'w, SpawnTimer>,
     next_wave_timer: ResMut<'w, NextWaveTimer>,
-    shop: ResMut<'w, Shop>,
     spell_shop: ResMut<'w, SpellShop>,
     draft: ResMut<'w, TowerDraft>,
     forced_towers: ResMut<'w, ForcedTowerOffers>,
@@ -135,7 +134,6 @@ pub fn restart_game(
     state.remaining.count = 0;
     state.spawn_timer.reset();
     state.next_wave_timer.timer.reset();
-    state.shop.activate(1);
     state.spell_shop.reset();
     state.forced_towers.reset();
     state.draft.activate(&mut state.forced_towers);

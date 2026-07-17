@@ -11,9 +11,9 @@ use crate::item_definitions::ItemKind;
 use crate::tooltip::{plain, tag_segments};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, Piercing, PiercingDamage,
-    PlayerStatKind, Regeneration, Shop, TowerDraft, TowerDraftPhase, TowerStatEffect, WaterDamage,
-    WaveNumber,
+    GameOver, GameRestartEvent, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, Piercing,
+    PiercingDamage, PlayerStatKind, Regeneration, Shop, TowerDraft, TowerDraftPhase,
+    TowerStatEffect, WaterDamage, WaveNumber,
 };
 
 #[derive(SystemParam)]
@@ -81,6 +81,19 @@ impl<'w> PlayerStatsMut<'w> {
                 self.piercing_damage.raw_value += delta;
             }
         }
+    }
+}
+
+/// Regenerates the shop's offers once every item plugin has had a chance to
+/// re-add its kind to the pool (see `ItemPoolRestoreSet`), so a run reset
+/// doesn't leave previously-exhausted items missing from the shop.
+pub fn activate_shop_on_restart(
+    mut events: EventReader<GameRestartEvent>,
+    mut shop: ResMut<Shop>,
+    wave_number: Res<WaveNumber>,
+) {
+    if events.read().next().is_some() {
+        shop.activate(wave_number.value);
     }
 }
 
@@ -266,7 +279,8 @@ pub fn update_shop_tooltip(
             return;
         };
 
-        let mut segments = vec![plain(upgrade_tooltip(offer.item, offer.cost))];
+        let purchased = shop.purchase_count(offer.item);
+        let mut segments = vec![plain(item_tooltip(offer.item, offer.cost, purchased))];
         let tags = offer.item.tags();
         if !tags.is_empty() {
             segments.push(plain("\nTags: "));
@@ -279,13 +293,21 @@ pub fn update_shop_tooltip(
 }
 
 
-fn upgrade_tooltip(kind: ItemKind, cost: i32) -> String {
+fn item_tooltip(kind: ItemKind, cost: i32, purchased: u32) -> String {
     let mut parts: Vec<String> = Vec::new();
+    parts.push(format!("{} - ${cost}", kind.name()));
+    if let Some(max) = kind.max_purchases() {
+        parts.push(if max == 1 {
+            "Unique".to_string()
+        } else {
+            format!("({purchased}/{max})")
+        });
+    }
     let effects = kind.effect_text();
     if !effects.is_empty() { parts.push(effects); }
     let desc = kind.description();
     if !desc.is_empty() { parts.push(desc.to_string()); }
-    format!("{}  ${}\nPermanent upgrade\n{}", kind.name(), cost, parts.join("\n"))
+    parts.join("\n")
 }
 
 fn apply_stat_upgrade(kind: ItemKind, stats: &mut PlayerStatsMut) {

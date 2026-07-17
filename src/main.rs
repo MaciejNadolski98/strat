@@ -31,7 +31,7 @@ use draft::{place_draft_tower, sync_draft_previews, update_draft_input, update_d
 use effects::{update_beam_effects, update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{game_is_running, pan_camera, restart_game, toggle_pause};
-use item_definitions::{ItemPlugins, ItemRegistry};
+use item_definitions::{ItemPlugins, ItemPoolRestoreSet};
 use spell_definitions::{SpellPlugins, SpellRegistry};
 use tower_definitions::{TowerPlugins, TowerRegistry};
 use hud::update_hud;
@@ -45,7 +45,7 @@ use resources::{
     WaveNumber, GamePhase, GameRestartEvent, reset_stat_temporaries,
 };
 use setup::setup;
-use shop::{update_shop_input, update_shop_text, update_shop_tooltip};
+use shop::{activate_shop_on_restart, update_shop_input, update_shop_text, update_shop_tooltip};
 use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
 };
@@ -66,8 +66,7 @@ fn initialize_draft(
     draft.activate(&mut forced_towers);
 }
 
-fn initialize_shop(registry: Res<ItemRegistry>, mut shop: ResMut<Shop>) {
-    shop.known_kinds = registry.kinds.clone();
+fn initialize_shop(mut shop: ResMut<Shop>) {
     shop.activate(1);
 }
 
@@ -106,7 +105,6 @@ fn main() {
         .insert_resource(PiercingDamage(Stat::new(BASE_PIERCING_DAMAGE)))
         .insert_resource(WaveNumber { value: 1 })
         .insert_resource(EnemiesRemaining { count: 0 })
-        .insert_resource(ItemRegistry::default())
         .insert_resource(SpellRegistry::default())
         .insert_resource(TowerRegistry::default())
         .insert_resource(TowerDraft::new_empty())
@@ -222,5 +220,7 @@ fn main() {
         .add_systems(Update, update_path_input.after(toggle_pause))
         .add_systems(Update, update_path_hints)
         .add_systems(Update, restart_game)
+        .configure_sets(Update, ItemPoolRestoreSet.after(restart_game))
+        .add_systems(Update, activate_shop_on_restart.after(ItemPoolRestoreSet))
         .run();
 }

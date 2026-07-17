@@ -460,7 +460,8 @@ pub struct GameRestartEvent;
 pub struct Shop {
     pub offers: [Option<ShopOffer>; 3],
     pub reroll_cost: i32,
-    pub(crate) known_kinds: Vec<ItemKind>,
+    pub(crate) item_pool: Vec<ItemKind>,
+    purchase_counts: std::collections::HashMap<ItemKind, u32>,
 }
 
 impl Shop {
@@ -468,17 +469,29 @@ impl Shop {
         Self {
             offers: [None; 3],
             reroll_cost: 0,
-            known_kinds: Vec::new(),
+            item_pool: Vec::new(),
+            purchase_counts: std::collections::HashMap::new(),
         }
     }
 
+    pub fn add_to_pool(&mut self, kind: ItemKind) {
+        if !self.item_pool.contains(&kind) {
+            self.item_pool.push(kind);
+        }
+    }
+
+    pub fn purchase_count(&self, kind: ItemKind) -> u32 {
+        self.purchase_counts.get(&kind).copied().unwrap_or(0)
+    }
+
     pub fn activate(&mut self, wave: u32) {
-        self.offers = Self::generate_offers(&self.known_kinds, wave);
+        self.purchase_counts.clear();
+        self.offers = Self::generate_offers(&self.item_pool, wave);
         self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
     }
 
     pub fn reroll(&mut self, wave: u32) {
-        self.offers = Self::generate_offers(&self.known_kinds, wave);
+        self.offers = Self::generate_offers(&self.item_pool, wave);
         self.reroll_cost = scale_price(SHOP_REROLL_COST, wave);
     }
 
@@ -489,16 +502,25 @@ impl Shop {
     pub fn take_offer(&mut self, selected: usize) -> Option<ShopOffer> {
         let offer = self.offers[selected];
         self.offers[selected] = None;
+        if let Some(offer) = offer {
+            let count = self.purchase_counts.entry(offer.item).or_insert(0);
+            *count += 1;
+            if offer.item.max_purchases().is_some_and(|max| *count >= max) {
+                self.item_pool.retain(|kind| *kind != offer.item);
+            }
+        }
         offer
     }
 
-    fn generate_offers(kinds: &[ItemKind], wave: u32) -> [Option<ShopOffer>; 3] {
+    fn generate_offers(pool: &[ItemKind], wave: u32) -> [Option<ShopOffer>; 3] {
         let mut offers = [None; 3];
+        let mut available: Vec<ItemKind> = pool.to_vec();
         for offer in &mut offers {
-            if kinds.is_empty() {
+            if available.is_empty() {
                 break;
             }
-            let kind = kinds[rand::random::<usize>() % kinds.len()];
+            let idx = rand::random::<usize>() % available.len();
+            let kind = available.remove(idx);
             *offer = Some(ShopOffer {
                 item: kind,
                 cost: scale_price(kind.cost(), wave),

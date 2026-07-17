@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::resources::{FireDamage, GameRestartEvent, ItemPurchasedEvent, PlayerStatKind};
+use crate::resources::{FireDamage, GameRestartEvent, ItemPurchasedEvent, PlayerStatKind, Shop};
 use crate::tags;
-use super::{ItemDefinition, ItemKind, ItemRegistry};
+use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 
 pub const ITEM: ItemDefinition = ItemDefinition {
     name: "Pyromania",
@@ -11,6 +11,7 @@ pub const ITEM: ItemDefinition = ItemDefinition {
     cost: 6,
     icon_color: Color::srgb(0.96, 0.44, 0.08),
     tags: &[tags::INFERNAL],
+    max_purchases: Some(1),
 };
 
 pub const KIND: ItemKind = ItemKind(&ITEM);
@@ -22,15 +23,20 @@ pub struct PyromaniaPlugin;
 
 impl Plugin for PyromaniaPlugin {
     fn build(&self, app: &mut App) {
-        app.world_mut().resource_mut::<ItemRegistry>().kinds.push(KIND);
+        app.world_mut().resource_mut::<Shop>().add_to_pool(KIND);
         app.init_resource::<PyromaniaStacks>();
-        app.add_systems(Update, (on_item_purchased, on_restart));
+        app.add_systems(Update, (on_item_purchased, on_restart.in_set(ItemPoolRestoreSet)));
     }
 }
 
-fn on_restart(mut events: EventReader<GameRestartEvent>, mut stacks: ResMut<PyromaniaStacks>) {
+fn on_restart(
+    mut events: EventReader<GameRestartEvent>,
+    mut stacks: ResMut<PyromaniaStacks>,
+    mut shop: ResMut<Shop>,
+) {
     if events.read().next().is_some() {
         stacks.0 = 0;
+        shop.add_to_pool(KIND);
     }
 }
 
