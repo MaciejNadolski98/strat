@@ -24,7 +24,7 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition {
         earth_multiplier: 0.0,
         fire_multiplier: 0.0,
         air_multiplier: 0.0,
-        water_multiplier: 1.0,
+        water_multiplier: 0.3,
     },
     projectile_speed: 260.0,
     explosion_radius: 0.0,

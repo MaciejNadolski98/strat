@@ -54,9 +54,9 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
 
 pub const KIND: TowerKind = TowerKind(&TOWER_GATLING);
 
-const MAX_SHOTS: f32 = 8.0;
-const SPEED_PER_SHOT: f32 = 0.2;
-const SHOT_DECAY_RATE: f32 = 1.0;
+const MAX_SHOTS: f32 = 15.0;
+const SPEED_PER_SHOT: f32 = 0.8;
+const SHOT_DECAY_RATE: f32 = 1.5;
 
 #[derive(Component)]
 struct GatlingTower;
