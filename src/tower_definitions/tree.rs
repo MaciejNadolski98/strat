@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
+use crate::components::{CustomTooltip, DefaultAim, DefaultFire, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
 use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;

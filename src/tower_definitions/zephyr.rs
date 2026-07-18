@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, TemporaryAttackSpeed, Tower};
+use crate::components::{CustomTooltip, DefaultAim, DefaultFire, TemporaryAttackSpeed, Tower};
 use crate::game::game_is_running;
 use crate::resources::{AirDamage, EarthDamage, GamePhase, PlayerStatKind, TowerStatEffect};
 use crate::tags;

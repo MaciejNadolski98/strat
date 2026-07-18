@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::sprite::ColorMaterial;
 
 use crate::charges::try_emit_charge;
-use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, Tower};
+use crate::components::{CustomTooltip, DefaultAim, DefaultFire, Tower};
 use crate::game::game_is_running;
 use crate::resources::{CurrentHp, EnemyKilledEvent, MaxHp};
 use crate::tags::{self, Conduit};
