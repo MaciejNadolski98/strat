@@ -128,7 +128,7 @@ fn apply_dynamo_aura(
         let dynamo_pos = dynamo_transform.translation.truncate();
         for (tower_transform, mut temp_speed) in &mut adjacent_towers {
             if tower_transform.translation.truncate().distance(dynamo_pos) <= TOWER_DYNAMO.range {
-                temp_speed.bonus -= SPEED_PENALTY;
+                temp_speed.flat -= SPEED_PENALTY;
             }
         }
     }

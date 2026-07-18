@@ -379,10 +379,6 @@ impl TowerDraft {
     }
 }
 
-/// Queue of towers (from `--towers=a,b,c`) to force into slot 0 of the next
-/// rounds' draft offers, one consumed per round, oldest first. Names are
-/// resolved against the tower registry at startup so a typo fails fast
-/// instead of silently never triggering.
 #[derive(Resource, Default)]
 pub struct ForcedTowerOffers {
     pub queue: Vec<TowerKind>,
@@ -443,8 +439,6 @@ pub struct ShootEvent {
     pub source_tower: Entity,
 }
 
-/// Fired when a `Charge` reaches a tower with `ChargeConsumer`, so that
-/// tower's own systems can react with whatever effect it provides.
 #[derive(Event)]
 pub struct ChargeConsumedEvent {
     pub tower: Entity,
@@ -478,6 +472,10 @@ impl Shop {
         if !self.item_pool.contains(&kind) {
             self.item_pool.push(kind);
         }
+    }
+
+    pub fn remove_from_pool(&mut self, kind: ItemKind) {
+        self.item_pool.retain(|k| *k != kind);
     }
 
     pub fn purchase_count(&self, kind: ItemKind) -> u32 {

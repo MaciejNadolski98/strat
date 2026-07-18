@@ -220,15 +220,8 @@ pub struct TowerDefinition {
     pub projectile_speed: f32,
     pub explosion_radius: f32,
     pub angular_speed: f32,
-    /// Random deviation (radians) applied to a fired projectile's direction
-    /// away from the aimed-at target. `0.0` is perfectly accurate.
     pub spread: f32,
-    /// Extra enemies beyond the first a projectile can hit before it
-    /// disappears. Added to the global `Piercing` stat at fire time.
     pub piercing: u32,
-    /// This tower's own adjustment to the damage lost per pierce, added to
-    /// the global `PiercingDamage` stat and clamped to `-1.0..=0.0`. Only
-    /// matters when `piercing > 0` (including from the global stat).
     pub piercing_damage: f32,
     pub base_color: Color,
     pub barrel_color: Color,

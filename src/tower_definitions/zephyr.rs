@@ -116,7 +116,7 @@ fn apply_zephyr_aura(
         let zephyr_pos = zephyr_transform.translation.truncate();
         for (tower_transform, mut temp_speed) in &mut adjacent_towers {
             if tower_transform.translation.truncate().distance(zephyr_pos) <= TOWER_ZEPHYR.range {
-                temp_speed.bonus += bonus;
+                temp_speed.flat += bonus;
             }
         }
     }

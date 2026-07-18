@@ -13,7 +13,7 @@ use crate::waves::{RunMode, wave};
 
 pub fn reset_temporary_enemy_speed(mut enemies: Query<&mut TemporaryEnemySpeed, With<Enemy>>) {
     for mut temp in &mut enemies {
-        temp.multiplier = 1.0;
+        temp.reset();
     }
 }
 

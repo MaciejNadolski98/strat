@@ -13,16 +13,13 @@ pub mod vitality;
 pub mod offense;
 pub mod elemental_focus;
 pub mod siege;
+pub mod lens;
 
 use bevy::prelude::*;
 
 use crate::resources::TowerStatEffect;
 use crate::tags::TagInfo;
 
-/// Systems that (re-)add an item's [`ItemKind`] to the [`crate::resources::Shop`]
-/// pool in response to [`crate::resources::GameRestartEvent`]. Ordered to run
-/// after `restart_game` and before the shop regenerates its offers, so every
-/// item plugin's kind is back in the pool by the time offers are rolled.
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Default)]
 pub struct ItemPoolRestoreSet;
 
@@ -113,5 +110,6 @@ impl Plugin for ItemPlugins {
             elemental_focus::ElementalFocusPlugin,
             siege::SiegePlugin,
         ));
+        app.add_plugins((lens::LensPlugin,));
     }
 }

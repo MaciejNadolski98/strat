@@ -142,7 +142,7 @@ fn decelerate(
     let delta = time.delta_secs();
     for (mut windup, mut temp_speed) in &mut towers {
         windup.shots = (windup.shots - delta * SHOT_DECAY_RATE).max(0.0);
-        temp_speed.bonus = windup.shots * SPEED_PER_SHOT;
+        temp_speed.flat = windup.shots * SPEED_PER_SHOT;
     }
 }
 

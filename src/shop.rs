@@ -84,9 +84,6 @@ impl<'w> PlayerStatsMut<'w> {
     }
 }
 
-/// Regenerates the shop's offers once every item plugin has had a chance to
-/// re-add its kind to the pool (see `ItemPoolRestoreSet`), so a run reset
-/// doesn't leave previously-exhausted items missing from the shop.
 pub fn activate_shop_on_restart(
     mut events: EventReader<GameRestartEvent>,
     mut shop: ResMut<Shop>,

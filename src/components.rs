@@ -127,9 +127,6 @@ pub struct DraftSlotLabel {
 #[derive(Component)]
 pub struct DraftHeaderText;
 
-/// Marks a hidden, off-field entity that mirrors a `TowerDraft` offer so the
-/// same `Added<TowerKind>` attach systems that populate a placed tower's
-/// `CustomTooltip` also populate one for its not-yet-placed draft preview.
 #[derive(Component)]
 pub struct DraftPreview;
 
@@ -240,31 +237,48 @@ pub struct Charge {
     pub jumps_left: u32,
 }
 
-#[derive(Component, Default)]
-pub struct TemporaryAttackSpeed {
-    pub bonus: f32,
-}
-
-#[derive(Component)]
-pub struct RangeBoost {
-    pub multiplier: f32,
-}
-
-#[derive(Component, Default)]
-pub struct TemporaryDamageBonus {
+#[derive(Clone, Copy)]
+pub struct TemporaryStat {
     pub flat: f32,
-}
-
-#[derive(Component)]
-pub struct TemporaryEnemySpeed {
     pub multiplier: f32,
 }
 
-impl Default for TemporaryEnemySpeed {
+impl Default for TemporaryStat {
     fn default() -> Self {
-        Self { multiplier: 1.0 }
+        Self { flat: 0.0, multiplier: 1.0 }
     }
 }
+
+impl TemporaryStat {
+    pub fn apply(&self, base: f32) -> f32 {
+        (base + self.flat) * self.multiplier
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
+macro_rules! temporary_stat_component {
+    ($name:ident) => {
+        #[derive(Component, Default)]
+        pub struct $name(pub TemporaryStat);
+
+        impl std::ops::Deref for $name {
+            type Target = TemporaryStat;
+            fn deref(&self) -> &Self::Target { &self.0 }
+        }
+
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+        }
+    };
+}
+
+temporary_stat_component!(TemporaryAttackSpeed);
+temporary_stat_component!(TemporaryDamageBonus);
+temporary_stat_component!(TemporaryEnemySpeed);
+temporary_stat_component!(TemporaryRange);
 
 #[derive(Component)]
 pub struct AngularSpeed {
@@ -317,7 +331,6 @@ pub struct PathProgress {
     pub distance: f32,
 }
 
-/// A projectile's fixed unit-vector heading, set once when fired.
 #[derive(Component)]
 pub struct Direction {
     pub value: Vec2,

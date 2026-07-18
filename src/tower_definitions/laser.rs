@@ -1,18 +1,23 @@
 use bevy::prelude::*;
 
-use crate::components::{BeamFire, ChargeConsumer, CustomTooltip, DamageFormula, DefaultFire, RangeBoost};
+use crate::components::{BeamFire, ChargeConsumer, CustomTooltip, DamageFormula, DefaultFire, TemporaryRange};
 use crate::game::game_is_running;
-use crate::resources::{ChargeConsumedEvent, PlayerStatKind, TowerStatEffect};
+use crate::resources::{ChargeConsumedEvent, GamePhase, PlayerStatKind, ShootEvent, TowerStatEffect};
 use crate::tags;
 use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_DIAMOND_M, BARREL_SNIPER, PALETTE_CRIMSON};
 
-const CHARGED_RANGE_MULTIPLIER: f32 = 3.0;
+const CHARGE_MULTIPLIER_BONUS: f32 = 2.0;
 
 #[derive(Component)]
 pub struct LaserTower;
+
+#[derive(Component, Default)]
+struct LaserCharge {
+    charged: bool,
+}
 
 pub struct LaserPlugin;
 
@@ -20,12 +25,13 @@ impl Plugin for LaserPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_laser_marker.run_if(game_is_running));
-        app.add_systems(Update, consume_laser_charge.run_if(game_is_running));
+        app.add_systems(Update, (consume_laser_charge, discharge_on_shot).run_if(game_is_running));
+        app.add_systems(Update, apply_laser_charge.in_set(GamePhase::TemporaryTowerEffects));
         app.add_systems(Update, update_laser_tooltip);
     }
 }
 
-pub const TOWER_LASER: TowerDefinition = TowerDefinition {
+pub static TOWER_LASER: TowerDefinition = TowerDefinition {
     name: "Laser",
     range: 150.0,
     cooldown: 3.0,
@@ -54,7 +60,7 @@ pub const TOWER_LASER: TowerDefinition = TowerDefinition {
     tags: &[tags::MECHANICAL, tags::INFERNAL, tags::CONDUIT],
 };
 
-pub const KIND: TowerKind = TowerKind(&TOWER_LASER);
+pub static KIND: TowerKind = TowerKind(&TOWER_LASER);
 
 fn attach_laser_marker(
     mut commands: Commands,
@@ -67,7 +73,8 @@ fn attach_laser_marker(
                     LaserTower,
                     BeamFire,
                     ChargeConsumer,
-                    RangeBoost { multiplier: 1.0 },
+                    LaserCharge::default(),
+                    TemporaryRange::default(),
                     CustomTooltip::default(),
                 ))
                 .remove::<DefaultFire>();
@@ -77,21 +84,42 @@ fn attach_laser_marker(
 
 fn consume_laser_charge(
     mut events: EventReader<ChargeConsumedEvent>,
-    mut towers: Query<&mut RangeBoost, With<LaserTower>>,
+    mut towers: Query<&mut LaserCharge, With<LaserTower>>,
 ) {
     for event in events.read() {
-        if let Ok(mut boost) = towers.get_mut(event.tower) {
-            boost.multiplier = CHARGED_RANGE_MULTIPLIER;
+        if let Ok(mut charge) = towers.get_mut(event.tower) {
+            charge.charged = true;
+        }
+    }
+}
+
+fn discharge_on_shot(
+    mut events: EventReader<ShootEvent>,
+    mut towers: Query<&mut LaserCharge, With<LaserTower>>,
+) {
+    for event in events.read() {
+        if let Ok(mut charge) = towers.get_mut(event.source_tower) {
+            charge.charged = false;
+        }
+    }
+}
+
+fn apply_laser_charge(
+    mut towers: Query<(&LaserCharge, &mut TemporaryRange), With<LaserTower>>,
+) {
+    for (charge, mut boost) in &mut towers {
+        if charge.charged {
+            boost.multiplier += CHARGE_MULTIPLIER_BONUS;
         }
     }
 }
 
 fn update_laser_tooltip(
-    mut towers: Query<(&RangeBoost, &mut CustomTooltip), With<LaserTower>>,
+    mut towers: Query<(&LaserCharge, &mut CustomTooltip), With<LaserTower>>,
 ) {
-    for (boost, mut tooltip) in &mut towers {
-        tooltip.0 = if boost.multiplier > 1.0 {
-            vec![plain(format!("Charged: {:.0}x range on next attack", boost.multiplier))]
+    for (charge, mut tooltip) in &mut towers {
+        tooltip.0 = if charge.charged {
+            vec![plain(format!("Charged: {:.0}x range on next attack", 1.0 + CHARGE_MULTIPLIER_BONUS))]
         } else {
             Vec::new()
         };

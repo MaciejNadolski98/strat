@@ -8,7 +8,6 @@ use crate::components::{
 use crate::effects::{spawn_explosion_effect, spawn_floating_text};
 use crate::resources::{EnemyKilledEvent, KillCount, Money, Loot, SpellShop};
 
-/// How close a straight-flying projectile needs to get to an enemy to hit it.
 const HIT_RADIUS: f32 = 14.0;
 
 pub fn move_projectiles(

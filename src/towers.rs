@@ -10,7 +10,7 @@ use bevy::window::PrimaryWindow;
 use crate::components::{
     Aim, AngularSpeed, BeamFire, CustomTooltip, Damage, DamageFormula, DefaultAim, DefaultFire,
     Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius, FireCooldown, Health,
-    IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, RangeBoost,
+    IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, TemporaryRange,
     RemainingRange, Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed,
     TemporaryDamageBonus, Tower, TowerRangeIndicator,
 };
@@ -65,6 +65,7 @@ pub fn update_tower_tooltip(
         Option<&CustomTooltip>,
         Option<&TemporaryAttackSpeed>,
         Option<&TemporaryDamageBonus>,
+        Option<&TemporaryRange>,
     ), With<Tower>>,
     stats: TowerTooltipStats,
     mut tooltip: Query<(Entity, &mut Text, &mut Visibility), With<ShopTooltip>>,
@@ -89,24 +90,25 @@ pub fn update_tower_tooltip(
 
     let hovered_tower = towers
         .iter()
-        .filter_map(|(kind, damage_formula, transform, custom, temp_speed, temp_damage)| {
+        .filter_map(|(kind, damage_formula, transform, custom, temp_speed, temp_damage, temp_range)| {
             let tower_position = transform.translation.truncate();
             let half_size = kind.base_size() * 0.5;
             let inside_tower = (world_position.x - tower_position.x).abs() <= half_size.x
                 && (world_position.y - tower_position.y).abs() <= half_size.y;
 
-            inside_tower.then_some((kind, damage_formula, transform.translation.z, custom, temp_speed, temp_damage))
+            inside_tower.then_some((kind, damage_formula, transform.translation.z, custom, temp_speed, temp_damage, temp_range))
         })
         .max_by(|a, b| a.2.total_cmp(&b.2));
 
-    let Some((kind, damage_formula, _, custom, temp_speed, temp_damage)) = hovered_tower else {
+    let Some((kind, damage_formula, _, custom, temp_speed, temp_damage, temp_range)) = hovered_tower else {
         return;
     };
 
-    let temp_speed_val = temp_speed.map(|ts| ts.bonus).unwrap_or(0.0);
+    let temp_speed_val = temp_speed.map(|ts| ts.flat).unwrap_or(0.0);
     let temp_damage_val = temp_damage.map(|td| td.flat).unwrap_or(0.0);
+    let range_multiplier = temp_range.map(|tr| tr.multiplier).unwrap_or(1.0);
 
-    let mut segments = tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val);
+    let mut segments = tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val, range_multiplier);
     if let Some(ct) = custom {
         if !ct.0.is_empty() {
             segments.push(plain("\n"));
@@ -163,6 +165,7 @@ pub fn tower_tooltip(
     stats: &TowerTooltipStats,
     temp_flat_damage: f32,
     temp_speed_bonus: f32,
+    range_multiplier: f32,
 ) -> Vec<Segment> {
     let config = kind.definition().tooltip_config;
     let effective_speed = (stats.attack_speed.value() + temp_speed_bonus).max(0.1);
@@ -199,7 +202,7 @@ pub fn tower_tooltip(
     }
 
     if config.show_range {
-        push_line(&mut segments, &mut first, vec![plain(format!("Range: {:.0}", kind.range()))]);
+        push_line(&mut segments, &mut first, vec![plain(format!("Range: {:.0}", kind.range() * range_multiplier))]);
     }
     if config.show_cooldown {
         push_line(&mut segments, &mut first, vec![plain(format!("Cooldown: {:.2}s", kind.cooldown() / effective_speed))]);
@@ -254,13 +257,19 @@ pub fn element_color(kind: PlayerStatKind) -> Option<Color> {
 
 pub fn reset_temporary_attack_speed(mut towers: Query<&mut TemporaryAttackSpeed, With<Tower>>) {
     for mut temp in &mut towers {
-        temp.bonus = 0.0;
+        temp.reset();
     }
 }
 
 pub fn reset_temporary_damage_bonus(mut towers: Query<&mut TemporaryDamageBonus, With<Tower>>) {
     for mut temp in &mut towers {
-        temp.flat = 0.0;
+        temp.reset();
+    }
+}
+
+pub fn reset_temporary_range(mut towers: Query<&mut TemporaryRange, With<Tower>>) {
+    for mut temp in &mut towers {
+        temp.reset();
     }
 }
 
@@ -272,7 +281,7 @@ pub fn progress_cooldown(
     let delta = time.delta();
     for (mut cooldown, temp_speed) in &mut towers {
         let base_cooldown = cooldown.base_cooldown;
-        let effective_speed = (attack_speed.value() + temp_speed.bonus).max(0.1);
+        let effective_speed = (attack_speed.value() + temp_speed.flat).max(0.1);
         cooldown.timer.set_duration(Duration::from_secs_f32(
             base_cooldown / effective_speed,
         ));
@@ -282,7 +291,7 @@ pub fn progress_cooldown(
 
 pub fn aim_towers(
     mut towers: Query<
-        (&mut Transform, &TowerKind, &AngularSpeed, &mut Aim, Option<&RangeBoost>),
+        (&mut Transform, &TowerKind, &AngularSpeed, &mut Aim, Option<&TemporaryRange>),
         (With<Tower>, With<DefaultAim>),
     >,
     enemies: Query<(Entity, &Transform, &Health, &PathProgress), (With<Enemy>, Without<Tower>)>,
@@ -295,7 +304,7 @@ pub fn aim_towers(
 
     for (mut tower_transform, tower_kind, rotation_speed, mut aim, range_boost) in &mut towers {
         let tower_position = tower_transform.translation.truncate();
-        let effective_range = tower_kind.range() * range_boost.map_or(1.0, |b| b.multiplier);
+        let effective_range = range_boost.map_or(tower_kind.range(), |b| b.apply(tower_kind.range()));
         let Some(target_position) = enemies
             .iter()
             .filter(|(_, _, health, _)| health.current > 0.0)
@@ -449,7 +458,7 @@ pub fn fire_beam_towers(
             &mut FireCooldown,
             &TemporaryDamageBonus,
             &Aim,
-            Option<&mut RangeBoost>,
+            Option<&TemporaryRange>,
         ),
         (With<Tower>, With<BeamFire>),
     >,
@@ -467,7 +476,7 @@ pub fn fire_beam_towers(
         mut cooldown,
         damage_bonus,
         aim,
-        mut range_boost,
+        range_boost,
     ) in &mut towers
     {
         if !(aim.ready && cooldown.timer.finished()) {
@@ -477,10 +486,7 @@ pub fn fire_beam_towers(
         cooldown.timer.reset();
         shoot_events.write(ShootEvent { source_tower: tower_entity });
 
-        let effective_range = tower_kind.range() * range_boost.as_deref().map_or(1.0, |b| b.multiplier);
-        if let Some(boost) = range_boost.as_deref_mut() {
-            boost.multiplier = 1.0;
-        }
+        let effective_range = range_boost.map_or(tower_kind.range(), |b| b.apply(tower_kind.range()));
 
         let tower_pos = tower_transform.translation.truncate();
         let beam_end = tower_pos + aim.direction * effective_range;
@@ -576,7 +582,7 @@ fn roll_critical_hit(critical_chance: f32) -> bool {
 pub fn update_tower_range_indicator(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    towers: Query<(&TowerKind, &Transform), With<Tower>>,
+    towers: Query<(&TowerKind, &Transform, Option<&TemporaryRange>), With<Tower>>,
     mut indicator: Query<
         (&mut Transform, &mut Visibility),
         (With<TowerRangeIndicator>, Without<Tower>),
@@ -603,21 +609,22 @@ pub fn update_tower_range_indicator(
 
     let hovered_tower = towers
         .iter()
-        .filter_map(|(kind, transform)| {
+        .filter_map(|(kind, transform, range_boost)| {
             let tower_position = transform.translation.truncate();
             let half_size = kind.base_size() * 0.5;
             let inside_tower = (world_position.x - tower_position.x).abs() <= half_size.x
                 && (world_position.y - tower_position.y).abs() <= half_size.y;
-            inside_tower.then_some((kind, transform))
+            inside_tower.then_some((kind, transform, range_boost))
         })
         .max_by(|a, b| a.1.translation.z.total_cmp(&b.1.translation.z));
 
-    let Some((kind, tower_transform)) = hovered_tower else {
+    let Some((kind, tower_transform, range_boost)) = hovered_tower else {
         return;
     };
 
+    let effective_range = range_boost.map_or(kind.range(), |b| b.apply(kind.range()));
     indicator_transform.translation = tower_transform.translation.truncate().extend(1.5);
-    indicator_transform.scale = Vec3::splat(kind.range());
+    indicator_transform.scale = Vec3::splat(effective_range);
     *indicator_visibility = Visibility::Visible;
 }
 
@@ -654,7 +661,7 @@ pub fn update_draft_tooltip(
         if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
             let kind = draft.offers[slot.index];
             let damage_formula = kind.damage_formula();
-            let mut segments = tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0);
+            let mut segments = tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0, 1.0);
             let extras = slot_children
                 .get(slot_entity)
                 .ok()
