@@ -4,20 +4,17 @@ use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::resources::{GameRestartEvent, Shop};
 use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 
-pub const ITEM: ItemDefinition = ItemDefinition {
-    name: "Elemental Focus",
-    description: "",
-    effects: &[
+pub const ITEM: ItemDefinition = ItemDefinition::new(
+    "Elemental Focus",
+    &[
         TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
         TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0),
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
         TowerStatEffect::new(PlayerStatKind::WaterDamage, 2.0),
     ],
-    cost: 9,
-    icon_color: Color::srgb(0.34, 0.60, 0.84),
-    tags: &[],
-    max_purchases: None,
-};
+    9,
+    Color::srgb(0.34, 0.60, 0.84),
+);
 
 pub const KIND: ItemKind = ItemKind(&ITEM);
 

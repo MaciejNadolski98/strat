@@ -9,15 +9,15 @@ use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 const RANGE_FLAT_FRACTION: f32 = 0.5;
 static RANGE_BONUS: f32 = laser::TOWER_LASER.range * RANGE_FLAT_FRACTION;
 
-pub static ITEM: ItemDefinition = ItemDefinition {
-    name: "Lens",
-    description: "+50% Laser tower range",
-    effects: &[],
-    cost: 8,
-    icon_color: Color::srgb(0.70, 0.92, 0.98),
-    tags: &[tags::CONDUIT],
-    max_purchases: Some(1),
-};
+pub static ITEM: ItemDefinition = ItemDefinition::new(
+    "Lens",
+    &[],
+    8,
+    Color::srgb(0.70, 0.92, 0.98),
+)
+    .with_description("+50% Laser tower range")
+    .with_tags(&[tags::CONDUIT])
+    .with_max_purchases(1);
 
 pub static KIND: ItemKind = ItemKind(&ITEM);
 

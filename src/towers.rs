@@ -108,7 +108,7 @@ pub fn update_tower_tooltip(
     let temp_damage_val = temp_damage.map(|td| td.flat).unwrap_or(0.0);
     let range_multiplier = temp_range.map(|tr| tr.multiplier).unwrap_or(1.0);
 
-    let mut segments = tower_tooltip(*kind, damage_formula, &stats, temp_damage_val, temp_speed_val, range_multiplier);
+    let mut segments = tower_tooltip(*kind, &Some(*damage_formula), &stats, temp_damage_val, temp_speed_val, range_multiplier);
     if let Some(ct) = custom {
         if !ct.0.is_empty() {
             segments.push(plain("\n"));
@@ -161,7 +161,7 @@ fn push_line(segments: &mut Vec<Segment>, first: &mut bool, line: Vec<Segment>) 
 
 pub fn tower_tooltip(
     kind: TowerKind,
-    damage_formula: &DamageFormula,
+    damage_formula: &Option<DamageFormula>,
     stats: &TowerTooltipStats,
     temp_flat_damage: f32,
     temp_speed_bonus: f32,
@@ -175,11 +175,11 @@ pub fn tower_tooltip(
     push_line(&mut segments, &mut first, vec![plain(kind.name().to_string())]);
 
     if config.show_damage {
-        let regular_damage = (damage_formula.calculate_damage_with_elemental_multiplier(
+        let regular_damage = (damage_formula.unwrap().calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
             false,
         ) + temp_flat_damage).max(1.0);
-        let critical_damage = (damage_formula.calculate_damage_with_elemental_multiplier(
+        let critical_damage = (damage_formula.unwrap().calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
             true,
         ) + temp_flat_damage).max(1.0);
@@ -196,7 +196,7 @@ pub fn tower_tooltip(
         push_line(&mut segments, &mut first, vec![plain(format!("Damage: {regular_damage:.0} ({critical_damage:.0} crit)"))]);
 
         let mut formula_line = vec![plain("Formula: ")];
-        formula_line.extend(damage_formula_segments(damage_formula));
+        formula_line.extend(damage_formula_segments(&damage_formula.unwrap()));
         formula_line.push(plain(active_suffix));
         push_line(&mut segments, &mut first, formula_line);
     }
@@ -380,58 +380,61 @@ pub fn fire_towers(
         }
 
         let tower_position = tower_transform.translation.truncate();
-        let is_critical = roll_critical_hit(critical_chance.value());
-        let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
-            &earth_damage,
-            &fire_damage,
-            &air_damage,
-            &water_damage,
-            is_critical,
-        ) + damage_bonus.flat).max(1.0);
 
         cooldown.timer.reset();
         shoot_events.write(ShootEvent { source_tower: tower_entity });
 
         let spread = tower_kind.definition().spread;
-        let fire_direction = if spread > 0.0 {
-            let angle_offset = (rand::random::<f32>() - 0.5) * spread;
-            Vec2::from_angle(angle_offset).rotate(aim.direction)
-        } else {
-            aim.direction
-        };
-
         let piercing_total = effective_piercing(tower_kind.definition().piercing, piercing.value());
         let piercing_falloff = effective_piercing_falloff(
             tower_kind.definition().piercing_damage,
             piercing_damage.value(),
         );
 
-        let (proj_length, proj_width) = if is_critical { (18.0, 8.0) } else { (14.0, 6.0) };
-        let proj_angle = fire_direction.y.atan2(fire_direction.x);
+        for _ in 0..tower_kind.definition().projectiles_per_shot {
+            let is_critical = roll_critical_hit(critical_chance.value());
+            let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
+                &earth_damage,
+                &fire_damage,
+                &air_damage,
+                &water_damage,
+                is_critical,
+            ) + damage_bonus.flat).max(1.0);
 
-        commands.spawn((
-            Projectile,
-            Mesh2d(meshes.add(Ellipse::new(proj_length * 0.5, proj_width * 0.5))),
-            MeshMaterial2d(materials.add(projectile_color(is_critical))),
-            Transform::from_translation(tower_position.extend(4.0))
-                .with_rotation(Quat::from_rotation_z(proj_angle)),
-            Direction { value: fire_direction },
-            RemainingRange { value: tower_kind.range() },
-            Pierce { remaining: piercing_total },
-            PiercingFalloff { value: piercing_falloff },
-            Pierced::default(),
-            SourceTower {
-                entity: tower_entity,
-            },
-            Speed {
-                value: tower_kind.projectile_speed(),
-            },
-            Damage { amount: damage },
-            IsCritical { value: is_critical },
-            ExplosionRadius {
-                value: tower_kind.upgraded_explosion_radius(explosion_size.value().max(0.0)),
-            },
-        ));
+            let fire_direction = if spread > 0.0 {
+                let angle_offset = (rand::random::<f32>() - 0.5) * spread;
+                Vec2::from_angle(angle_offset).rotate(aim.direction)
+            } else {
+                aim.direction
+            };
+
+            let (proj_length, proj_width) = if is_critical { (18.0, 8.0) } else { (14.0, 6.0) };
+            let proj_angle = fire_direction.y.atan2(fire_direction.x);
+
+            commands.spawn((
+                Projectile,
+                Mesh2d(meshes.add(Ellipse::new(proj_length * 0.5, proj_width * 0.5))),
+                MeshMaterial2d(materials.add(projectile_color(is_critical))),
+                Transform::from_translation(tower_position.extend(4.0))
+                    .with_rotation(Quat::from_rotation_z(proj_angle)),
+                Direction { value: fire_direction },
+                RemainingRange { value: tower_kind.range() },
+                Pierce { remaining: piercing_total },
+                PiercingFalloff { value: piercing_falloff },
+                Pierced::default(),
+                SourceTower {
+                    entity: tower_entity,
+                },
+                Speed {
+                    value: tower_kind.projectile_speed(),
+                },
+                Damage { amount: damage },
+                IsCritical { value: is_critical },
+                ExplosionRadius {
+                    value: tower_kind.upgraded_explosion_radius(explosion_size.value().max(0.0)),
+                },
+            ));
+        }
     }
 }
 

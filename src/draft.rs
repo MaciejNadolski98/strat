@@ -186,7 +186,7 @@ pub fn place_draft_tower(
         Transform::from_translation(grid_position.extend(2.0)),
         Tower,
         tower_kind,
-        tower_kind.damage_formula(),
+        tower_kind.damage_formula().unwrap_or_default(),
         FireCooldown {
             base_cooldown: tower_kind.cooldown(),
             timer: {

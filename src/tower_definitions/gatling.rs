@@ -5,7 +5,7 @@ use crate::game::game_is_running;
 use crate::resources::{AttackSpeed, GamePhase, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
 use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
-use super::{TowerDefinition, TooltipConfig, TowerRegistry};
+use super::{TowerDefinition, TowerRegistry};
 use super::templates::{BASE_STANDARD, BARREL_DOUBLE_LIGHT, PALETTE_BLUE};
 
 pub struct GatlingPlugin;
@@ -23,11 +23,11 @@ impl Plugin for GatlingPlugin {
     }
 }
 
-pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
-    name: "Gatling",
-    range: 92.0,
-    cooldown: 1.3,
-    damage_formula: DamageFormula {
+pub const TOWER_GATLING: TowerDefinition = TowerDefinition::new_attacking(
+    "Gatling",
+    92.0,
+    1.3,
+    DamageFormula {
         flat: 10,
         crit_multiplier: 1.2,
         earth_multiplier: 0.0,
@@ -35,22 +35,16 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition {
         air_multiplier: 0.60,
         water_multiplier: 0.60,
     },
-    projectile_speed: 890.0,
-    explosion_radius: 0.0,
-    angular_speed: 2.3,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: PALETTE_BLUE.base,
-    barrel_color: Color::srgb(0.10, 0.10, 0.10),
-    base: BASE_STANDARD,
-    barrel: BARREL_DOUBLE_LIGHT,
-    stat_effects: &[
+    PALETTE_BLUE.base,
+    BASE_STANDARD,
+    BARREL_DOUBLE_LIGHT,
+    890.0,
+    2.3,
+)
+    .with_barrel_color(Color::srgb(0.10, 0.10, 0.10))
+    .with_stat_effects(&[
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
-    ],
-    tooltip_config: TooltipConfig::STANDARD,
-    tags: &[],
-};
+    ]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_GATLING);
 

@@ -24,32 +24,16 @@ impl Plugin for ZephyrPlugin {
     }
 }
 
-pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition {
-    name: "Zephyr",
-    range: 82.0,
-    cooldown: 999.0,
-    damage_formula: DamageFormula {
-        flat: 0,
-        crit_multiplier: 1.0,
-        earth_multiplier: 0.0,
-        fire_multiplier: 0.0,
-        air_multiplier: 0.0,
-        water_multiplier: 0.0,
-    },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: Color::srgb(0.72, 0.88, 0.96),
-    barrel_color: Color::srgb(0.72, 0.88, 0.96),
-    base: BASE_CIRCLE_M,
-    barrel: BARREL_NONE,
-    stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
-    tooltip_config: TooltipConfig::AURA,
-    tags: &[tags::BIOTIC],
-};
+pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition::new_utility(
+    "Zephyr",
+    82.0,
+    Color::srgb(0.72, 0.88, 0.96),
+    BASE_CIRCLE_M,
+    BARREL_NONE,
+)
+    .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)])
+    .with_tooltip_config(TooltipConfig::AURA)
+    .with_tags(&[tags::BIOTIC]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);
 

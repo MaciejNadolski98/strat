@@ -36,33 +36,18 @@ impl Plugin for TreePlugin {
     }
 }
 
-pub const TOWER_TREE: TowerDefinition = TowerDefinition {
-    name: "Tree",
-    range: 87.0,
-    cooldown: 4.0,
-    damage_formula: DamageFormula {
-        flat: 0,
-        crit_multiplier: 1.0,
-        earth_multiplier: 0.0,
-        fire_multiplier: 0.0,
-        air_multiplier: 0.0,
-        water_multiplier: 0.0,
-    },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: PALETTE_FOREST.base,
-    barrel_color: PALETTE_FOREST.barrel,
-    base: BASE_HEX_M,
-    barrel: BARREL_NONE,
-    stat_effects: &[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)],
-    tooltip_config: TooltipConfig::AURA
-        .with_cooldown(true),
-    tags: &[tags::BIOTIC],
-};
+pub const TOWER_TREE: TowerDefinition = TowerDefinition::new_utility(
+    "Tree",
+    87.0,
+    PALETTE_FOREST.base,
+    BASE_HEX_M,
+    BARREL_NONE,
+)
+    .with_cooldown(4.0)
+    .with_barrel_color(PALETTE_FOREST.barrel)
+    .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)])
+    .with_tooltip_config(TooltipConfig::AURA.with_cooldown(true))
+    .with_tags(&[tags::BIOTIC]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_TREE);
 

@@ -5,15 +5,12 @@ use crate::tags;
 use crate::resources::{GameRestartEvent, Shop};
 use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 
-pub const ITEM: ItemDefinition = ItemDefinition {
-    name: "Splash",
-    description: "",
-    effects: &[TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)],
-    cost: 4,
-    icon_color: Color::srgb(0.82, 0.44, 0.18),
-    tags: &[tags::MECHANICAL],
-    max_purchases: None,
-};
+pub const ITEM: ItemDefinition = ItemDefinition::new(
+    "Splash",
+    &[TowerStatEffect::new(PlayerStatKind::ExplosionSize, 4.0)],
+    4,
+    Color::srgb(0.82, 0.44, 0.18),
+).with_tags(&[tags::MECHANICAL]);
 
 pub const KIND: ItemKind = ItemKind(&ITEM);
 

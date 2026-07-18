@@ -34,6 +34,37 @@ pub struct ItemDefinition {
     pub max_purchases: Option<u32>,
 }
 
+impl ItemDefinition {
+    pub const fn new(
+        name: &'static str,
+        effects: &'static [TowerStatEffect],
+        cost: u32,
+        icon_color: Color,
+    ) -> Self {
+        Self {
+            name,
+            description: "",
+            effects,
+            cost,
+            icon_color,
+            tags: &[],
+            max_purchases: None,
+        }
+    }
+
+    pub const fn with_description(self, description: &'static str) -> Self {
+        Self { description, ..self }
+    }
+
+    pub const fn with_tags(self, tags: &'static [TagInfo]) -> Self {
+        Self { tags, ..self }
+    }
+
+    pub const fn with_max_purchases(self, max_purchases: u32) -> Self {
+        Self { max_purchases: Some(max_purchases), ..self }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct ItemKind(pub &'static ItemDefinition);
 

@@ -31,11 +31,11 @@ impl Plugin for LaserPlugin {
     }
 }
 
-pub static TOWER_LASER: TowerDefinition = TowerDefinition {
-    name: "Laser",
-    range: 150.0,
-    cooldown: 3.0,
-    damage_formula: DamageFormula {
+pub static TOWER_LASER: TowerDefinition = TowerDefinition::new_attacking(
+    "Laser",
+    150.0,
+    3.0,
+    DamageFormula {
         flat: 60,
         crit_multiplier: 1.5,
         earth_multiplier: 0.0,
@@ -43,22 +43,18 @@ pub static TOWER_LASER: TowerDefinition = TowerDefinition {
         air_multiplier: 0.0,
         water_multiplier: 0.0,
     },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.5,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: PALETTE_CRIMSON.base,
-    barrel_color: PALETTE_CRIMSON.barrel,
-    base: BASE_DIAMOND_M,
-    barrel: BARREL_SNIPER,
-    stat_effects: &[
+    PALETTE_CRIMSON.base,
+    BASE_DIAMOND_M,
+    BARREL_SNIPER,
+    0.0,
+    0.5,
+)
+    .with_barrel_color(PALETTE_CRIMSON.barrel)
+    .with_stat_effects(&[
         TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0),
-    ],
-    tooltip_config: TooltipConfig::STANDARD.with_projectile(false),
-    tags: &[tags::MECHANICAL, tags::INFERNAL, tags::CONDUIT],
-};
+    ])
+    .with_tooltip_config(TooltipConfig::STANDARD.with_projectile(false))
+    .with_tags(&[tags::MECHANICAL, tags::INFERNAL, tags::CONDUIT]);
 
 pub static KIND: TowerKind = TowerKind(&TOWER_LASER);
 

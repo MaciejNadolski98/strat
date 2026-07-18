@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::components::DamageFormula;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
-use super::{TowerDefinition, TooltipConfig, TowerKind, TowerRegistry};
+use super::{TowerDefinition, TowerKind, TowerRegistry};
 use super::templates::{BASE_STANDARD, BARREL_SNIPER, PALETTE_VIOLET};
 
 pub struct SniperPlugin;
@@ -14,11 +14,11 @@ impl Plugin for SniperPlugin {
     }
 }
 
-pub const TOWER_SNIPER: TowerDefinition = TowerDefinition {
-    name: "Sniper",
-    range: 260.0,
-    cooldown: 1.75,
-    damage_formula: DamageFormula {
+pub const TOWER_SNIPER: TowerDefinition = TowerDefinition::new_attacking(
+    "Sniper",
+    260.0,
+    1.75,
+    DamageFormula {
         flat: 55,
         crit_multiplier: 5.0,
         earth_multiplier: 0.0,
@@ -26,22 +26,18 @@ pub const TOWER_SNIPER: TowerDefinition = TowerDefinition {
         air_multiplier: 0.0,
         water_multiplier: 1.9,
     },
-    projectile_speed: 720.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.9,
-    spread: 0.0,
-    piercing: 2,
-    piercing_damage: 0.0,
-    base_color: PALETTE_VIOLET.base,
-    barrel_color: PALETTE_VIOLET.barrel,
-    base: BASE_STANDARD,
-    barrel: BARREL_SNIPER,
-    stat_effects: &[
+    PALETTE_VIOLET.base,
+    BASE_STANDARD,
+    BARREL_SNIPER,
+    720.0,
+    0.9,
+)
+    .with_barrel_color(PALETTE_VIOLET.barrel)
+    .with_piercing(2)
+    .with_stat_effects(&[
         TowerStatEffect::new(PlayerStatKind::CriticalChance, 0.08),
         TowerStatEffect::new(PlayerStatKind::Regeneration, -1.0),
-    ],
-    tooltip_config: TooltipConfig::STANDARD,
-    tags: &[tags::MECHANICAL],
-};
+    ])
+    .with_tags(&[tags::MECHANICAL]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_SNIPER);

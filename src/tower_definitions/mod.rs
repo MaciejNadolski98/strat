@@ -43,7 +43,7 @@ impl TowerKind {
         self.0.cooldown
     }
 
-    pub fn damage_formula(self) -> DamageFormula {
+    pub fn damage_formula(self) -> Option<DamageFormula> {
         self.0.damage_formula
     }
 
@@ -216,13 +216,14 @@ pub struct TowerDefinition {
     pub name: &'static str,
     pub range: f32,
     pub cooldown: f32,
-    pub damage_formula: DamageFormula,
+    pub damage_formula: Option<DamageFormula>,
     pub projectile_speed: f32,
     pub explosion_radius: f32,
     pub angular_speed: f32,
     pub spread: f32,
     pub piercing: u32,
     pub piercing_damage: f32,
+    pub projectiles_per_shot: u32,
     pub base_color: Color,
     pub barrel_color: Color,
     pub base: BaseTemplate,
@@ -230,4 +231,111 @@ pub struct TowerDefinition {
     pub stat_effects: &'static [TowerStatEffect],
     pub tooltip_config: TooltipConfig,
     pub tags: &'static [TagInfo],
+}
+
+impl TowerDefinition {
+    const fn new(
+        name: &'static str,
+        range: f32,
+        cooldown: f32,
+        damage_formula: Option<DamageFormula>,
+        base_color: Color,
+        base: BaseTemplate,
+        barrel: BarrelTemplate,
+    ) -> Self {
+        Self {
+            name,
+            range,
+            cooldown,
+            damage_formula,
+            projectile_speed: 0.0,
+            explosion_radius: 0.0,
+            angular_speed: 0.0,
+            spread: 0.0,
+            piercing: 0,
+            piercing_damage: 0.0,
+            projectiles_per_shot: 1,
+            base_color,
+            barrel_color: base_color,
+            base,
+            barrel,
+            stat_effects: &[],
+            tooltip_config: TooltipConfig::STANDARD,
+            tags: &[],
+        }
+    }
+
+    pub const fn new_attacking(
+        name: &'static str,
+        range: f32,
+        cooldown: f32,
+        damage_formula: DamageFormula,
+        base_color: Color,
+        base: BaseTemplate,
+        barrel: BarrelTemplate,
+        projectile_speed: f32,
+        angular_speed: f32,
+    ) -> Self {
+        Self::new(name, range, cooldown, Some(damage_formula), base_color, base, barrel)
+            .with_projectile_speed(projectile_speed)
+            .with_angular_speed(angular_speed)
+    }
+
+    pub const fn new_utility(
+        name: &'static str,
+        range: f32,
+        base_color: Color,
+        base: BaseTemplate,
+        barrel: BarrelTemplate,
+    ) -> Self {
+        Self::new(name, range, 0.0, None, base_color, base, barrel)
+    }
+
+    const fn with_projectile_speed(self, projectile_speed: f32) -> Self {
+        Self { projectile_speed, ..self }
+    }
+
+    pub const fn with_explosion_radius(self, explosion_radius: f32) -> Self {
+        Self { explosion_radius, ..self }
+    }
+
+    const fn with_angular_speed(self, angular_speed: f32) -> Self {
+        Self { angular_speed, ..self }
+    }
+
+    pub const fn with_spread(self, spread: f32) -> Self {
+        Self { spread, ..self }
+    }
+
+    pub const fn with_piercing(self, piercing: u32) -> Self {
+        Self { piercing, ..self }
+    }
+
+    pub const fn with_piercing_damage(self, piercing_damage: f32) -> Self {
+        Self { piercing_damage, ..self }
+    }
+
+    pub const fn with_projectiles_per_shot(self, projectiles_per_shot: u32) -> Self {
+        Self { projectiles_per_shot, ..self }
+    }
+
+    pub const fn with_barrel_color(self, barrel_color: Color) -> Self {
+        Self { barrel_color, ..self }
+    }
+
+    pub const fn with_stat_effects(self, stat_effects: &'static [TowerStatEffect]) -> Self {
+        Self { stat_effects, ..self }
+    }
+
+    pub const fn with_tooltip_config(self, tooltip_config: TooltipConfig) -> Self {
+        Self { tooltip_config, ..self }
+    }
+
+    pub const fn with_tags(self, tags: &'static [TagInfo]) -> Self {
+        Self { tags, ..self }
+    }
+
+    pub const fn with_cooldown(self, cooldown: f32) -> Self {
+        Self { cooldown, ..self }
+    }
 }

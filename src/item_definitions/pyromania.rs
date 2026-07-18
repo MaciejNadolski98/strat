@@ -4,15 +4,15 @@ use crate::resources::{FireDamage, GameRestartEvent, ItemPurchasedEvent, PlayerS
 use crate::tags;
 use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 
-pub const ITEM: ItemDefinition = ItemDefinition {
-    name: "Pyromania",
-    description: "Whenever you buy fire, +1 Fire",
-    effects: &[],
-    cost: 6,
-    icon_color: Color::srgb(0.96, 0.44, 0.08),
-    tags: &[tags::INFERNAL],
-    max_purchases: Some(1),
-};
+pub const ITEM: ItemDefinition = ItemDefinition::new(
+    "Pyromania",
+    &[],
+    6,
+    Color::srgb(0.96, 0.44, 0.08),
+)
+    .with_description("Whenever you buy fire, +1 Fire")
+    .with_tags(&[tags::INFERNAL])
+    .with_max_purchases(1);
 
 pub const KIND: ItemKind = ItemKind(&ITEM);
 

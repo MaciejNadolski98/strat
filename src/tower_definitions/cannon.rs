@@ -14,11 +14,11 @@ impl Plugin for CannonPlugin {
     }
 }
 
-pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
-    name: "Cannon",
-    range: 150.0,
-    cooldown: 1.45,
-    damage_formula: DamageFormula {
+pub const TOWER_CANNON: TowerDefinition = TowerDefinition::new_attacking(
+    "Cannon",
+    150.0,
+    1.45,
+    DamageFormula {
         flat: 34,
         crit_multiplier: 1.5,
         earth_multiplier: 1.0,
@@ -26,22 +26,19 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition {
         air_multiplier: 0.0,
         water_multiplier: 0.0,
     },
-    projectile_speed: 320.0,
-    explosion_radius: 64.0,
-    angular_speed: 1.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: PALETTE_BRONZE.base,
-    barrel_color: PALETTE_BRONZE.barrel,
-    base: BASE_SIEGE,
-    barrel: BARREL_CANNON,
-    stat_effects: &[
+    PALETTE_BRONZE.base,
+    BASE_SIEGE,
+    BARREL_CANNON,
+    320.0,
+    1.0,
+)
+    .with_barrel_color(PALETTE_BRONZE.barrel)
+    .with_explosion_radius(64.0)
+    .with_stat_effects(&[
         TowerStatEffect::new(PlayerStatKind::ExplosionSize, 12.0),
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, -0.08),
-    ],
-    tooltip_config: TooltipConfig::STANDARD.with_splash(true),
-    tags: &[tags::MECHANICAL],
-};
+    ])
+    .with_tooltip_config(TooltipConfig::STANDARD.with_splash(true))
+    .with_tags(&[tags::MECHANICAL]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CANNON);

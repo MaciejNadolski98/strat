@@ -9,7 +9,7 @@ use crate::tooltip::{colored, plain};
 use crate::towers::EARTH_COLOR;
 use crate::tower_definitions::TowerKind;
 use crate::tower_definitions::templates::BASE_TRIANGLE_M;
-use super::{TowerDefinition, TooltipConfig, TowerRegistry};
+use super::{TowerDefinition, TowerRegistry};
 use super::templates::{BARREL_HEAVY, PALETTE_EARTH};
 
 pub struct GolemPlugin;
@@ -29,11 +29,11 @@ impl Plugin for GolemPlugin {
     }
 }
 
-pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
-    name: "Golem",
-    range: 160.0,
-    cooldown: 1.1,
-    damage_formula: DamageFormula {
+pub const TOWER_GOLEM: TowerDefinition = TowerDefinition::new_attacking(
+    "Golem",
+    160.0,
+    1.1,
+    DamageFormula {
         flat: 20,
         crit_multiplier: 1.8,
         earth_multiplier: 0.5,
@@ -41,20 +41,15 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition {
         air_multiplier: 0.0,
         water_multiplier: 0.0,
     },
-    projectile_speed: 350.0,
-    explosion_radius: 0.0,
-    angular_speed: 1.2,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: PALETTE_EARTH.base,
-    barrel_color: PALETTE_EARTH.barrel,
-    base: BASE_TRIANGLE_M,
-    barrel: BARREL_HEAVY,
-    stat_effects: &[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)],
-    tooltip_config: TooltipConfig::STANDARD,
-    tags: &[tags::BIOTIC, tags::MECHANICAL],
-};
+    PALETTE_EARTH.base,
+    BASE_TRIANGLE_M,
+    BARREL_HEAVY,
+    350.0,
+    1.2,
+)
+    .with_barrel_color(PALETTE_EARTH.barrel)
+    .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)])
+    .with_tags(&[tags::BIOTIC, tags::MECHANICAL]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_GOLEM);
 

@@ -38,11 +38,11 @@ impl Plugin for CyclonePlugin {
     }
 }
 
-pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
-    name: "Cyclone",
-    range: 80.0,
-    cooldown: 2.0,
-    damage_formula: DamageFormula {
+pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition::new_attacking(
+    "Cyclone",
+    80.0,
+    2.0,
+    DamageFormula {
         flat: 16,
         crit_multiplier: 1.5,
         earth_multiplier: 0.0,
@@ -50,22 +50,18 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition {
         air_multiplier: 0.85,
         water_multiplier: 0.0,
     },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: Color::srgb(0.42, 0.68, 0.90),
-    barrel_color: Color::srgb(0.42, 0.68, 0.90),
-    base: BASE_PENTAGON_M,
-    barrel: BARREL_NONE,
-    stat_effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)],
-    tooltip_config: TooltipConfig::STANDARD
-        .with_turn_speed(false)
-        .with_projectile(false),
-    tags: &[],
-};
+    Color::srgb(0.42, 0.68, 0.90),
+    BASE_PENTAGON_M,
+    BARREL_NONE,
+    0.0,
+    0.0,
+)
+    .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::AirDamage, 3.0)])
+    .with_tooltip_config(
+        TooltipConfig::STANDARD
+            .with_turn_speed(false)
+            .with_projectile(false),
+    );
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CYCLONE);
 

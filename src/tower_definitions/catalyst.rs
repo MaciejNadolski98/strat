@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire};
+use crate::components::{CustomTooltip, DefaultAim, DefaultFire};
 use crate::game::game_is_running;
 use crate::resources::{FireDamage, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase, TowerStatEffect};
 use crate::tags;
@@ -34,32 +34,16 @@ impl Plugin for CatalystPlugin {
     }
 }
 
-pub const TOWER_CATALYST: TowerDefinition = TowerDefinition {
-    name: "Catalyst",
-    range: 260.0,
-    cooldown: 999.0,
-    damage_formula: DamageFormula {
-        flat: 0,
-        crit_multiplier: 1.0,
-        earth_multiplier: 0.0,
-        fire_multiplier: 0.0,
-        air_multiplier: 0.0,
-        water_multiplier: 0.0,
-    },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: Color::srgb(0.95, 0.72, 0.12),
-    barrel_color: Color::srgb(0.95, 0.72, 0.12),
-    base: BASE_PENTAGON_M,
-    barrel: BARREL_NONE,
-    stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)],
-    tooltip_config: TooltipConfig::UTILITY,
-    tags: &[tags::INFERNAL, tags::CONDUIT],
-};
+pub const TOWER_CATALYST: TowerDefinition = TowerDefinition::new_utility(
+    "Catalyst",
+    260.0,
+    Color::srgb(0.95, 0.72, 0.12),
+    BASE_PENTAGON_M,
+    BARREL_NONE,
+)
+    .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)])
+    .with_tooltip_config(TooltipConfig::UTILITY)
+    .with_tags(&[tags::INFERNAL, tags::CONDUIT]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_CATALYST);
 

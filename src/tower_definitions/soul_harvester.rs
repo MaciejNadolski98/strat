@@ -23,32 +23,15 @@ impl Plugin for SoulHarvesterPlugin {
     }
 }
 
-pub const TOWER_SOUL_HARVESTER: TowerDefinition = TowerDefinition {
-    name: "Soul Harvester",
-    range: 110.0,
-    cooldown: 999.0,
-    damage_formula: DamageFormula {
-        flat: 0,
-        crit_multiplier: 1.0,
-        earth_multiplier: 0.0,
-        fire_multiplier: 0.0,
-        air_multiplier: 0.0,
-        water_multiplier: 0.0,
-    },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: Color::srgb(0.30, 0.08, 0.36),
-    barrel_color: Color::srgb(0.30, 0.08, 0.36),
-    base: BASE_PENTAGON_S,
-    barrel: BARREL_NONE,
-    stat_effects: &[],
-    tooltip_config: TooltipConfig::UTILITY,
-    tags: &[tags::INFERNAL],
-};
+pub const TOWER_SOUL_HARVESTER: TowerDefinition = TowerDefinition::new_utility(
+    "Soul Harvester",
+    110.0,
+    Color::srgb(0.30, 0.08, 0.36),
+    BASE_PENTAGON_S,
+    BARREL_NONE,
+)
+    .with_tooltip_config(TooltipConfig::UTILITY)
+    .with_tags(&[tags::INFERNAL]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_SOUL_HARVESTER);
 

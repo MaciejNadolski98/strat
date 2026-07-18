@@ -35,32 +35,17 @@ impl Plugin for BrimstonePlugin {
     }
 }
 
-pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition {
-    name: "Brimstone",
-    range: 170.0,
-    cooldown: 10.0,
-    damage_formula: DamageFormula {
-        flat: 250,
-        crit_multiplier: 2.0,
-        earth_multiplier: 0.0,
-        fire_multiplier: 300.0,
-        air_multiplier: 0.0,
-        water_multiplier: 0.0,
-    },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: Color::srgb(0.16, 0.05, 0.04),
-    barrel_color: Color::srgb(0.16, 0.05, 0.04),
-    base: BASE_HEX_S,
-    barrel: BARREL_NONE,
-    stat_effects: &[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)],
-    tooltip_config: TooltipConfig::UTILITY.with_damage(true),
-    tags: &[tags::INFERNAL],
-};
+pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_utility(
+    "Brimstone",
+    170.0,
+    Color::srgb(0.16, 0.05, 0.04),
+    BASE_HEX_S,
+    BARREL_NONE,
+)
+    .with_cooldown(10.0)
+    .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)])
+    .with_tooltip_config(TooltipConfig::UTILITY.with_damage(true))
+    .with_tags(&[tags::INFERNAL]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_BRIMSTONE);
 

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::sprite::ColorMaterial;
 
 use crate::charges::try_emit_charge;
-use crate::components::{CustomTooltip, DamageFormula, DefaultAim, DefaultFire, Tower, TemporaryAttackSpeed};
+use crate::components::{CustomTooltip, DefaultAim, DefaultFire, Tower, TemporaryAttackSpeed};
 use crate::game::game_is_running;
 use crate::resources::{GamePhase, ShootEvent};
 use crate::tags::{self, Conduit};
@@ -24,32 +24,15 @@ impl Plugin for DynamoPlugin {
     }
 }
 
-pub const TOWER_DYNAMO: TowerDefinition = TowerDefinition {
-    name: "Dynamo",
-    range: 100.0,
-    cooldown: 999.0,
-    damage_formula: DamageFormula {
-        flat: 0,
-        crit_multiplier: 1.0,
-        earth_multiplier: 0.0,
-        fire_multiplier: 0.0,
-        air_multiplier: 0.0,
-        water_multiplier: 0.0,
-    },
-    projectile_speed: 0.0,
-    explosion_radius: 0.0,
-    angular_speed: 0.0,
-    spread: 0.0,
-    piercing: 0,
-    piercing_damage: 0.0,
-    base_color: Color::srgb(0.24, 0.46, 0.56),
-    barrel_color: Color::srgb(0.24, 0.46, 0.56),
-    base: BASE_CIRCLE_M,
-    barrel: BARREL_NONE,
-    stat_effects: &[],
-    tooltip_config: TooltipConfig::AURA,
-    tags: &[tags::MECHANICAL],
-};
+pub const TOWER_DYNAMO: TowerDefinition = TowerDefinition::new_utility(
+    "Dynamo",
+    100.0,
+    Color::srgb(0.24, 0.46, 0.56),
+    BASE_CIRCLE_M,
+    BARREL_NONE,
+)
+    .with_tooltip_config(TooltipConfig::AURA)
+    .with_tags(&[tags::MECHANICAL]);
 
 pub const KIND: TowerKind = TowerKind(&TOWER_DYNAMO);
 

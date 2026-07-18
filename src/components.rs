@@ -381,7 +381,7 @@ pub struct ExplosionRadius {
     pub value: f32,
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, Default)]
 pub struct DamageFormula {
     pub flat: u32,
     pub crit_multiplier: f32,

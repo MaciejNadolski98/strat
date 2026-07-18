@@ -4,15 +4,12 @@ use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::resources::{GameRestartEvent, Shop};
 use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 
-pub const ITEM: ItemDefinition = ItemDefinition {
-    name: "Air",
-    description: "",
-    effects: &[TowerStatEffect::new(PlayerStatKind::AirDamage, 4.0)],
-    cost: 3,
-    icon_color: Color::srgb(0.58, 0.72, 0.92),
-    tags: &[],
-    max_purchases: None,
-};
+pub const ITEM: ItemDefinition = ItemDefinition::new(
+    "Air",
+    &[TowerStatEffect::new(PlayerStatKind::AirDamage, 4.0)],
+    3,
+    Color::srgb(0.58, 0.72, 0.92),
+);
 
 pub const KIND: ItemKind = ItemKind(&ITEM);
 

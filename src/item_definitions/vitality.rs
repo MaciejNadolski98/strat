@@ -5,18 +5,15 @@ use crate::tags;
 use crate::resources::{GameRestartEvent, Shop};
 use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
 
-pub const ITEM: ItemDefinition = ItemDefinition {
-    name: "Vitality",
-    description: "",
-    effects: &[
+pub const ITEM: ItemDefinition = ItemDefinition::new(
+    "Vitality",
+    &[
         TowerStatEffect::new(PlayerStatKind::MaxHp, 5.0),
         TowerStatEffect::new(PlayerStatKind::Regeneration, 1.0),
     ],
-    cost: 6,
-    icon_color: Color::srgb(0.72, 0.34, 0.34),
-    tags: &[tags::BIOTIC],
-    max_purchases: None,
-};
+    6,
+    Color::srgb(0.72, 0.34, 0.34),
+).with_tags(&[tags::BIOTIC]);
 
 pub const KIND: ItemKind = ItemKind(&ITEM);
 
