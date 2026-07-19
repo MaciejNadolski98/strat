@@ -36,7 +36,7 @@ impl Plugin for TreePlugin {
     }
 }
 
-pub const TOWER_TREE: TowerDefinition = TowerDefinition::new_utility(
+pub static TOWER_TREE: TowerDefinition = TowerDefinition::new_utility(
     "Tree",
     87.0,
     PALETTE_FOREST.base,
@@ -49,7 +49,7 @@ pub const TOWER_TREE: TowerDefinition = TowerDefinition::new_utility(
     .with_tooltip_config(TooltipConfig::AURA.with_cooldown(true))
     .with_tags(&[tags::BIOTIC]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_TREE);
+pub static KIND: TowerKind = TowerKind(&TOWER_TREE);
 
 pub fn tree_slow_multiplier(earth: f32) -> f32 {
     0.3 + 0.7 / (1.0 + earth / 15.0)

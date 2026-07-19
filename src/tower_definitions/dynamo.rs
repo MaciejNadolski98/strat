@@ -24,7 +24,7 @@ impl Plugin for DynamoPlugin {
     }
 }
 
-pub const TOWER_DYNAMO: TowerDefinition = TowerDefinition::new_utility(
+pub static TOWER_DYNAMO: TowerDefinition = TowerDefinition::new_utility(
     "Dynamo",
     100.0,
     Color::srgb(0.24, 0.46, 0.56),
@@ -34,7 +34,7 @@ pub const TOWER_DYNAMO: TowerDefinition = TowerDefinition::new_utility(
     .with_tooltip_config(TooltipConfig::AURA)
     .with_tags(&[tags::MECHANICAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_DYNAMO);
+pub static KIND: TowerKind = TowerKind(&TOWER_DYNAMO);
 
 const SPEED_PENALTY: f32 = 0.35;
 const CHARGE_PER_SHOT: f32 = 1.0 / 200.0;

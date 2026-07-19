@@ -14,7 +14,7 @@ impl Plugin for CannonPlugin {
     }
 }
 
-pub const TOWER_CANNON: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_CANNON: TowerDefinition = TowerDefinition::new_attacking(
     "Cannon",
     150.0,
     1.45,
@@ -41,4 +41,4 @@ pub const TOWER_CANNON: TowerDefinition = TowerDefinition::new_attacking(
     .with_tooltip_config(TooltipConfig::STANDARD.with_splash(true))
     .with_tags(&[tags::MECHANICAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_CANNON);
+pub static KIND: TowerKind = TowerKind(&TOWER_CANNON);

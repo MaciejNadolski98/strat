@@ -14,7 +14,7 @@ impl Plugin for SniperPlugin {
     }
 }
 
-pub const TOWER_SNIPER: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_SNIPER: TowerDefinition = TowerDefinition::new_attacking(
     "Sniper",
     260.0,
     1.75,
@@ -40,4 +40,4 @@ pub const TOWER_SNIPER: TowerDefinition = TowerDefinition::new_attacking(
     ])
     .with_tags(&[tags::MECHANICAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_SNIPER);
+pub static KIND: TowerKind = TowerKind(&TOWER_SNIPER);

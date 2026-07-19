@@ -29,7 +29,7 @@ impl Plugin for GolemPlugin {
     }
 }
 
-pub const TOWER_GOLEM: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_GOLEM: TowerDefinition = TowerDefinition::new_attacking(
     "Golem",
     160.0,
     1.1,
@@ -51,7 +51,7 @@ pub const TOWER_GOLEM: TowerDefinition = TowerDefinition::new_attacking(
     .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::EarthDamage, 3.0)])
     .with_tags(&[tags::BIOTIC, tags::MECHANICAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_GOLEM);
+pub static KIND: TowerKind = TowerKind(&TOWER_GOLEM);
 
 fn attach_golem_kill_count(
     mut commands: Commands,

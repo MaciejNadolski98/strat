@@ -31,14 +31,14 @@ impl Plugin for LensPlugin {
             Update,
             (
                 unlock(Some(laser::KIND), KIND).in_set(ItemPoolRestoreSet),
-                on_restart.in_set(ItemPoolRestoreSet),
+                reset_stacks.in_set(ItemPoolRestoreSet),
             ),
         );
         app.add_systems(Update, apply_lens_bonus.in_set(GamePhase::TemporaryTowerEffects));
     }
 }
 
-fn on_restart(
+fn reset_stacks(
     mut events: EventReader<GameRestartEvent>,
     mut purchased: ResMut<LensPurchased>,
 ) {

@@ -34,7 +34,7 @@ impl Plugin for CatalystPlugin {
     }
 }
 
-pub const TOWER_CATALYST: TowerDefinition = TowerDefinition::new_utility(
+pub static TOWER_CATALYST: TowerDefinition = TowerDefinition::new_utility(
     "Catalyst",
     260.0,
     Color::srgb(0.95, 0.72, 0.12),
@@ -45,7 +45,7 @@ pub const TOWER_CATALYST: TowerDefinition = TowerDefinition::new_utility(
     .with_tooltip_config(TooltipConfig::UTILITY)
     .with_tags(&[tags::INFERNAL, tags::CONDUIT]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_CATALYST);
+pub static KIND: TowerKind = TowerKind(&TOWER_CATALYST);
 
 pub fn catalyst_seconds_per_spell(fire: f32) -> f32 {
     20.0 / (0.2 + 1.8 * fire / 100.0)

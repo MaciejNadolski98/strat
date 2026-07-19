@@ -24,7 +24,7 @@ impl Plugin for ZephyrPlugin {
     }
 }
 
-pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition::new_utility(
+pub static TOWER_ZEPHYR: TowerDefinition = TowerDefinition::new_utility(
     "Zephyr",
     82.0,
     Color::srgb(0.72, 0.88, 0.96),
@@ -35,7 +35,7 @@ pub const TOWER_ZEPHYR: TowerDefinition = TowerDefinition::new_utility(
     .with_tooltip_config(TooltipConfig::AURA)
     .with_tags(&[tags::BIOTIC]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);
+pub static KIND: TowerKind = TowerKind(&TOWER_ZEPHYR);
 
 const AIR_SCALING: f32 = 0.04;
 const EARTH_SCALING: f32 = -0.06;

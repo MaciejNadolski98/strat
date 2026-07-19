@@ -23,7 +23,7 @@ impl Plugin for GatlingPlugin {
     }
 }
 
-pub const TOWER_GATLING: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_GATLING: TowerDefinition = TowerDefinition::new_attacking(
     "Gatling",
     92.0,
     1.3,
@@ -46,7 +46,7 @@ pub const TOWER_GATLING: TowerDefinition = TowerDefinition::new_attacking(
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
     ]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_GATLING);
+pub static KIND: TowerKind = TowerKind(&TOWER_GATLING);
 
 const MAX_SHOTS: f32 = 15.0;
 const SPEED_PER_SHOT: f32 = 0.8;

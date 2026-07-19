@@ -14,7 +14,7 @@ impl Plugin for BallistaPlugin {
     }
 }
 
-pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_BALLISTA: TowerDefinition = TowerDefinition::new_attacking(
     "Ballista",
     185.0,
     0.73,
@@ -41,4 +41,4 @@ pub const TOWER_BALLISTA: TowerDefinition = TowerDefinition::new_attacking(
     ])
     .with_tags(&[tags::MECHANICAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_BALLISTA);
+pub static KIND: TowerKind = TowerKind(&TOWER_BALLISTA);

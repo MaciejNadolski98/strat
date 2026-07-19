@@ -24,7 +24,7 @@ impl Plugin for PyrePlugin {
     }
 }
 
-pub const TOWER_PYRE: TowerDefinition = TowerDefinition::new_utility(
+pub static TOWER_PYRE: TowerDefinition = TowerDefinition::new_utility(
     "Pyre",
     82.0,
     Color::srgb(0.90, 0.32, 0.10),
@@ -35,7 +35,7 @@ pub const TOWER_PYRE: TowerDefinition = TowerDefinition::new_utility(
     .with_tooltip_config(TooltipConfig::AURA)
     .with_tags(&[tags::INFERNAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_PYRE);
+pub static KIND: TowerKind = TowerKind(&TOWER_PYRE);
 
 pub fn pyre_damage_bonus(fire: f32) -> f32 {
     fire * 0.5

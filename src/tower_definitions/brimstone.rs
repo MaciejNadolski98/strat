@@ -35,7 +35,7 @@ impl Plugin for BrimstonePlugin {
     }
 }
 
-pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_attacking(
     "Brimstone",
     170.0,
     10.0,
@@ -57,7 +57,7 @@ pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_attacking(
     .with_tooltip_config(TooltipConfig::UTILITY.with_damage(true))
     .with_tags(&[tags::INFERNAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_BRIMSTONE);
+pub static KIND: TowerKind = TowerKind(&TOWER_BRIMSTONE);
 
 #[derive(SystemParam)]
 struct ElementalDamages<'w> {

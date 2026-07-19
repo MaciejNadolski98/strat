@@ -31,7 +31,7 @@ fn attach_sprayer_marker(
     }
 }
 
-pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_SPRAYER: TowerDefinition = TowerDefinition::new_attacking(
     "Sprayer",
     100.0,
     0.32,
@@ -58,4 +58,4 @@ pub const TOWER_SPRAYER: TowerDefinition = TowerDefinition::new_attacking(
     ])
     .with_tags(&[tags::MECHANICAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_SPRAYER);
+pub static KIND: TowerKind = TowerKind(&TOWER_SPRAYER);

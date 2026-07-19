@@ -23,7 +23,7 @@ impl Plugin for SoulHarvesterPlugin {
     }
 }
 
-pub const TOWER_SOUL_HARVESTER: TowerDefinition = TowerDefinition::new_utility(
+pub static TOWER_SOUL_HARVESTER: TowerDefinition = TowerDefinition::new_utility(
     "Soul Harvester",
     110.0,
     Color::srgb(0.30, 0.08, 0.36),
@@ -33,7 +33,7 @@ pub const TOWER_SOUL_HARVESTER: TowerDefinition = TowerDefinition::new_utility(
     .with_tooltip_config(TooltipConfig::UTILITY)
     .with_tags(&[tags::INFERNAL]);
 
-pub const KIND: TowerKind = TowerKind(&TOWER_SOUL_HARVESTER);
+pub static KIND: TowerKind = TowerKind(&TOWER_SOUL_HARVESTER);
 
 const KILLS_PER_HARVEST: u32 = 4;
 const HEAL_PER_HARVEST: i32 = 1;

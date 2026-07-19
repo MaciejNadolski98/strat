@@ -38,7 +38,7 @@ impl Plugin for CyclonePlugin {
     }
 }
 
-pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition::new_attacking(
+pub static TOWER_CYCLONE: TowerDefinition = TowerDefinition::new_attacking(
     "Cyclone",
     80.0,
     2.0,
@@ -63,7 +63,7 @@ pub const TOWER_CYCLONE: TowerDefinition = TowerDefinition::new_attacking(
             .with_projectile(false),
     );
 
-pub const KIND: TowerKind = TowerKind(&TOWER_CYCLONE);
+pub static KIND: TowerKind = TowerKind(&TOWER_CYCLONE);
 
 fn attach_cyclone_tower(
     mut commands: Commands,
