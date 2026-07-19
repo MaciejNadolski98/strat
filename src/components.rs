@@ -279,6 +279,8 @@ temporary_stat_component!(TemporaryAttackSpeed);
 temporary_stat_component!(TemporaryDamageBonus);
 temporary_stat_component!(TemporaryEnemySpeed);
 temporary_stat_component!(TemporaryRange);
+temporary_stat_component!(TemporaryProjectiles);
+temporary_stat_component!(TemporarySpread);
 
 #[derive(Component)]
 pub struct AngularSpeed {

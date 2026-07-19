@@ -8,11 +8,11 @@ use bevy::sprite::ColorMaterial;
 use bevy::window::PrimaryWindow;
 
 use crate::components::{
-    Aim, AngularSpeed, BeamFire, CustomTooltip, Damage, DamageFormula, DefaultAim, DefaultFire,
-    Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius, FireCooldown, Health,
-    IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile, TemporaryRange,
-    RemainingRange, Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed,
-    TemporaryDamageBonus, Tower, TowerRangeIndicator,
+    Aim, AngularSpeed, BeamFire, CustomTooltip, Damage, DamageFormula, DefaultAim,
+    DefaultFire, Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius,
+    FireCooldown, Health, IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile,
+    TemporaryRange, RemainingRange, Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed,
+    TemporaryDamageBonus, TemporaryProjectiles, TemporarySpread, Tower, TowerRangeIndicator,
 };
 use crate::effects::{spawn_beam_effect, spawn_floating_text};
 use crate::projectiles::projectile_color;
@@ -273,6 +273,18 @@ pub fn reset_temporary_range(mut towers: Query<&mut TemporaryRange, With<Tower>>
     }
 }
 
+pub fn reset_temporary_projectiles(mut towers: Query<&mut TemporaryProjectiles, With<Tower>>) {
+    for mut temp in &mut towers {
+        temp.reset();
+    }
+}
+
+pub fn reset_temporary_spread(mut towers: Query<&mut TemporarySpread, With<Tower>>) {
+    for mut temp in &mut towers {
+        temp.reset();
+    }
+}
+
 pub fn progress_cooldown(
     mut towers: Query<(&mut FireCooldown, &TemporaryAttackSpeed), With<Tower>>,
     time: Res<Time>,
@@ -345,6 +357,8 @@ pub fn fire_towers(
             &mut FireCooldown,
             &TemporaryDamageBonus,
             &Aim,
+            Option<&TemporaryProjectiles>,
+            Option<&TemporarySpread>,
         ),
         (With<Tower>, With<DefaultFire>),
     >,
@@ -373,6 +387,8 @@ pub fn fire_towers(
         mut cooldown,
         damage_bonus,
         aim,
+        temp_projectiles,
+        temp_spread,
     ) in &mut towers
     {
         if !(aim.ready && cooldown.timer.finished()) {
@@ -384,14 +400,21 @@ pub fn fire_towers(
         cooldown.timer.reset();
         shoot_events.write(ShootEvent { source_tower: tower_entity });
 
-        let spread = tower_kind.definition().spread;
+        let base_spread = tower_kind.definition().spread;
+        let spread = temp_spread.map_or(base_spread, |ts| ts.apply(base_spread));
         let piercing_total = effective_piercing(tower_kind.definition().piercing, piercing.value());
         let piercing_falloff = effective_piercing_falloff(
             tower_kind.definition().piercing_damage,
             piercing_damage.value(),
         );
 
-        for _ in 0..tower_kind.definition().projectiles_per_shot {
+        let base_projectiles = tower_kind.definition().projectiles_per_shot as f32;
+        let projectile_count = temp_projectiles
+            .map_or(base_projectiles, |tp| tp.apply(base_projectiles))
+            .round()
+            .max(0.0) as u32;
+
+        for _ in 0..projectile_count {
             let is_critical = roll_critical_hit(critical_chance.value());
             let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
                 &earth_damage,

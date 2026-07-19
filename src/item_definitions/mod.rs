@@ -14,14 +14,45 @@ pub mod offense;
 pub mod elemental_focus;
 pub mod siege;
 pub mod lens;
+pub mod nozzle;
 
 use bevy::prelude::*;
 
-use crate::resources::TowerStatEffect;
+use crate::components::DraftPreview;
+use crate::resources::{GameRestartEvent, Shop, TowerStatEffect};
 use crate::tags::TagInfo;
+use crate::tower_definitions::TowerKind;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Default)]
 pub struct ItemPoolRestoreSet;
+
+pub fn unlock(
+    tower: Option<TowerKind>,
+    item: ItemKind,
+) -> impl Fn(
+    Query<&TowerKind, (Added<TowerKind>, Without<DraftPreview>)>,
+    Local<bool>,
+    ResMut<Shop>,
+    EventReader<GameRestartEvent>,
+) {
+    move |new_towers, mut unlocked, mut shop, mut restart_events| {
+        if restart_events.read().next().is_some() {
+            *unlocked = false;
+            shop.remove_from_pool(item);
+            return;
+        }
+
+        let should_unlock = match tower {
+            Some(tower) => new_towers.iter().any(|kind| *kind == tower),
+            None => true,
+        };
+
+        if !*unlocked && should_unlock {
+            *unlocked = true;
+            shop.add_to_pool(item);
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct ItemDefinition {
@@ -141,6 +172,6 @@ impl Plugin for ItemPlugins {
             elemental_focus::ElementalFocusPlugin,
             siege::SiegePlugin,
         ));
-        app.add_plugins((lens::LensPlugin,));
+        app.add_plugins((lens::LensPlugin, nozzle::NozzlePlugin));
     }
 }

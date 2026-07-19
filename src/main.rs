@@ -51,7 +51,8 @@ use spells::{
 };
 use towers::{
     aim_towers, fire_beam_towers, fire_towers, progress_cooldown, reset_temporary_attack_speed, reset_temporary_damage_bonus,
-    reset_temporary_range, update_draft_tooltip, update_tower_range_indicator, update_tower_tooltip,
+    reset_temporary_projectiles, reset_temporary_range, reset_temporary_spread, update_draft_tooltip,
+    update_tower_range_indicator, update_tower_tooltip,
 };
 use waves::RunMode;
 
@@ -162,6 +163,8 @@ fn main() {
                 reset_temporary_attack_speed,
                 reset_temporary_damage_bonus,
                 reset_temporary_range,
+                reset_temporary_projectiles,
+                reset_temporary_spread,
             )
                 .in_set(GamePhase::ResetTemporaries),
         )

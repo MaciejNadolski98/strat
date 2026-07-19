@@ -6,11 +6,28 @@ use crate::tags;
 use super::{TowerDefinition, TowerKind, TowerRegistry};
 use super::templates::{BASE_LIGHT, BARREL_LIGHT, PALETTE_TEAL};
 
+#[derive(Component)]
+pub struct SprayerTower;
+
 pub struct SprayerPlugin;
 
 impl Plugin for SprayerPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
+        app.add_systems(Update, attach_sprayer_marker);
+    }
+}
+
+fn attach_sprayer_marker(
+    mut commands: Commands,
+    new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
+) {
+    for (entity, kind) in &new_towers {
+        if *kind == KIND {
+            commands.entity(entity).insert((
+                SprayerTower,
+            ));
+        }
     }
 }
 
