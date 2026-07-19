@@ -35,14 +35,24 @@ impl Plugin for BrimstonePlugin {
     }
 }
 
-pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_utility(
+pub const TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_attacking(
     "Brimstone",
     170.0,
+    10.0,
+    DamageFormula {
+        flat: 250,
+        crit_multiplier: 2.0,
+        earth_multiplier: 0.0,
+        fire_multiplier: 300.0,
+        air_multiplier: 0.0,
+        water_multiplier: 0.0,
+    },
     Color::srgb(0.16, 0.05, 0.04),
     BASE_HEX_S,
     BARREL_NONE,
+    0.0,
+    0.0,
 )
-    .with_cooldown(10.0)
     .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::FireDamage, 2.0)])
     .with_tooltip_config(TooltipConfig::UTILITY.with_damage(true))
     .with_tags(&[tags::INFERNAL]);
