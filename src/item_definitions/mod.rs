@@ -15,6 +15,8 @@ pub mod elemental_focus;
 pub mod siege;
 pub mod lens;
 pub mod nozzle;
+pub mod apple;
+pub mod wood;
 
 use bevy::prelude::*;
 
@@ -172,6 +174,11 @@ impl Plugin for ItemPlugins {
             elemental_focus::ElementalFocusPlugin,
             siege::SiegePlugin,
         ));
-        app.add_plugins((lens::LensPlugin, nozzle::NozzlePlugin));
+        app.add_plugins((
+            lens::LensPlugin, 
+            nozzle::NozzlePlugin, 
+            apple::ApplePlugin,
+            wood::WoodPlugin,
+        ));
     }
 }
