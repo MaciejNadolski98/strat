@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use crate::components::Tower;
-use crate::item_definitions::unlock;
+use crate::item_definitions::{unlock, UnlockCondition};
 use crate::resources::{FireDamage, ItemPurchasedEvent};
 use crate::tags;
 use crate::tower_definitions::tree::{self, TreeTower};
-use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
+use super::{ItemDefinition, ItemKind};
 
 const BONUS_PER_TREE: u32 = 2;
 
@@ -24,13 +24,8 @@ pub struct WoodPlugin;
 
 impl Plugin for WoodPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update, 
-            (
-                unlock(Some(tree::KIND), KIND).in_set(ItemPoolRestoreSet),
-                apply_effect
-            )
-        );
+        unlock(app, UnlockCondition::Tower(tree::KIND), KIND);
+        app.add_systems(Update, apply_effect);
     }
 }
 

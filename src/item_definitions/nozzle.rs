@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 use crate::components::{TemporaryProjectiles, TemporarySpread};
-use crate::resources::{GamePhase, GameRestartEvent, ItemPurchasedEvent};
+use crate::game::GameState;
+use crate::resources::{GamePhase, ItemPurchasedEvent};
 use crate::tags;
 use crate::tower_definitions::sprayer::{self, SprayerTower};
-use super::{unlock, ItemDefinition, ItemKind, ItemPoolRestoreSet};
+use super::{unlock, ItemDefinition, ItemKind, UnlockCondition};
 
 const SPREAD_PER_STACK: f32 = 0.15;
 
@@ -28,14 +29,9 @@ pub struct NozzlePlugin;
 impl Plugin for NozzlePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NozzleStacks>();
-        app.add_systems(
-            Update,
-            (
-                unlock(Some(sprayer::KIND), KIND).in_set(ItemPoolRestoreSet),
-                on_item_purchased,
-                restart_stacks.in_set(ItemPoolRestoreSet),
-            ),
-        );
+        unlock(app, UnlockCondition::Tower(sprayer::KIND), KIND);
+        app.add_systems(Update, on_item_purchased);
+        app.add_systems(OnEnter(GameState::Playing), restart_stacks);
         app.add_systems(Update, apply_nozzle_bonus.in_set(GamePhase::TemporaryTowerEffects));
     }
 }
@@ -51,13 +47,8 @@ fn on_item_purchased(
     }
 }
 
-fn restart_stacks(
-    mut events: EventReader<GameRestartEvent>,
-    mut stacks: ResMut<NozzleStacks>,
-) {
-    if events.read().next().is_some() {
-        stacks.0 = 0;
-    }
+fn restart_stacks(mut stacks: ResMut<NozzleStacks>) {
+    stacks.0 = 0;
 }
 
 fn apply_nozzle_bonus(

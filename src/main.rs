@@ -30,7 +30,7 @@ use constants::{
 use draft::{place_draft_tower, sync_draft_previews, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_beam_effects, update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
-use game::{game_is_running, pan_camera, restart_game, toggle_pause};
+use game::{bounce_to_playing, game_is_running, pan_camera, start_run, trigger_restart, toggle_pause, GameState};
 use item_definitions::{ItemPlugins, ItemPoolRestoreSet};
 use spell_definitions::{SpellPlugins, SpellRegistry};
 use tower_definitions::{TowerPlugins, TowerRegistry};
@@ -42,10 +42,10 @@ use resources::{
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver,
     GameWon, KillCount, MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Piercing,
     PiercingDamage, Regeneration, Shop, SpawnTimer, Stat, SpellShop, TowerDraft, WaterDamage,
-    WaveNumber, GamePhase, GameRestartEvent, reset_stat_temporaries,
+    WaveNumber, GamePhase, reset_stat_temporaries,
 };
 use setup::setup;
-use shop::{activate_shop_on_restart, update_shop_input, update_shop_text, update_shop_tooltip};
+use shop::{activate_shop, update_shop_input, update_shop_text, update_shop_tooltip};
 use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
 };
@@ -58,17 +58,8 @@ use waves::RunMode;
 
 use crate::resources::{ChargeConsumedEvent, ItemPurchasedEvent, NewRoundEvent, ShootEvent};
 
-fn initialize_draft(
-    registry: Res<TowerRegistry>,
-    mut draft: ResMut<TowerDraft>,
-    mut forced_towers: ResMut<ForcedTowerOffers>,
-) {
+fn initialize_draft(registry: Res<TowerRegistry>, mut draft: ResMut<TowerDraft>) {
     draft.known_kinds = registry.kinds.clone();
-    draft.activate(&mut forced_towers);
-}
-
-fn initialize_shop(mut shop: ResMut<Shop>) {
-    shop.activate(1);
 }
 
 fn initialize_spell_shop(registry: Res<SpellRegistry>, mut spell_shop: ResMut<SpellShop>) {
@@ -121,7 +112,6 @@ fn main() {
         .add_event::<ShootEvent>()
         .add_event::<ChargeConsumedEvent>()
         .add_event::<NewRoundEvent>()
-        .add_event::<GameRestartEvent>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Simple Tower Defense".to_string(),
@@ -142,7 +132,14 @@ fn main() {
     app.insert_resource(forced_towers);
 
     app
-        .add_systems(Startup, (setup, initialize_draft, initialize_shop, initialize_spell_shop).chain())
+        .init_state::<GameState>()
+        .add_systems(Startup, setup)
+        .add_systems(
+            OnEnter(GameState::Playing),
+            (initialize_draft, initialize_spell_shop, start_run).chain(),
+        )
+        .add_systems(OnEnter(GameState::Playing), activate_shop.after(ItemPoolRestoreSet))
+        .add_systems(OnEnter(GameState::Restarting), bounce_to_playing)
         .add_systems(Update, toggle_pause)
         .configure_sets(
             Update,
@@ -223,8 +220,6 @@ fn main() {
         .add_systems(Update, update_shop_input.after(toggle_pause))
         .add_systems(Update, update_path_input.after(toggle_pause))
         .add_systems(Update, update_path_hints)
-        .add_systems(Update, restart_game)
-        .configure_sets(Update, ItemPoolRestoreSet.after(restart_game))
-        .add_systems(Update, activate_shop_on_restart.after(ItemPoolRestoreSet))
+        .add_systems(Update, trigger_restart)
         .run();
 }

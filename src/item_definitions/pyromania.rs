@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
-use crate::item_definitions::unlock;
-use crate::resources::{FireDamage, GameRestartEvent, ItemPurchasedEvent, PlayerStatKind};
+use crate::game::GameState;
+use crate::item_definitions::{unlock, UnlockCondition};
+use crate::resources::{FireDamage, ItemPurchasedEvent, PlayerStatKind};
 use crate::tags;
-use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
+use super::{ItemDefinition, ItemKind};
 
 pub const ITEM: ItemDefinition = ItemDefinition::new(
     "Pyromania",
@@ -24,19 +25,15 @@ pub struct PyromaniaPlugin;
 
 impl Plugin for PyromaniaPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, unlock(None, KIND).in_set(ItemPoolRestoreSet));
+        unlock(app, UnlockCondition::Always, KIND);
+        app.add_systems(OnEnter(GameState::Playing), reset_stacks);
         app.init_resource::<PyromaniaStacks>();
-        app.add_systems(Update, (on_item_purchased, reset_stacks.in_set(ItemPoolRestoreSet)));
+        app.add_systems(Update, on_item_purchased);
     }
 }
 
-fn reset_stacks(
-    mut events: EventReader<GameRestartEvent>,
-    mut stacks: ResMut<PyromaniaStacks>,
-) {
-    if events.read().next().is_some() {
-        stacks.0 = 0;
-    }
+fn reset_stacks(mut stacks: ResMut<PyromaniaStacks>) {
+    stacks.0 = 0;
 }
 
 fn on_item_purchased(

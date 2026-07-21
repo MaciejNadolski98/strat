@@ -11,7 +11,7 @@ use crate::item_definitions::ItemKind;
 use crate::tooltip::{plain, tag_segments};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameRestartEvent, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, Piercing,
+    GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, Piercing,
     PiercingDamage, PlayerStatKind, Regeneration, Shop, TowerDraft, TowerDraftPhase,
     TowerStatEffect, WaterDamage, WaveNumber,
 };
@@ -84,14 +84,8 @@ impl<'w> PlayerStatsMut<'w> {
     }
 }
 
-pub fn activate_shop_on_restart(
-    mut events: EventReader<GameRestartEvent>,
-    mut shop: ResMut<Shop>,
-    wave_number: Res<WaveNumber>,
-) {
-    if events.read().next().is_some() {
-        shop.activate(wave_number.value);
-    }
+pub fn activate_shop(mut shop: ResMut<Shop>, wave_number: Res<WaveNumber>) {
+    shop.activate(wave_number.value);
 }
 
 pub fn update_shop_input(

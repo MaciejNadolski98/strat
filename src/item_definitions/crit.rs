@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use crate::item_definitions::unlock;
+use crate::item_definitions::{unlock, UnlockCondition};
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
-use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
+use super::{ItemDefinition, ItemKind};
 
 pub const ITEM: ItemDefinition = ItemDefinition::new(
     "Crit",
@@ -18,6 +18,6 @@ pub struct CritPlugin;
 
 impl Plugin for CritPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, unlock(None, KIND).in_set(ItemPoolRestoreSet));
+        unlock(app, UnlockCondition::Always, KIND);
     }
 }

@@ -9,13 +9,20 @@ use crate::constants::{
 use crate::pathing::spawn_path_visuals;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
-    EnemiesRemaining, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver, GameRestartEvent,
+    EnemiesRemaining, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver,
     GameWon, KillCount, Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused,
     Regeneration, SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 
+#[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum GameState {
+    #[default]
+    Playing,
+    Restarting,
+}
+
 #[derive(SystemParam)]
-pub struct RestartState<'w> {
+pub struct GameRunState<'w> {
     money: ResMut<'w, Money>,
     hp: ResMut<'w, CurrentHp>,
     max_hp: ResMut<'w, MaxHp>,
@@ -75,12 +82,23 @@ pub fn game_is_running(paused: Res<Paused>, game_won: Res<GameWon>) -> bool {
     !paused.value && !game_won.value
 }
 
-pub fn restart_game(
-    mut commands: Commands,
+pub fn trigger_restart(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut state: RestartState,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        next_state.set(GameState::Restarting);
+    }
+}
+
+pub fn bounce_to_playing(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::Playing);
+}
+
+pub fn start_run(
+    mut commands: Commands,
+    mut state: GameRunState,
     mut new_round: EventWriter<NewRoundEvent>,
-    mut game_restart: EventWriter<GameRestartEvent>,
     mut cleanup: ParamSet<(
         Query<Entity, With<Tower>>,
         Query<Entity, With<Enemy>>,
@@ -91,10 +109,6 @@ pub fn restart_game(
     hints: Query<Entity, With<PathExtensionHint>>,
     mut end_marker: Query<&mut Transform, With<PathEndMarker>>,
 ) {
-    if !keyboard.just_pressed(KeyCode::KeyR) {
-        return;
-    }
-
     for entity in cleanup.p0().iter() {
         commands.entity(entity).despawn();
     }
@@ -143,6 +157,5 @@ pub fn restart_game(
         marker_transform.translation = state.path_tiles.end().extend(0.0);
     }
     new_round.write(NewRoundEvent);
-    game_restart.write(GameRestartEvent);
     state.paused.value = false;
 }

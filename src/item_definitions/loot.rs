@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::resources::{PlayerStatKind, TowerStatEffect};
-use super::{unlock, ItemDefinition, ItemKind, ItemPoolRestoreSet};
+use super::{unlock, ItemDefinition, ItemKind, UnlockCondition};
 
 pub const ITEM: ItemDefinition = ItemDefinition::new(
     "loot",
@@ -16,6 +16,6 @@ pub struct LootPlugin;
 
 impl Plugin for LootPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, unlock(None, KIND).in_set(ItemPoolRestoreSet));
+        unlock(app, UnlockCondition::Always, KIND);
     }
 }

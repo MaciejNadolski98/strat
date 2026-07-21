@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use crate::item_definitions::unlock;
+use crate::item_definitions::{unlock, UnlockCondition};
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
 use crate::tower_definitions::tree;
-use super::{ItemDefinition, ItemKind, ItemPoolRestoreSet};
+use super::{ItemDefinition, ItemKind};
 
 pub const ITEM: ItemDefinition = ItemDefinition::new(
     "Apple",
@@ -23,6 +23,6 @@ pub struct ApplePlugin;
 
 impl Plugin for ApplePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, unlock(Some(tree::KIND), KIND).in_set(ItemPoolRestoreSet));
+        unlock(app, UnlockCondition::Tower(tree::KIND), KIND);
     }
 }

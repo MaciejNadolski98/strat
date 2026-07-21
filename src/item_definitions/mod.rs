@@ -18,42 +18,77 @@ pub mod nozzle;
 pub mod apple;
 pub mod wood;
 
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 
 use crate::components::DraftPreview;
-use crate::resources::{GameRestartEvent, Shop, TowerStatEffect};
+use crate::game::GameState;
+use crate::resources::{ItemPurchasedEvent, Shop, TowerStatEffect};
 use crate::tags::TagInfo;
 use crate::tower_definitions::TowerKind;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Default)]
 pub struct ItemPoolRestoreSet;
 
-pub fn unlock(
-    tower: Option<TowerKind>,
-    item: ItemKind,
-) -> impl Fn(
-    Query<&TowerKind, (Added<TowerKind>, Without<DraftPreview>)>,
-    Local<bool>,
-    ResMut<Shop>,
-    EventReader<GameRestartEvent>,
-) {
-    move |new_towers, mut unlocked, mut shop, mut restart_events| {
-        if restart_events.read().next().is_some() {
-            *unlocked = false;
-            shop.remove_from_pool(item);
-            return;
+#[derive(Resource, Default)]
+pub(crate) struct UnlockedItems(HashSet<ItemKind>);
+
+pub enum UnlockCondition {
+    Always,
+    Tower(TowerKind),
+    Item(ItemKind),
+}
+
+pub fn unlock(app: &mut App, condition: UnlockCondition, item: ItemKind) {
+    match condition {
+        UnlockCondition::Always => {
+            let unlock_system = move |mut shop: ResMut<Shop>, mut unlocked: ResMut<UnlockedItems>| {
+                if unlocked.0.insert(item) {
+                    shop.add_to_pool(item);
+                }
+            };
+            app.add_systems(OnEnter(GameState::Playing), unlock_system.in_set(ItemPoolRestoreSet));
         }
-
-        let should_unlock = match tower {
-            Some(tower) => new_towers.iter().any(|kind| *kind == tower),
-            None => true,
-        };
-
-        if !*unlocked && should_unlock {
-            *unlocked = true;
-            shop.add_to_pool(item);
+        UnlockCondition::Tower(tower) => {
+            let unlock_system = move |
+                new_towers: Query<&TowerKind, (Added<TowerKind>, Without<DraftPreview>)>,
+                mut shop: ResMut<Shop>,
+                mut unlocked: ResMut<UnlockedItems>,
+            | {
+                if unlocked.0.contains(&item) {
+                    return;
+                }
+                if new_towers.iter().any(|kind| *kind == tower) {
+                    unlocked.0.insert(item);
+                    shop.add_to_pool(item);
+                }
+            };
+            app.add_systems(Update, unlock_system.in_set(ItemPoolRestoreSet));
+        }
+        UnlockCondition::Item(required_item) => {
+            let unlock_system = move |
+                mut events: EventReader<ItemPurchasedEvent>,
+                mut shop: ResMut<Shop>,
+                mut unlocked: ResMut<UnlockedItems>,
+            | {
+                if unlocked.0.contains(&item) {
+                    return;
+                }
+                if events.read().any(|event| event.kind == required_item) {
+                    unlocked.0.insert(item);
+                    shop.add_to_pool(item);
+                }
+            };
+            app.add_systems(Update, unlock_system.in_set(ItemPoolRestoreSet));
         }
     }
+
+    let lock_system = move |mut shop: ResMut<Shop>, mut unlocked: ResMut<UnlockedItems>| {
+        unlocked.0.remove(&item);
+        shop.remove_from_pool(item);
+    };
+    app.add_systems(OnEnter(GameState::Playing), lock_system.in_set(ItemPoolRestoreSet));
 }
 
 #[derive(Clone, Copy)]
@@ -157,6 +192,7 @@ pub struct ItemPlugins;
 
 impl Plugin for ItemPlugins {
     fn build(&self, app: &mut App) {
+        app.init_resource::<UnlockedItems>();
         app.add_plugins((
             potato::PotatoPlugin,
             meds::MedsPlugin,
