@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::{CustomTooltip, DefaultAim, DefaultFire, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
+use crate::components::{ChargeConsumer, CustomTooltip, DefaultAim, DefaultFire, Enemy, FireCooldown, Health, TemporaryEnemySpeed};
 use crate::effects::spawn_floating_text;
 use crate::enemies::{move_enemies, reset_temporary_enemy_speed};
 use crate::game::game_is_running;
@@ -47,7 +47,7 @@ pub static TOWER_TREE: TowerDefinition = TowerDefinition::new_utility(
     .with_barrel_color(PALETTE_FOREST.barrel)
     .with_stat_effects(&[TowerStatEffect::new(PlayerStatKind::WaterDamage, 3.0)])
     .with_tooltip_config(TooltipConfig::AURA.with_cooldown(true))
-    .with_tags(&[tags::BIOTIC]);
+    .with_tags(&[tags::BIOTIC, tags::CONDUIT]);
 
 pub static KIND: TowerKind = TowerKind(&TOWER_TREE);
 
@@ -72,11 +72,14 @@ fn update_tree_tooltip(
         plain(" (-> 70% as "),
         colored("earth", EARTH_COLOR),
         plain(" -> infinity)\n"),
+
         plain("Income: "),
         colored(format!("${income:.1}"), WATER_COLOR),
         plain(" per enemy every 4s (1 + "),
         colored("water", WATER_COLOR),
-        plain(" x 0.015)"),
+        plain(" x 0.015)\n"),
+
+        plain("Consumes charge with no effect"),
     ];
     for mut tooltip in &mut towers {
         tooltip.0 = extras.clone();
@@ -90,7 +93,7 @@ fn attach_tree_marker(
     for (entity, kind) in &new_towers {
         if *kind == KIND {
             commands.entity(entity)
-                .insert((TreeTower, CustomTooltip::default()))
+                .insert((TreeTower, ChargeConsumer, CustomTooltip::default()))
                 .remove::<(DefaultAim, DefaultFire)>();
         }
     }
