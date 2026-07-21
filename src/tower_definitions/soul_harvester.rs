@@ -1,20 +1,25 @@
 use bevy::prelude::*;
-use bevy::sprite::ColorMaterial;
 
-use crate::charges::try_emit_charge;
-use crate::components::{CustomTooltip, DefaultAim, DefaultFire, Tower};
+use crate::components::{CustomTooltip, DefaultAim, DefaultFire, TemporaryRange};
 use crate::game::game_is_running;
 use crate::resources::{CurrentHp, EnemyKilledEvent, MaxHp};
-use crate::tags::{self, Conduit};
+use crate::tags;
 use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_S, BARREL_NONE};
 
+#[derive(Event)]
+pub struct SoulHarvestEvent {
+    pub tower: Entity,
+    pub position: Vec2,
+}
+
 pub struct SoulHarvesterPlugin;
 
 impl Plugin for SoulHarvesterPlugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<SoulHarvestEvent>();
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(Update, attach_soul_harvester_marker.run_if(game_is_running));
         app.add_systems(Update, harvest_souls.run_if(game_is_running));
@@ -43,7 +48,7 @@ const BAR_HEIGHT: f32 = 4.0;
 const BAR_Y: f32 = -24.0;
 
 #[derive(Component, Default)]
-struct SoulHarvesterTower {
+pub struct SoulHarvesterTower {
     kill_progress: u32,
 }
 
@@ -61,7 +66,11 @@ fn attach_soul_harvester_marker(
     for (entity, kind) in &new_towers {
         if *kind == KIND {
             commands.entity(entity)
-                .insert((SoulHarvesterTower::default(), CustomTooltip::default()))
+                .insert((
+                    SoulHarvesterTower::default(),
+                    TemporaryRange::default(),
+                    CustomTooltip::default(),
+                ))
                 .remove::<(DefaultAim, DefaultFire)>()
                 .with_children(|parent| {
                     parent.spawn((
@@ -100,19 +109,17 @@ fn update_soul_harvester_progress_bar(
 }
 
 fn harvest_souls(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut current_hp: ResMut<CurrentHp>,
     max_hp: Res<MaxHp>,
     mut events: EventReader<EnemyKilledEvent>,
-    mut harvesters: Query<(Entity, &Transform, &mut SoulHarvesterTower)>,
-    conduits: Query<(Entity, &Transform), (With<Tower>, With<Conduit>)>,
+    mut harvest_events: EventWriter<SoulHarvestEvent>,
+    mut harvesters: Query<(Entity, &Transform, &mut SoulHarvesterTower, Option<&TemporaryRange>)>,
 ) {
     for event in events.read() {
-        for (harvester_entity, harvester_transform, mut harvester) in &mut harvesters {
+        for (harvester_entity, harvester_transform, mut harvester, temp_range) in &mut harvesters {
             let harvester_pos = harvester_transform.translation.truncate();
-            if event.position.distance(harvester_pos) > TOWER_SOUL_HARVESTER.range {
+            let effective_range = temp_range.map_or(TOWER_SOUL_HARVESTER.range, |r| r.apply(TOWER_SOUL_HARVESTER.range));
+            if event.position.distance(harvester_pos) > effective_range {
                 continue;
             }
 
@@ -120,10 +127,7 @@ fn harvest_souls(
             if harvester.kill_progress >= KILLS_PER_HARVEST {
                 harvester.kill_progress -= KILLS_PER_HARVEST;
                 current_hp.amount = (current_hp.amount + HEAL_PER_HARVEST).min(max_hp.value().round() as i32);
-                try_emit_charge(
-                    &mut commands, &mut meshes, &mut materials, &conduits,
-                    harvester_entity, harvester_pos, TOWER_SOUL_HARVESTER.range,
-                );
+                harvest_events.write(SoulHarvestEvent { tower: harvester_entity, position: harvester_pos });
             }
         }
     }
@@ -134,7 +138,7 @@ fn update_soul_harvester_tooltip(
 ) {
     for (harvester, mut tooltip) in &mut towers {
         let extras = format!(
-            "Heals {HEAL_PER_HARVEST} HP and produces a charge every {KILLS_PER_HARVEST} enemy deaths in range\nProgress: {}/{KILLS_PER_HARVEST}",
+            "Heals {HEAL_PER_HARVEST} HP every {KILLS_PER_HARVEST} enemy deaths in range\nProgress: {}/{KILLS_PER_HARVEST}",
             harvester.kill_progress,
         );
         tooltip.0 = vec![plain(extras)];

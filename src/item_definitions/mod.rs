@@ -17,6 +17,10 @@ pub mod lens;
 pub mod nozzle;
 pub mod apple;
 pub mod wood;
+pub mod soul_conduit;
+pub mod extended_reach;
+pub mod soul_toll;
+pub mod infernal_pact;
 
 use std::collections::HashSet;
 
@@ -211,10 +215,14 @@ impl Plugin for ItemPlugins {
             siege::SiegePlugin,
         ));
         app.add_plugins((
-            lens::LensPlugin, 
-            nozzle::NozzlePlugin, 
+            lens::LensPlugin,
+            nozzle::NozzlePlugin,
             apple::ApplePlugin,
             wood::WoodPlugin,
+            soul_conduit::SoulConduitPlugin,
+            extended_reach::ExtendedReachPlugin,
+            soul_toll::SoulTollPlugin,
+            infernal_pact::InfernalPactPlugin,
         ));
     }
 }
