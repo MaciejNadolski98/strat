@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
-use crate::components::{CustomTooltip, DamageFormula, TemporaryAttackSpeed};
+use crate::components::{ChargeConsumer, CustomTooltip, DamageFormula, TemporaryAttackSpeed};
 use crate::game::game_is_running;
-use crate::resources::{AttackSpeed, GamePhase, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
+use crate::resources::{AttackSpeed, ChargeConsumedEvent, GamePhase, NewRoundEvent, PlayerStatKind, ShootEvent, TowerStatEffect};
+use crate::tags;
 use crate::tooltip::plain;
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TowerRegistry};
@@ -15,7 +16,7 @@ impl Plugin for GatlingPlugin {
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
         app.add_systems(
             Update,
-            (attach_gatling_tower, accelerate, reset).run_if(game_is_running),
+            (attach_gatling_tower, accelerate, consume_charge, reset).run_if(game_is_running),
         );
         app.add_systems(Update, decelerate.in_set(GamePhase::TemporaryTowerEffects));
         app.add_systems(Update, update_windup_bar.in_set(GamePhase::Gameplay));
@@ -44,13 +45,15 @@ pub static TOWER_GATLING: TowerDefinition = TowerDefinition::new_attacking(
     .with_barrel_color(Color::srgb(0.10, 0.10, 0.10))
     .with_stat_effects(&[
         TowerStatEffect::new(PlayerStatKind::AirDamage, 2.0),
-    ]);
+    ])
+    .with_tags(&[tags::CONDUIT]);
 
 pub static KIND: TowerKind = TowerKind(&TOWER_GATLING);
 
 const MAX_SHOTS: f32 = 15.0;
 const SPEED_PER_SHOT: f32 = 0.8;
 const SHOT_DECAY_RATE: f32 = 1.5;
+const CHARGE_SHOTS_BONUS: f32 = 8.0;
 
 #[derive(Component)]
 struct GatlingTower;
@@ -78,7 +81,7 @@ fn attach_gatling_tower(
     for (entity, kind) in &new_towers {
         if *kind == KIND {
             commands.entity(entity)
-                .insert((GatlingTower, GatlingWindUp::default(), CustomTooltip::default()))
+                .insert((GatlingTower, GatlingWindUp::default(), ChargeConsumer, CustomTooltip::default()))
                 .with_children(|parent| {
                     parent.spawn((
                         Sprite::from_color(
@@ -129,6 +132,17 @@ fn accelerate(
     }
 }
 
+fn consume_charge(
+    mut events: EventReader<ChargeConsumedEvent>,
+    mut towers: Query<&mut GatlingWindUp, With<GatlingTower>>,
+) {
+    for event in events.read() {
+        if let Ok(mut windup) = towers.get_mut(event.tower) {
+            windup.shots = (windup.shots + CHARGE_SHOTS_BONUS).min(MAX_SHOTS);
+        }
+    }
+}
+
 fn decelerate(
     mut towers: Query<(&mut GatlingWindUp, &mut TemporaryAttackSpeed), With<GatlingTower>>,
     time: Res<Time>,
@@ -161,7 +175,7 @@ fn update_gatling_tooltip(
     let min_cooldown = TOWER_GATLING.cooldown / (effective_speed + max_bonus);
 
     let static_extras = format!(
-        "Builds attack speed while firing, decays when idle\nMax wind-up: +{max_bonus:.1}x atk speed ({MAX_SHOTS:.0} shots)\nBase cooldown: {base_cooldown:.2}s  Min: {min_cooldown:.2}s\nDecay: {SHOT_DECAY_RATE:.0} shot/s",
+        "Builds attack speed while firing, decays when idle\nMax wind-up: +{max_bonus:.1}x atk speed ({MAX_SHOTS:.0} shots)\nBase cooldown: {base_cooldown:.2}s  Min: {min_cooldown:.2}s\nDecay: {SHOT_DECAY_RATE:.0} shot/s\nConsuming a charge adds {CHARGE_SHOTS_BONUS:.0} shots of wind-up",
     );
 
     for (windup, mut tooltip) in &mut towers {
