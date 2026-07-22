@@ -92,7 +92,7 @@ fn apply_zephyr_aura(
     earth_damage: Res<EarthDamage>,
 ) {
     let bonus = zephyr_speed_bonus(air_damage.value(), earth_damage.value());
-    if bonus <= 0.0 {
+    if bonus == 0.0 {
         return;
     }
 

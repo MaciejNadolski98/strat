@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::{TemporaryProjectiles, TemporarySpread};
-use crate::game::GameState;
-use crate::resources::{GamePhase, ItemPurchasedEvent};
+use crate::resources::{GamePhase, Shop};
 use crate::tags;
 use crate::tower_definitions::sprayer::{self, SprayerTower};
 use super::{unlock, ItemDefinition, ItemKind, UnlockCondition};
@@ -21,42 +20,22 @@ pub static ITEM: ItemDefinition = ItemDefinition::new(
 
 pub static KIND: ItemKind = ItemKind(&ITEM);
 
-#[derive(Resource, Default)]
-struct NozzleStacks(u32);
-
 pub struct NozzlePlugin;
 
 impl Plugin for NozzlePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<NozzleStacks>();
         unlock(app, UnlockCondition::Tower(sprayer::KIND), KIND);
-        app.add_systems(Update, on_item_purchased);
-        app.add_systems(OnEnter(GameState::Playing), restart_stacks);
         app.add_systems(Update, apply_nozzle_bonus.in_set(GamePhase::TemporaryTowerEffects));
     }
 }
 
-fn on_item_purchased(
-    mut events: EventReader<ItemPurchasedEvent>,
-    mut stacks: ResMut<NozzleStacks>,
-) {
-    for event in events.read() {
-        if event.kind == KIND {
-            stacks.0 += 1;
-        }
-    }
-}
-
-fn restart_stacks(mut stacks: ResMut<NozzleStacks>) {
-    stacks.0 = 0;
-}
-
 fn apply_nozzle_bonus(
-    stacks: Res<NozzleStacks>,
+    shop: Res<Shop>,
     mut towers: Query<(&mut TemporaryProjectiles, &mut TemporarySpread), With<SprayerTower>>,
 ) {
+    let stacks = shop.purchase_count(KIND);
     for (mut projectiles, mut spread) in &mut towers {
-        projectiles.flat = stacks.0 as f32;
-        spread.flat = stacks.0 as f32 * SPREAD_PER_STACK;
+        projectiles.flat = stacks as f32;
+        spread.flat = stacks as f32 * SPREAD_PER_STACK;
     }
 }

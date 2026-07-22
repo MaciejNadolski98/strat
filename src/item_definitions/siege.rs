@@ -5,7 +5,7 @@ use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
 use super::{ItemDefinition, ItemKind};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Siege",
     &[
         TowerStatEffect::new(PlayerStatKind::ExplosionSize, 3.0),
@@ -15,7 +15,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.74, 0.46, 0.20),
 ).with_tags(&[tags::MECHANICAL, tags::BIOTIC]);
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct SiegePlugin;
 

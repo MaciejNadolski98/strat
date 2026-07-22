@@ -131,6 +131,7 @@ pub fn update_spell_tooltip(
 pub fn update_burning_enemies(
     mut commands: Commands,
     time: Res<Time>,
+    game_over: Res<GameOver>,
     mut money: ResMut<Money>,
     mut kills: ResMut<KillCount>,
     loot: Res<Loot>,
@@ -138,6 +139,10 @@ pub fn update_burning_enemies(
     mut kill_events: EventWriter<EnemyKilledEvent>,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, &mut Burning, Option<&DropsSpell>), With<Enemy>>,
 ) {
+    if game_over.value {
+        return;
+    }
+
     for (entity, transform, mut health, reward, mut burning, drops_spell) in &mut enemies {
         if health.current <= 0.0 {
             continue;

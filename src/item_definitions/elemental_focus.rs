@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use super::{unlock, ItemDefinition, ItemKind, UnlockCondition};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Elemental Focus",
     &[
         TowerStatEffect::new(PlayerStatKind::EarthDamage, 2.0),
@@ -15,7 +15,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.34, 0.60, 0.84),
 );
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct ElementalFocusPlugin;
 

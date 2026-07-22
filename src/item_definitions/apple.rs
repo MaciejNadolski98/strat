@@ -6,7 +6,7 @@ use crate::tags;
 use crate::tower_definitions::tree;
 use super::{ItemDefinition, ItemKind};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Apple",
     &[
         TowerStatEffect::new(PlayerStatKind::MaxHp, 3.0),
@@ -17,7 +17,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.92, 0.12, 0.13),
 ).with_tags(&[tags::BIOTIC]);
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct ApplePlugin;
 

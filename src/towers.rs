@@ -12,7 +12,7 @@ use crate::components::{
     DefaultFire, Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius,
     FireCooldown, Health, IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile,
     TemporaryRange, RemainingRange, Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed,
-    TemporaryDamageBonus, TemporaryProjectiles, TemporarySpread, Tower, TowerRangeIndicator,
+    TemporaryDamageBonus, TemporaryProjectiles, TemporarySpread, TemporaryStat, Tower, TowerRangeIndicator,
 };
 use crate::effects::{spawn_beam_effect, spawn_floating_text};
 use crate::projectiles::projectile_color;
@@ -26,6 +26,14 @@ use crate::tooltip::{colored, plain, tag_segments, Segment};
 use crate::tower_definitions::TowerKind;
 
 const BEAM_HALF_WIDTH: f32 = 10.0;
+
+#[derive(SystemParam)]
+pub struct ElementalDamages<'w> {
+    pub earth: Res<'w, EarthDamage>,
+    pub fire: Res<'w, FireDamage>,
+    pub air: Res<'w, AirDamage>,
+    pub water: Res<'w, WaterDamage>,
+}
 
 #[derive(SystemParam)]
 pub struct TowerTooltipStats<'w> {
@@ -105,10 +113,10 @@ pub fn update_tower_tooltip(
     };
 
     let temp_speed_val = temp_speed.map(|ts| ts.flat).unwrap_or(0.0);
-    let temp_damage_val = temp_damage.map(|td| td.flat).unwrap_or(0.0);
+    let temp_damage_bonus = temp_damage.map(|td| td.0).unwrap_or_default();
     let range_multiplier = temp_range.map(|tr| tr.multiplier).unwrap_or(1.0);
 
-    let mut segments = tower_tooltip(*kind, &Some(*damage_formula), &stats, temp_damage_val, temp_speed_val, range_multiplier);
+    let mut segments = tower_tooltip(*kind, &Some(*damage_formula), &stats, &temp_damage_bonus, temp_speed_val, range_multiplier);
     if let Some(ct) = custom {
         if !ct.0.is_empty() {
             segments.push(plain("\n"));
@@ -163,7 +171,7 @@ pub fn tower_tooltip(
     kind: TowerKind,
     damage_formula: &Option<DamageFormula>,
     stats: &TowerTooltipStats,
-    temp_flat_damage: f32,
+    damage_bonus: &TemporaryStat,
     temp_speed_bonus: f32,
     range_multiplier: f32,
 ) -> Vec<Segment> {
@@ -175,17 +183,18 @@ pub fn tower_tooltip(
     push_line(&mut segments, &mut first, vec![plain(kind.name().to_string())]);
 
     if config.show_damage {
-        let regular_damage = (damage_formula.unwrap().calculate_damage_with_elemental_multiplier(
+        let regular_damage = damage_formula.unwrap().calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
-            false,
-        ) + temp_flat_damage).max(1.0);
-        let critical_damage = (damage_formula.unwrap().calculate_damage_with_elemental_multiplier(
+            damage_bonus, false,
+        ).max(1.0);
+        let critical_damage = damage_formula.unwrap().calculate_damage_with_elemental_multiplier(
             &stats.earth_damage, &stats.fire_damage, &stats.air_damage, &stats.water_damage,
-            true,
-        ) + temp_flat_damage).max(1.0);
+            damage_bonus, true,
+        ).max(1.0);
 
         let mut active_parts: Vec<String> = Vec::new();
-        if temp_flat_damage > 0.01 { active_parts.push(format!("+{temp_flat_damage:.1} dmg")); }
+        if damage_bonus.flat > 0.01 { active_parts.push(format!("+{:.1} dmg", damage_bonus.flat)); }
+        if (damage_bonus.multiplier - 1.0).abs() > 0.001 { active_parts.push(format!("x{:.2} dmg", damage_bonus.multiplier)); }
         if temp_speed_bonus > 0.01 { active_parts.push(format!("+{temp_speed_bonus:.2}x spd")); }
         let active_suffix = if active_parts.is_empty() {
             String::new()
@@ -416,13 +425,14 @@ pub fn fire_towers(
 
         for _ in 0..projectile_count {
             let is_critical = roll_critical_hit(critical_chance.value());
-            let damage = (damage_formula.calculate_damage_with_elemental_multiplier(
+            let damage = damage_formula.calculate_damage_with_elemental_multiplier(
                 &earth_damage,
                 &fire_damage,
                 &air_damage,
                 &water_damage,
+                damage_bonus,
                 is_critical,
-            ) + damage_bonus.flat).max(1.0);
+            ).max(1.0);
 
             let fire_direction = if spread > 0.0 {
                 let angle_offset = (rand::random::<f32>() - 0.5) * spread;
@@ -527,10 +537,9 @@ pub fn fire_beam_towers(
             projectile_color(is_critical),
         );
 
-        let base = formula.calculate_damage_with_elemental_multiplier(
-            &earth_damage, &fire_damage, &air_damage, &water_damage, is_critical,
-        );
-        let dmg = (base + damage_bonus.flat).max(1.0);
+        let dmg = formula.calculate_damage_with_elemental_multiplier(
+            &earth_damage, &fire_damage, &air_damage, &water_damage, damage_bonus, is_critical,
+        ).max(1.0);
 
         let segment = beam_end - tower_pos;
         let segment_len_sq = segment.length_squared();
@@ -601,7 +610,7 @@ pub fn fire_beam_towers(
     }
 }
 
-fn roll_critical_hit(critical_chance: f32) -> bool {
+pub fn roll_critical_hit(critical_chance: f32) -> bool {
     rand::random::<f32>() < critical_chance.clamp(0.0, 1.0)
 }
 
@@ -687,7 +696,7 @@ pub fn update_draft_tooltip(
         if (cursor_world.x - pos.x).abs() <= 65.0 && (cursor_world.y - pos.y).abs() <= 70.0 {
             let kind = draft.offers[slot.index];
             let damage_formula = kind.damage_formula();
-            let mut segments = tower_tooltip(kind, &damage_formula, &stats, 0.0, 0.0, 1.0);
+            let mut segments = tower_tooltip(kind, &damage_formula, &stats, &TemporaryStat::default(), 0.0, 1.0);
             let extras = slot_children
                 .get(slot_entity)
                 .ok()

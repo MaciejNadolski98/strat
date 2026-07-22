@@ -5,16 +5,17 @@ use bevy::window::PrimaryWindow;
 
 use crate::components::{
     CustomTooltip, DamageFormula, DefaultAim, DefaultFire, DropsSpell, Enemy, FireCooldown,
-    Health, Reward,
+    Health, Reward, TemporaryDamageBonus,
 };
 use crate::effects::{spawn_floating_text, spawn_pulse};
 use crate::game::game_is_running;
 use crate::resources::{
-    CriticalChance, CurrentHp, EarthDamage, EnemyKilledEvent, FireDamage, AirDamage, GameOver,
-    KillCount, Loot, Money, PlayerStatKind, SpellShop, TowerDraft, TowerDraftPhase,
-    TowerStatEffect, WaterDamage,
+    CriticalChance, CurrentHp, EnemyKilledEvent, GameOver,
+    KillCount, Loot, Money, PlayerStatKind, ShootEvent, SpellShop, TowerDraft, TowerDraftPhase,
+    TowerStatEffect,
 };
 use crate::tags;
+use crate::towers::{roll_critical_hit, ElementalDamages};
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_HEX_S, BARREL_NONE};
@@ -60,14 +61,6 @@ pub static TOWER_BRIMSTONE: TowerDefinition = TowerDefinition::new_attacking(
 pub static KIND: TowerKind = TowerKind(&TOWER_BRIMSTONE);
 
 #[derive(SystemParam)]
-struct ElementalDamages<'w> {
-    earth: Res<'w, EarthDamage>,
-    fire: Res<'w, FireDamage>,
-    air: Res<'w, AirDamage>,
-    water: Res<'w, WaterDamage>,
-}
-
-#[derive(SystemParam)]
 struct KillRewards<'w> {
     money: ResMut<'w, Money>,
     kills: ResMut<'w, KillCount>,
@@ -102,7 +95,8 @@ fn trigger_brimstone(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut towers: Query<(Entity, &Transform, &TowerKind, &DamageFormula, &mut FireCooldown), With<BrimstoneTower>>,
+    mut shoot_events: EventWriter<ShootEvent>,
+    mut towers: Query<(Entity, &Transform, &TowerKind, &DamageFormula, &TemporaryDamageBonus, &mut FireCooldown), With<BrimstoneTower>>,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, Option<&DropsSpell>), With<Enemy>>,
 ) {
     if game_over.value
@@ -119,7 +113,7 @@ fn trigger_brimstone(
         return;
     };
 
-    for (tower_entity, tower_transform, tower_kind, formula, mut cooldown) in &mut towers {
+    for (tower_entity, tower_transform, tower_kind, formula, damage_bonus, mut cooldown) in &mut towers {
         if !cooldown.timer.finished() {
             continue;
         }
@@ -133,6 +127,7 @@ fn trigger_brimstone(
         }
 
         cooldown.timer.reset();
+        shoot_events.write(ShootEvent { source_tower: tower_entity });
 
         current_hp.amount -= HP_COST;
         if current_hp.amount <= 0 {
@@ -148,9 +143,9 @@ fn trigger_brimstone(
             &mut materials,
         );
 
-        let is_critical = rand::random::<f32>() < critical_chance.value().clamp(0.0, 1.0);
+        let is_critical = roll_critical_hit(critical_chance.value());
         let dmg = formula.calculate_damage_with_elemental_multiplier(
-            &elemental.earth, &elemental.fire, &elemental.air, &elemental.water, is_critical,
+            &elemental.earth, &elemental.fire, &elemental.air, &elemental.water, damage_bonus, is_critical,
         ).max(1.0);
 
         let mut killed: Vec<(Entity, i32, Vec2, bool)> = Vec::new();

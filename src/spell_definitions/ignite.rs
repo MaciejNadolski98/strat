@@ -9,14 +9,14 @@ const BURN_DURATION: f32 = 6.0;
 const BURN_TICK: f32 = 0.5;
 const BURN_DAMAGE_PER_TICK: f32 = 8.0;
 
-pub const SPELL: SpellDefinition = SpellDefinition {
+pub static SPELL: SpellDefinition = SpellDefinition {
     name: "Ignite",
     description: "Sets all enemies on fire, scaling with fire damage",
     icon_color: Color::srgb(0.92, 0.26, 0.12),
     tags: &[tags::INFERNAL],
 };
 
-pub const KIND: SpellKind = SpellKind(&SPELL);
+pub static KIND: SpellKind = SpellKind(&SPELL);
 
 pub struct IgnitePlugin;
 

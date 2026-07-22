@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
-use crate::game::GameState;
 use crate::item_definitions::{unlock, UnlockCondition};
-use crate::resources::{FireDamage, ItemPurchasedEvent, PlayerStatKind, TowerStatEffect};
+use crate::resources::{FireDamage, PlayerStatKind, Shop, TowerStatEffect};
 use crate::tags;
 use crate::tower_definitions::soul_harvester::{self, SoulHarvestEvent};
 use super::{ItemDefinition, ItemKind};
@@ -21,43 +20,23 @@ pub static ITEM: ItemDefinition = ItemDefinition::new(
 
 pub static KIND: ItemKind = ItemKind(&ITEM);
 
-#[derive(Resource, Default)]
-struct InfernalPactPurchased(bool);
-
 pub struct InfernalPactPlugin;
 
 impl Plugin for InfernalPactPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<InfernalPactPurchased>();
         unlock(app, UnlockCondition::Tower(soul_harvester::KIND), KIND);
-        app.add_systems(OnEnter(GameState::Playing), reset_purchased);
-        app.add_systems(Update, on_item_purchased);
         app.add_systems(Update, apply_harvest_bonus);
     }
 }
 
-fn reset_purchased(mut purchased: ResMut<InfernalPactPurchased>) {
-    purchased.0 = false;
-}
-
-fn on_item_purchased(
-    mut events: EventReader<ItemPurchasedEvent>,
-    mut purchased: ResMut<InfernalPactPurchased>,
-) {
-    for event in events.read() {
-        if event.kind == KIND {
-            purchased.0 = true;
-        }
-    }
-}
-
 fn apply_harvest_bonus(
-    purchased: Res<InfernalPactPurchased>,
+    shop: Res<Shop>,
     mut events: EventReader<SoulHarvestEvent>,
     mut fire_damage: ResMut<FireDamage>,
 ) {
+    let purchased = shop.purchase_count(KIND) > 0;
     for _ in events.read() {
-        if purchased.0 {
+        if purchased {
             fire_damage.raw_value += FIRE_PER_HARVEST;
         }
     }

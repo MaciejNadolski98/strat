@@ -2,16 +2,16 @@ use bevy::prelude::*;
 
 use crate::components::{
     Aim, CustomTooltip, DamageFormula, DefaultAim, DefaultFire, DropsSpell, Enemy, FireCooldown,
-    Health, Reward,
+    Health, Reward, TemporaryDamageBonus,
 };
 use crate::effects::{spawn_floating_text, spawn_pulse};
 use crate::game::game_is_running;
 use crate::resources::{
-    AirDamage, CriticalChance, EnemyKilledEvent, GameOver, KillCount, Loot,
-    Money, PlayerStatKind, SpellShop, TowerStatEffect,
+    CriticalChance, EnemyKilledEvent, GameOver, KillCount,
+    Loot, Money, PlayerStatKind, ShootEvent, SpellShop, TowerStatEffect,
 };
 use crate::tooltip::plain;
-use crate::towers::progress_cooldown;
+use crate::towers::{progress_cooldown, roll_critical_hit, ElementalDamages};
 use crate::tower_definitions::TowerKind;
 use super::{TowerDefinition, TooltipConfig, TowerRegistry};
 use super::templates::{BASE_PENTAGON_M, BARREL_NONE};
@@ -100,17 +100,18 @@ fn fire_cyclone_towers(
     loot: Res<Loot>,
     mut spell_shop: ResMut<SpellShop>,
     game_over: Res<GameOver>,
-    air_damage: Res<AirDamage>,
+    elemental: ElementalDamages,
     critical_chance: Res<CriticalChance>,
+    mut shoot_events: EventWriter<ShootEvent>,
     mut kill_events: EventWriter<EnemyKilledEvent>,
-    mut cyclone_towers: Query<(Entity, &Transform, &mut FireCooldown, &DamageFormula, &Aim), With<CycloneTower>>,
+    mut cyclone_towers: Query<(Entity, &Transform, &mut FireCooldown, &DamageFormula, &TemporaryDamageBonus, &Aim), With<CycloneTower>>,
     mut enemies: Query<(Entity, &Transform, &mut Health, &Reward, Option<&DropsSpell>), With<Enemy>>,
 ) {
     if game_over.value {
         return;
     }
 
-    for (tower_entity, tower_transform, mut cooldown, formula, aim) in &mut cyclone_towers {
+    for (tower_entity, tower_transform, mut cooldown, formula, damage_bonus, aim) in &mut cyclone_towers {
         if !(aim.ready && cooldown.timer.finished()) {
             continue;
         }
@@ -118,6 +119,7 @@ fn fire_cyclone_towers(
         let tower_pos = tower_transform.translation.truncate();
 
         cooldown.timer.reset();
+        shoot_events.write(ShootEvent { source_tower: tower_entity });
 
         spawn_pulse(
             &mut commands,
@@ -128,10 +130,10 @@ fn fire_cyclone_towers(
             &mut materials,
         );
 
-        let is_critical = rand::random::<f32>() < critical_chance.value().clamp(0.0, 1.0);
-        let base = formula.flat as f32
-            + formula.air_multiplier * air_damage.value();
-        let dmg = (if is_critical { base * formula.crit_multiplier } else { base }).max(1.0);
+        let is_critical = roll_critical_hit(critical_chance.value());
+        let dmg = formula.calculate_damage_with_elemental_multiplier(
+            &elemental.earth, &elemental.fire, &elemental.air, &elemental.water, damage_bonus, is_critical,
+        ).max(1.0);
 
         let mut killed: Vec<(Entity, i32, Vec2, bool)> = Vec::new();
 

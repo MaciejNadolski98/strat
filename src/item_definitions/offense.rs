@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use super::{unlock, ItemDefinition, ItemKind, UnlockCondition};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Offense",
     &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
@@ -13,7 +13,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.82, 0.70, 0.24),
 );
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct OffensePlugin;
 

@@ -5,14 +5,14 @@ use super::{SpellCastEvent, SpellDefinition, SpellKind, SpellRegistry};
 
 const SLOW_MULTIPLIER: f32 = 0.5;
 
-pub const SPELL: SpellDefinition = SpellDefinition {
+pub static SPELL: SpellDefinition = SpellDefinition {
     name: "Slow",
     description: "Slows all enemies until wave end",
     icon_color: Color::srgb(0.42, 0.82, 0.92),
     tags: &[],
 };
 
-pub const KIND: SpellKind = SpellKind(&SPELL);
+pub static KIND: SpellKind = SpellKind(&SPELL);
 
 #[derive(Resource)]
 pub struct SlowActive {

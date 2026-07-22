@@ -5,7 +5,7 @@ use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
 use super::{ItemDefinition, ItemKind};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Coffee",
     &[
         TowerStatEffect::new(PlayerStatKind::AttackSpeed, 0.12),
@@ -15,7 +15,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.86, 0.72, 0.24),
 ).with_tags(&[tags::MECHANICAL]);
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct CoffeePlugin;
 

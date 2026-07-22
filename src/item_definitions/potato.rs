@@ -5,7 +5,7 @@ use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
 use super::{ItemDefinition, ItemKind};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Potato",
     &[
         TowerStatEffect::new(PlayerStatKind::MaxHp, 4.0),
@@ -16,7 +16,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.74, 0.18, 0.18),
 ).with_tags(&[tags::BIOTIC]);
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct PotatoPlugin;
 

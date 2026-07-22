@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::resources::{PlayerStatKind, TowerStatEffect};
 use super::{unlock, ItemDefinition, ItemKind, UnlockCondition};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Water",
     &[
         TowerStatEffect::new(PlayerStatKind::WaterDamage, 4.0),
@@ -13,7 +13,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     Color::srgb(0.18, 0.42, 0.78),
 );
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct WaterPlugin;
 

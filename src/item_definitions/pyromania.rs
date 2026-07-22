@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 
-use crate::game::GameState;
 use crate::item_definitions::{unlock, UnlockCondition};
-use crate::resources::{FireDamage, ItemPurchasedEvent, PlayerStatKind};
+use crate::resources::{FireDamage, ItemPurchasedEvent, PlayerStatKind, Shop};
 use crate::tags;
 use super::{ItemDefinition, ItemKind};
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Pyromania",
     &[],
     6,
@@ -16,40 +15,32 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     .with_tags(&[tags::INFERNAL])
     .with_max_purchases(1);
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
-
-#[derive(Resource, Default)]
-struct PyromaniaStacks(u32);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct PyromaniaPlugin;
 
 impl Plugin for PyromaniaPlugin {
     fn build(&self, app: &mut App) {
         unlock(app, UnlockCondition::Always, KIND);
-        app.add_systems(OnEnter(GameState::Playing), reset_stacks);
-        app.init_resource::<PyromaniaStacks>();
         app.add_systems(Update, on_item_purchased);
     }
 }
 
-fn reset_stacks(mut stacks: ResMut<PyromaniaStacks>) {
-    stacks.0 = 0;
-}
-
 fn on_item_purchased(
     mut events: EventReader<ItemPurchasedEvent>,
-    mut stacks: ResMut<PyromaniaStacks>,
+    shop: Res<Shop>,
     mut fire_damage: ResMut<FireDamage>,
 ) {
+    let stacks = shop.purchase_count(KIND);
+    if stacks == 0 {
+        return;
+    }
     for event in events.read() {
-        if event.kind == KIND {
-            stacks.0 += 1;
-        }
         let boosts_fire = event.kind.effects().iter().any(|e| {
             matches!(e.kind, PlayerStatKind::FireDamage) && e.amount > 0.0
         });
-        if boosts_fire && stacks.0 > 0 {
-            fire_damage.raw_value += stacks.0 as f32;
+        if boosts_fire {
+            fire_damage.raw_value += stacks as f32;
         }
     }
 }

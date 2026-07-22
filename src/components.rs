@@ -400,6 +400,7 @@ impl DamageFormula {
         fire_damage: &FireDamage,
         air_damage: &AirDamage,
         water_damage: &WaterDamage,
+        damage_bonus: &TemporaryStat,
         crit: bool,
     ) -> f32 {
         let mut dmg = self.flat as f32;
@@ -408,10 +409,9 @@ impl DamageFormula {
         dmg += self.fire_multiplier * fire_damage.value();
         dmg += self.water_multiplier * water_damage.value();
         if crit {
-            dmg * self.crit_multiplier
-        } else {
-            dmg
+            dmg *= self.crit_multiplier;
         }
+        damage_bonus.apply(dmg)
     }
 }
 

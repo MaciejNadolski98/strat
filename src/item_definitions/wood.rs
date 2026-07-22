@@ -9,7 +9,7 @@ use super::{ItemDefinition, ItemKind};
 
 const BONUS_PER_TREE: u32 = 2;
 
-pub const ITEM: ItemDefinition = ItemDefinition::new(
+pub static ITEM: ItemDefinition = ItemDefinition::new(
     "Wood",
     &[],
     5,
@@ -18,7 +18,7 @@ pub const ITEM: ItemDefinition = ItemDefinition::new(
     .with_tags(&[tags::BIOTIC])
     .with_description("+2 Fire for each Tree on board");
 
-pub const KIND: ItemKind = ItemKind(&ITEM);
+pub static KIND: ItemKind = ItemKind(&ITEM);
 
 pub struct WoodPlugin;
 
