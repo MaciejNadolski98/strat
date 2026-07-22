@@ -22,7 +22,7 @@ use crate::resources::{
     ShootEvent, SpellShop, TowerDraft, TowerDraftPhase, WaterDamage,
 };
 use crate::shop::PlayerStatsMut;
-use crate::tooltip::{colored, plain, tag_segments, Segment};
+use crate::tooltip::{colored, plain, push_line, tag_segments, Segment};
 use crate::tower_definitions::TowerKind;
 
 const BEAM_HALF_WIDTH: f32 = 10.0;
@@ -157,14 +157,6 @@ fn damage_formula_segments(formula: &DamageFormula) -> Vec<Segment> {
         segs.push(colored(format!("{} water", formula.water_multiplier), WATER_COLOR));
     }
     segs
-}
-
-fn push_line(segments: &mut Vec<Segment>, first: &mut bool, line: Vec<Segment>) {
-    if !*first {
-        segments.push(plain("\n"));
-    }
-    segments.extend(line);
-    *first = false;
 }
 
 pub fn tower_tooltip(

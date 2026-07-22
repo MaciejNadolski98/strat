@@ -161,14 +161,6 @@ impl ItemKind {
         self.0.icon_color
     }
 
-    pub fn effect_text(self) -> String {
-        self.effects()
-            .iter()
-            .map(|e| e.effect_text())
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-
     pub fn tags(self) -> &'static [TagInfo] {
         self.0.tags
     }

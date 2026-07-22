@@ -30,6 +30,48 @@ pub fn tag_segments(tags: &[TagInfo]) -> Vec<Segment> {
     segs
 }
 
+pub fn push_line(segments: &mut Vec<Segment>, first: &mut bool, line: Vec<Segment>) {
+    if !*first {
+        segments.push(plain("\n"));
+    }
+    segments.extend(line);
+    *first = false;
+}
+
+pub const MONEY_COLOR: Color = Color::srgb(0.40, 0.92, 0.36);
+
+/// Colors known elemental keywords (Fire/Earth/Air/Water) and `$amount` tokens
+/// inside freeform item/spell description text, so descriptions get the same
+/// coloring as structured stat-effect lines without needing manual markup.
+pub fn highlight_description(text: &str) -> Vec<Segment> {
+    let mut segments = Vec::new();
+    for (i, word) in text.split(' ').enumerate() {
+        if i > 0 {
+            segments.push(plain(" "));
+        }
+        let core = word.trim_end_matches([',', '.']);
+        let suffix = &word[core.len()..];
+
+        let color = match core.to_lowercase().as_str() {
+            "fire" => Some(crate::towers::FIRE_COLOR),
+            "earth" => Some(crate::towers::EARTH_COLOR),
+            "air" => Some(crate::towers::AIR_COLOR),
+            "water" => Some(crate::towers::WATER_COLOR),
+            _ if core.starts_with('$') => Some(MONEY_COLOR),
+            _ => None,
+        };
+
+        segments.push(match color {
+            Some(c) => colored(core.to_string(), c),
+            None => plain(core.to_string()),
+        });
+        if !suffix.is_empty() {
+            segments.push(plain(suffix.to_string()));
+        }
+    }
+    segments
+}
+
 pub fn set_tooltip_segments(
     commands: &mut Commands,
     tooltip_entity: Entity,

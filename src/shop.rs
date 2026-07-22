@@ -8,7 +8,8 @@ use crate::components::{
 use crate::constants::{WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::effects::spawn_floating_text;
 use crate::item_definitions::ItemKind;
-use crate::tooltip::{plain, tag_segments};
+use crate::tooltip::{colored, highlight_description, plain, push_line, tag_segments, Segment};
+use crate::towers::element_color;
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
     GameOver, GameWon, ItemPurchasedEvent, MaxHp, Money, Loot, Piercing,
@@ -271,7 +272,7 @@ pub fn update_shop_tooltip(
         };
 
         let purchased = shop.purchase_count(offer.item);
-        let mut segments = vec![plain(item_tooltip(offer.item, offer.cost, purchased))];
+        let mut segments = item_tooltip(offer.item, offer.cost, purchased);
         let tags = offer.item.tags();
         if !tags.is_empty() {
             segments.push(plain("\nTags: "));
@@ -284,21 +285,35 @@ pub fn update_shop_tooltip(
 }
 
 
-fn item_tooltip(kind: ItemKind, cost: i32, purchased: u32) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    parts.push(format!("{} - ${cost}", kind.name()));
+fn item_tooltip(kind: ItemKind, cost: i32, purchased: u32) -> Vec<Segment> {
+    let mut segments = Vec::new();
+    let mut first = true;
+
+    push_line(&mut segments, &mut first, vec![plain(format!("{} - ${cost}", kind.name()))]);
+
     if let Some(max) = kind.max_purchases() {
-        parts.push(if max == 1 {
+        let line = if max == 1 {
             "Unique".to_string()
         } else {
             format!("({purchased}/{max})")
-        });
+        };
+        push_line(&mut segments, &mut first, vec![plain(line)]);
     }
-    let effects = kind.effect_text();
-    if !effects.is_empty() { parts.push(effects); }
+
+    for effect in kind.effects() {
+        let line = match element_color(effect.kind) {
+            Some(color) => vec![colored(effect.effect_text(), color)],
+            None => vec![plain(effect.effect_text())],
+        };
+        push_line(&mut segments, &mut first, line);
+    }
+
     let desc = kind.description();
-    if !desc.is_empty() { parts.push(desc.to_string()); }
-    parts.join("\n")
+    if !desc.is_empty() {
+        push_line(&mut segments, &mut first, highlight_description(desc));
+    }
+
+    segments
 }
 
 fn apply_stat_upgrade(kind: ItemKind, stats: &mut PlayerStatsMut) {
