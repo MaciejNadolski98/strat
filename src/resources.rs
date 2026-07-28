@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::constants::{
-    GRID_SIZE, INITIAL_PATH, PATH_EXTENSION_BASE_COST, PATH_EXTENSION_COST_STEP, PRICE_GROWTH,
+    HEX_SPACING, INITIAL_PATH, PATH_EXTENSION_BASE_COST, PATH_EXTENSION_COST_STEP, PRICE_GROWTH,
     SHOP_REROLL_COST,
 };
 use crate::item_definitions::ItemKind;
@@ -213,7 +213,7 @@ impl PathTiles {
 
     pub fn can_extend_to(&self, position: Vec2) -> bool {
         let distance_squared = position.distance_squared(self.end());
-        !self.contains(position) && (distance_squared - GRID_SIZE.powi(2)).abs() < 1.0
+        !self.contains(position) && (distance_squared - HEX_SPACING.powi(2)).abs() < 1.0
     }
 
     pub fn extend_to(&mut self, position: Vec2) {

@@ -97,6 +97,8 @@ pub fn bounce_to_playing(mut next_state: ResMut<NextState<GameState>>) {
 
 pub fn start_run(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut state: GameRunState,
     mut new_round: EventWriter<NewRoundEvent>,
     mut cleanup: ParamSet<(
@@ -152,7 +154,7 @@ pub fn start_run(
     state.forced_towers.reset();
     state.draft.activate(&mut state.forced_towers);
     state.path_tiles.reset();
-    spawn_path_visuals(&mut commands, &state.path_tiles, &[]);
+    spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &state.path_tiles, &[]);
     if let Ok(mut marker_transform) = end_marker.single_mut() {
         marker_transform.translation = state.path_tiles.end().extend(0.0);
     }

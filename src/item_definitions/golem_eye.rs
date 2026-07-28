@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::components::TemporaryRange;
-use crate::constants::GRID_SIZE;
+use crate::constants::HEX_SPACING;
 use crate::resources::{GamePhase, Shop};
 use crate::tags;
 use crate::tower_definitions::golem::{self, GolemTower};
@@ -34,7 +34,7 @@ fn apply_range_bonus(
 ) {
     let stacks = shop.purchase_count(KIND) as f32;
     let multiplier = if shop.purchase_count(golem_heart::KIND) > 0 { 2.0 } else { 1.0 };
-    let range_bonus = stacks * GRID_SIZE * multiplier;
+    let range_bonus = stacks * HEX_SPACING * multiplier;
 
     for mut range in &mut towers {
         range.flat += range_bonus;

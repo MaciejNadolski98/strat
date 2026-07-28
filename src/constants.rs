@@ -12,18 +12,25 @@ pub const BASE_ATTACK_SPEED: f32 = 1.0;
 pub const BASE_LOOT: i32 = 2;
 pub const BASE_CRITICAL_CHANCE: f32 = 0.12;
 pub const BASE_PIERCING_DAMAGE: f32 = -0.20;
-pub const GRID_SIZE: f32 = 48.0;
-pub const PATH_HALF_WIDTH: f32 = GRID_SIZE * 0.5;
+pub const HEX_SIZE: f32 = 28.0;
+pub const HEX_SPACING: f32 = HEX_SIZE * 1.7320508;
 
 pub const MAX_HEALTH_GROWTH: f32 = 0.4;
 pub const PRICE_GROWTH: f32 = 0.4;
 
+const fn axial_to_world(q: f32, r: f32) -> Vec2 {
+    Vec2::new(
+        HEX_SPACING * (q + 0.5 * r),
+        HEX_SIZE * (1.5 * r),
+    )
+}
+
 pub const INITIAL_PATH: [Vec2; 7] = [
-    Vec2::new(-456.0, 216.0),
-    Vec2::new(-408.0, 216.0),
-    Vec2::new(-360.0, 216.0),
-    Vec2::new(-312.0, 216.0),
-    Vec2::new(-264.0, 216.0),
-    Vec2::new(-216.0, 216.0),
-    Vec2::new(-168.0, 216.0),
+    axial_to_world(-12.0, 5.0),
+    axial_to_world(-11.0, 5.0),
+    axial_to_world(-10.0, 5.0),
+    axial_to_world(-9.0, 5.0),
+    axial_to_world(-8.0, 5.0),
+    axial_to_world(-7.0, 5.0),
+    axial_to_world(-6.0, 5.0),
 ];

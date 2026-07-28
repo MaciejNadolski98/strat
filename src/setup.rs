@@ -1,5 +1,7 @@
-use bevy::math::primitives::Circle;
+use bevy::asset::RenderAssetUsages;
+use bevy::math::primitives::{Circle, RegularPolygon};
 use bevy::prelude::*;
+use bevy::render::mesh::{Indices, PrimitiveTopology};
 
 use crate::components::{
     DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel,
@@ -7,9 +9,11 @@ use crate::components::{
     ShopText, ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerPhantom,
     TowerPhantomBarrel, TowerRangeIndicator,
 };
-use crate::constants::{GRID_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::pathing::{snap_axis, spawn_path_visuals};
+use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::pathing::{hex_centers_in_bounds, spawn_path_visuals};
 use crate::resources::PathTiles;
+
+const BACKGROUND_COLOR: Color = Color::srgb(0.10, 0.15, 0.13);
 
 pub fn setup(
     mut commands: Commands,
@@ -21,22 +25,24 @@ pub fn setup(
 
     let background = commands.spawn((
         Sprite::from_color(
-            Color::srgb(0.10, 0.15, 0.13),
+            BACKGROUND_COLOR,
             Vec2::new(WINDOW_WIDTH * 4.0, WINDOW_HEIGHT * 4.0),
         ),
         Transform::from_translation(Vec3::new(0.0, 0.0, -10.0)),
     )).id();
 
-    spawn_grid(&mut commands);
+    spawn_grid(&mut commands, &mut meshes, &mut materials);
 
-    spawn_path_visuals(&mut commands, &path_tiles, &[]);
+    spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &path_tiles, &[]);
 
     commands.spawn((
-        Sprite::from_color(Color::srgb(0.35, 0.13, 0.12), Vec2::new(52.0, 52.0)),
+        Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE + 6.0, 6))),
+        MeshMaterial2d(materials.add(Color::srgb(0.35, 0.13, 0.12))),
         Transform::from_translation(path_tiles.start().extend(0.0)),
     ));
     commands.spawn((
-        Sprite::from_color(Color::srgb(0.12, 0.35, 0.36), Vec2::new(58.0, 58.0)),
+        Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE + 9.0, 6))),
+        MeshMaterial2d(materials.add(Color::srgb(0.12, 0.35, 0.36))),
         Transform::from_translation(path_tiles.end().extend(0.0)),
         PathEndMarker,
     ));
@@ -130,28 +136,53 @@ pub fn setup(
     }
 }
 
-fn spawn_grid(commands: &mut Commands) {
-    let grid_color = Color::srgba(0.68, 0.76, 0.70, 0.12);
-    let extent_x = WINDOW_WIDTH * 5.0;
-    let extent_y = WINDOW_HEIGHT * 5.0;
+// Draws a honeycomb of hex outlines (a thin hex-shaped ring per cell) as a
+// single merged mesh/entity, so it actually reads as hexagons rather than the
+// triangular mesh you get from drawing lines through hex centers, without
+// spawning one entity per cell across the whole buildable area.
+fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) {
+    let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
+    let centers = hex_centers_in_bounds(extent);
+    let ring_mesh = build_hex_ring_mesh(&centers, HEX_SIZE, HEX_SIZE - 2.0);
 
-    let mut x = snap_axis(-extent_x);
-    while x <= extent_x {
-        commands.spawn((
-            Sprite::from_color(grid_color, Vec2::new(1.0, extent_y * 2.0)),
-            Transform::from_translation(Vec3::new(x, 0.0, -8.0)),
-        ));
-        x += GRID_SIZE;
+    commands.spawn((
+        Mesh2d(meshes.add(ring_mesh)),
+        MeshMaterial2d(materials.add(Color::srgba(0.68, 0.76, 0.70, 0.16))),
+        Transform::from_translation(Vec3::new(0.0, 0.0, -8.0)),
+    ));
+}
+
+/// Builds one merged mesh containing a hex-shaped ring (outer_r to inner_r)
+/// at each of `centers`, so the whole grid renders as a single draw call.
+fn build_hex_ring_mesh(centers: &[Vec2], outer_r: f32, inner_r: f32) -> Mesh {
+    let mut positions = Vec::with_capacity(centers.len() * 12);
+    let mut indices = Vec::with_capacity(centers.len() * 36);
+
+    for &center in centers {
+        let base = positions.len() as u32;
+        for radius in [outer_r, inner_r] {
+            for k in 0..6 {
+                let angle = (90.0 + 60.0 * k as f32).to_radians();
+                let vertex = center + Vec2::from_angle(angle) * radius;
+                positions.push([vertex.x, vertex.y, 0.0]);
+            }
+        }
+        for k in 0..6u32 {
+            let next = (k + 1) % 6;
+            let (o0, o1) = (base + k, base + next);
+            let (i0, i1) = (base + 6 + k, base + 6 + next);
+            indices.extend_from_slice(&[o0, o1, i1, o0, i1, i0]);
+        }
     }
 
-    let mut y = snap_axis(-extent_y);
-    while y <= extent_y {
-        commands.spawn((
-            Sprite::from_color(grid_color, Vec2::new(extent_x * 2.0, 1.0)),
-            Transform::from_translation(Vec3::new(0.0, y, -8.0)),
-        ));
-        y += GRID_SIZE;
-    }
+    let normals = vec![[0.0, 0.0, 1.0]; positions.len()];
+    let uvs = vec![[0.0, 0.0]; positions.len()];
+
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+        .with_inserted_indices(Indices::U32(indices))
 }
 
 fn spawn_shop_slots(commands: &mut Commands) -> Vec<Entity> {

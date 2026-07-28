@@ -9,7 +9,7 @@ use crate::components::{
     Aim, AngularSpeed, DefaultAim, DefaultFire, DraftHeaderText, DraftPanel, DraftPreview, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, TemporaryDamageBonus, TemporaryProjectiles, TemporarySpread, Tower, TowerPhantom, TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::tower_definitions::{BarrelTemplate, TowerKind};
-use crate::constants::GRID_SIZE;
+use crate::constants::HEX_SPACING;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::resources::{
     EnemiesRemaining, GameOver, PathTiles, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
@@ -172,7 +172,7 @@ pub fn place_draft_tower(
     if !is_buildable_cell(grid_position, &path_tiles)
         || towers
             .iter()
-            .any(|t| t.translation.truncate().distance(grid_position) < GRID_SIZE * 0.5)
+            .any(|t| t.translation.truncate().distance(grid_position) < HEX_SPACING * 0.5)
     {
         return;
     }
@@ -306,7 +306,7 @@ pub fn update_tower_phantom(
     if !is_buildable_cell(grid_pos, &path_tiles)
         || towers
             .iter()
-            .any(|t| t.translation.truncate().distance(grid_pos) < GRID_SIZE * 0.5)
+            .any(|t| t.translation.truncate().distance(grid_pos) < HEX_SPACING * 0.5)
     {
         return;
     }
