@@ -21,6 +21,11 @@ pub mod soul_conduit;
 pub mod extended_reach;
 pub mod soul_toll;
 pub mod infernal_pact;
+pub mod golem_hand;
+pub mod golem_mouth;
+pub mod golem_leg;
+pub mod golem_eye;
+pub mod golem_heart;
 
 use std::collections::HashSet;
 
@@ -42,6 +47,7 @@ pub enum UnlockCondition {
     Always,
     Tower(TowerKind),
     Item(ItemKind),
+    AllMaxed(&'static [ItemKind]),
 }
 
 pub fn unlock(app: &mut App, condition: UnlockCondition, item: ItemKind) {
@@ -80,6 +86,27 @@ pub fn unlock(app: &mut App, condition: UnlockCondition, item: ItemKind) {
                     return;
                 }
                 if events.read().any(|event| event.kind == required_item) {
+                    unlocked.0.insert(item);
+                    shop.add_to_pool(item);
+                }
+            };
+            app.add_systems(Update, unlock_system.in_set(ItemPoolRestoreSet));
+        }
+        UnlockCondition::AllMaxed(required_items) => {
+            let unlock_system = move |mut shop: ResMut<Shop>, mut unlocked: ResMut<UnlockedItems>| {
+                if unlocked.0.contains(&item) {
+                    return;
+                }
+                let all_maxed = required_items.iter().all(|&required| {
+                    let max = required.max_purchases().unwrap_or_else(|| {
+                        panic!(
+                            "UnlockCondition::AllMaxed requires every listed item to have max_purchases set, but {} does not",
+                            required.name(),
+                        )
+                    });
+                    shop.purchase_count(required) >= max
+                });
+                if all_maxed {
                     unlocked.0.insert(item);
                     shop.add_to_pool(item);
                 }
@@ -215,6 +242,13 @@ impl Plugin for ItemPlugins {
             extended_reach::ExtendedReachPlugin,
             soul_toll::SoulTollPlugin,
             infernal_pact::InfernalPactPlugin,
+        ));
+        app.add_plugins((
+            golem_hand::GolemHandPlugin,
+            golem_mouth::GolemMouthPlugin,
+            golem_leg::GolemLegPlugin,
+            golem_eye::GolemEyePlugin,
+            golem_heart::GolemHeartPlugin,
         ));
     }
 }

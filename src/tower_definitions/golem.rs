@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use crate::components::{CustomTooltip, DamageFormula, TowerKillCount};
+use crate::components::{CustomTooltip, DamageFormula, TemporaryProjectileSpeed, TemporaryRange};
 use crate::game::game_is_running;
-use crate::projectiles::move_projectiles;
-use crate::resources::{EarthDamage, EnemyKilledEvent, PlayerStatKind, TowerStatEffect};
+use crate::resources::{PlayerStatKind, TowerStatEffect};
 use crate::tags;
 use crate::tooltip::{colored, plain};
 use crate::towers::EARTH_COLOR;
@@ -12,19 +11,15 @@ use crate::tower_definitions::templates::BASE_TRIANGLE_M;
 use super::{TowerDefinition, TowerRegistry};
 use super::templates::{BARREL_HEAVY, PALETTE_EARTH};
 
+#[derive(Component)]
+pub struct GolemTower;
+
 pub struct GolemPlugin;
 
 impl Plugin for GolemPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().resource_mut::<TowerRegistry>().kinds.push(KIND);
-        app.add_systems(
-            Update,
-            (
-                attach_golem_kill_count,
-                golem_kill_tracking.after(move_projectiles),
-            )
-                .run_if(game_is_running),
-        );
+        app.add_systems(Update, attach_golem_tower.run_if(game_is_running));
         app.add_systems(Update, update_golem_tooltip);
     }
 }
@@ -34,9 +29,9 @@ pub static TOWER_GOLEM: TowerDefinition = TowerDefinition::new_attacking(
     160.0,
     1.1,
     DamageFormula {
-        flat: 20,
+        flat: 4,
         crit_multiplier: 1.8,
-        earth_multiplier: 0.5,
+        earth_multiplier: 0.2,
         fire_multiplier: 0.0,
         air_multiplier: 0.0,
         water_multiplier: 0.0,
@@ -53,44 +48,31 @@ pub static TOWER_GOLEM: TowerDefinition = TowerDefinition::new_attacking(
 
 pub static KIND: TowerKind = TowerKind(&TOWER_GOLEM);
 
-fn attach_golem_kill_count(
+fn attach_golem_tower(
     mut commands: Commands,
     new_towers: Query<(Entity, &TowerKind), Added<TowerKind>>,
 ) {
     for (entity, kind) in &new_towers {
         if *kind == KIND {
-            commands.entity(entity).insert((TowerKillCount { kills: 0 }, CustomTooltip::default()));
+            commands.entity(entity).insert((
+                GolemTower,
+                CustomTooltip::default(),
+                TemporaryRange::default(),
+                TemporaryProjectileSpeed::default(),
+            ));
         }
     }
 }
 
 fn update_golem_tooltip(
-    mut golems: Query<(&TowerKillCount, &mut CustomTooltip)>,
+    mut golems: Query<&mut CustomTooltip, With<GolemTower>>,
 ) {
-    for (kc, mut tooltip) in &mut golems {
-        let bonus = kc.kills / 10;
-        let progress = kc.kills % 10;
-        tooltip.0 = vec![
-            plain("Every 10 kills: "),
-            colored("+1 Earth Damage", EARTH_COLOR),
-            plain("\nProduced: "),
-            colored(format!("+{bonus} Earth"), EARTH_COLOR),
-            plain(format!("\nProgress: {progress}/10 kills")),
-        ];
-    }
-}
-
-fn golem_kill_tracking(
-    mut events: EventReader<EnemyKilledEvent>,
-    mut golems: Query<&mut TowerKillCount>,
-    mut earth_damage: ResMut<EarthDamage>,
-) {
-    for event in events.read() {
-        if let Ok(mut kc) = golems.get_mut(event.source_tower) {
-            let prev = kc.kills / 10;
-            kc.kills += 1;
-            let gained = kc.kills / 10 - prev;
-            earth_damage.raw_value += gained as f32;
-        }
+    let extras = vec![
+        plain("Deals small "),
+        colored("earth", EARTH_COLOR),
+        plain("-scaling damage on its own\nUpgraded by Golem's Hand/Mouth/Leg/Eye"),
+    ];
+    for mut tooltip in &mut golems {
+        tooltip.0 = extras.clone();
     }
 }

@@ -12,7 +12,8 @@ use crate::components::{
     DefaultFire, Direction, DraftPreview, DraftSlot, DropsSpell, Enemy, ExplosionRadius,
     FireCooldown, Health, IsCritical, PathProgress, Pierce, Pierced, PiercingFalloff, Projectile,
     TemporaryRange, RemainingRange, Reward, ShopTooltip, SourceTower, Speed, TemporaryAttackSpeed,
-    TemporaryDamageBonus, TemporaryProjectiles, TemporarySpread, TemporaryStat, Tower, TowerRangeIndicator,
+    TemporaryDamageBonus, TemporaryProjectiles, TemporaryProjectileSpeed, TemporarySpread,
+    TemporaryStat, Tower, TowerRangeIndicator,
 };
 use crate::effects::{spawn_beam_effect, spawn_floating_text};
 use crate::projectiles::projectile_color;
@@ -286,6 +287,12 @@ pub fn reset_temporary_spread(mut towers: Query<&mut TemporarySpread, With<Tower
     }
 }
 
+pub fn reset_temporary_projectile_speed(mut towers: Query<&mut TemporaryProjectileSpeed, With<Tower>>) {
+    for mut temp in &mut towers {
+        temp.reset();
+    }
+}
+
 pub fn progress_cooldown(
     mut towers: Query<(&mut FireCooldown, &TemporaryAttackSpeed), With<Tower>>,
     time: Res<Time>,
@@ -360,6 +367,8 @@ pub fn fire_towers(
             &Aim,
             Option<&TemporaryProjectiles>,
             Option<&TemporarySpread>,
+            Option<&TemporaryRange>,
+            Option<&TemporaryProjectileSpeed>,
         ),
         (With<Tower>, With<DefaultFire>),
     >,
@@ -390,6 +399,8 @@ pub fn fire_towers(
         aim,
         temp_projectiles,
         temp_spread,
+        temp_range,
+        temp_projectile_speed,
     ) in &mut towers
     {
         if !(aim.ready && cooldown.timer.finished()) {
@@ -400,6 +411,10 @@ pub fn fire_towers(
 
         cooldown.timer.reset();
         shoot_events.write(ShootEvent { source_tower: tower_entity });
+
+        let effective_range = temp_range.map_or(tower_kind.range(), |r| r.apply(tower_kind.range()));
+        let effective_projectile_speed = temp_projectile_speed
+            .map_or(tower_kind.projectile_speed(), |s| s.apply(tower_kind.projectile_speed()));
 
         let base_spread = tower_kind.definition().spread;
         let spread = temp_spread.map_or(base_spread, |ts| ts.apply(base_spread));
@@ -443,7 +458,7 @@ pub fn fire_towers(
                 Transform::from_translation(tower_position.extend(4.0))
                     .with_rotation(Quat::from_rotation_z(proj_angle)),
                 Direction { value: fire_direction },
-                RemainingRange { value: tower_kind.range() },
+                RemainingRange { value: effective_range },
                 Pierce { remaining: piercing_total },
                 PiercingFalloff { value: piercing_falloff },
                 Pierced::default(),
@@ -451,7 +466,7 @@ pub fn fire_towers(
                     entity: tower_entity,
                 },
                 Speed {
-                    value: tower_kind.projectile_speed(),
+                    value: effective_projectile_speed,
                 },
                 Damage { amount: damage },
                 IsCritical { value: is_critical },

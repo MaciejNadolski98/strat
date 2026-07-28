@@ -88,11 +88,6 @@ pub struct ExplosionEffect {
 pub struct TowerRangeIndicator;
 
 #[derive(Component)]
-pub struct TowerKillCount {
-    pub kills: u32,
-}
-
-#[derive(Component)]
 pub struct TowerPhantom;
 
 #[derive(Component)]
@@ -281,6 +276,7 @@ temporary_stat_component!(TemporaryEnemySpeed);
 temporary_stat_component!(TemporaryRange);
 temporary_stat_component!(TemporaryProjectiles);
 temporary_stat_component!(TemporarySpread);
+temporary_stat_component!(TemporaryProjectileSpeed);
 
 #[derive(Component)]
 pub struct AngularSpeed {
