@@ -242,10 +242,11 @@ fn is_consecutive_path_neighbor(path_tiles: &PathTiles, index: usize, position: 
         .any(|tile| tile.distance_squared(position) < 1.0)
 }
 
-/// Enumerates every hex center whose world position falls within
-/// `half_extent` of the origin (both axes), for drawing a bounded hex grid.
-pub fn hex_centers_in_bounds(half_extent: Vec2) -> Vec<Vec2> {
-    let mut centers = Vec::new();
+/// Enumerates every hex cell (axial coordinate + world center) whose world
+/// position falls within `half_extent` of the origin (both axes), for
+/// drawing a bounded hex grid or generating terrain over it.
+pub fn hex_cells_in_bounds(half_extent: Vec2) -> Vec<(i32, i32, Vec2)> {
+    let mut cells = Vec::new();
     let row_height = HEX_SIZE * 1.5;
     let col_width = HEX_SIZE * 3f32.sqrt();
 
@@ -256,11 +257,11 @@ pub fn hex_centers_in_bounds(half_extent: Vec2) -> Vec<Vec2> {
         for q in (q_center.floor() as i32 - q_span)..=(q_center.ceil() as i32 + q_span) {
             let pos = axial_to_world(q as f32, r as f32);
             if pos.x.abs() <= half_extent.x && pos.y.abs() <= half_extent.y {
-                centers.push(pos);
+                cells.push((q, r, pos));
             }
         }
     }
-    centers
+    cells
 }
 
 fn is_in_play_area(position: Vec2) -> bool {

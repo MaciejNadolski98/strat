@@ -10,7 +10,7 @@ use crate::components::{
     TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::pathing::{hex_centers_in_bounds, spawn_path_visuals};
+use crate::pathing::{hex_cells_in_bounds, spawn_path_visuals};
 use crate::resources::PathTiles;
 use crate::terrain::spawn_terrain;
 
@@ -33,9 +33,10 @@ pub fn setup(
     )).id();
 
     let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
-    let centers = hex_centers_in_bounds(extent);
+    let cells = hex_cells_in_bounds(extent);
+    let centers: Vec<Vec2> = cells.iter().map(|&(_, _, pos)| pos).collect();
 
-    spawn_terrain(&mut commands, &mut meshes, &mut materials, &centers);
+    spawn_terrain(&mut commands, &mut meshes, &mut materials, &cells);
     spawn_grid(&mut commands, &mut meshes, &mut materials, &centers);
 
     spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &path_tiles, &[]);

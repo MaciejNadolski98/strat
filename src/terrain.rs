@@ -1,3 +1,6 @@
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
+
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -24,27 +27,27 @@ impl TerrainKind {
     }
 }
 
-const NOISE_SEED: u32 = 1337;
-const NOISE_FREQUENCY: f64 = 1.0 / 260.0;
+const TERRAIN_SEED: u32 = 1337;
+const NOISE_FREQUENCY: f64 = 1.0 / 200.0;
 
-const WATER_THRESHOLD: f64 = -0.30;
 const MOUNTAIN_THRESHOLD: f64 = 0.20;
 const VOLCANO_THRESHOLD: f64 = 0.75;
 
-fn terrain_at(perlin: &Perlin, position: Vec2) -> TerrainKind {
-    let value = perlin.get([
-        position.x as f64 * NOISE_FREQUENCY,
-        position.y as f64 * NOISE_FREQUENCY,
-    ]);
+const WATER_SEED_MIN_HEIGHT: f64 = 0.55;
+const WATER_SEED_CHANCE: f64 = 0.03;
+const MAX_RIVER_LENGTH: u32 = 400;
+const RIVER_UPHILL_TOLERANCE: f64 = 0.3;
 
-    if value < WATER_THRESHOLD {
-        TerrainKind::WaterBody
-    } else if value < MOUNTAIN_THRESHOLD {
-        TerrainKind::Plains
-    } else if value < VOLCANO_THRESHOLD {
+const AXIAL_NEIGHBOR_OFFSETS: [(i32, i32); 6] =
+    [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
+
+fn base_terrain_kind(height: f64) -> TerrainKind {
+    if height > VOLCANO_THRESHOLD {
+        TerrainKind::Volcano
+    } else if height > MOUNTAIN_THRESHOLD {
         TerrainKind::Mountain
     } else {
-        TerrainKind::Volcano
+        TerrainKind::Plains
     }
 }
 
@@ -52,12 +55,35 @@ pub fn spawn_terrain(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
-    centers: &[Vec2],
+    cells: &[(i32, i32, Vec2)],
 ) {
-    let perlin = Perlin::new(NOISE_SEED);
-    let classified: Vec<(Vec2, TerrainKind)> = centers
+    let perlin = Perlin::new(TERRAIN_SEED);
+    let heights: HashMap<(i32, i32), f64> = cells
         .iter()
-        .map(|&center| (center, terrain_at(&perlin, center)))
+        .map(|&(q, r, pos)| {
+            let height = perlin.get([
+                pos.x as f64 * NOISE_FREQUENCY,
+                pos.y as f64 * NOISE_FREQUENCY,
+            ]);
+            ((q, r), height)
+        })
+        .collect();
+
+    let mut kinds: HashMap<(i32, i32), TerrainKind> = heights
+        .iter()
+        .map(|(&coord, &height)| (coord, base_terrain_kind(height)))
+        .collect();
+
+    for (&coord, &height) in &heights {
+        if height <= WATER_SEED_MIN_HEIGHT || water_seed_roll(coord) >= WATER_SEED_CHANCE {
+            continue;
+        }
+        carve_river(coord, &heights, &mut kinds);
+    }
+
+    let classified: Vec<(Vec2, TerrainKind)> = cells
+        .iter()
+        .map(|&(q, r, pos)| (pos, kinds[&(q, r)]))
         .collect();
 
     for kind in [
@@ -80,6 +106,42 @@ pub fn spawn_terrain(
             MeshMaterial2d(materials.add(kind.color())),
             Transform::from_translation(Vec3::new(0.0, 0.0, -9.0)),
         ));
+    }
+}
+
+fn water_seed_roll(coord: (i32, i32)) -> f64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (TERRAIN_SEED, coord).hash(&mut hasher);
+    (hasher.finish() >> 11) as f64 / (1u64 << 53) as f64
+}
+
+fn carve_river(
+    start: (i32, i32),
+    heights: &HashMap<(i32, i32), f64>,
+    kinds: &mut HashMap<(i32, i32), TerrainKind>,
+) {
+    let mut current = start;
+    let mut visited: HashSet<(i32, i32)> = HashSet::new();
+    visited.insert(current);
+
+    for _ in 0..MAX_RIVER_LENGTH {
+        kinds.insert(current, TerrainKind::WaterBody);
+        let current_height = heights[&current];
+
+        let lowest_neighbor = AXIAL_NEIGHBOR_OFFSETS
+            .iter()
+            .map(|&(dq, dr)| (current.0 + dq, current.1 + dr))
+            .filter(|coord| !visited.contains(coord))
+            .filter_map(|coord| heights.get(&coord).map(|&height| (coord, height)))
+            .min_by(|(_, a), (_, b)| a.total_cmp(b));
+
+        match lowest_neighbor {
+            Some((coord, height)) if height < current_height + RIVER_UPHILL_TOLERANCE => {
+                current = coord;
+                visited.insert(current);
+            }
+            _ => break,
+        }
     }
 }
 
