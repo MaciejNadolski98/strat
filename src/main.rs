@@ -15,6 +15,7 @@ mod shop;
 mod spell_definitions;
 mod spells;
 mod tags;
+mod terrain;
 mod tooltip;
 mod tower_definitions;
 mod towers;

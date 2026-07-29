@@ -18,6 +18,9 @@ use crate::shop::PlayerStatsMut;
 use crate::towers::apply_tower_effects;
 use crate::waves::enemies_in_wave;
 
+const TOWER_OUTLINE_COLOR: Color = Color::srgb(0.15, 0.15, 0.15);
+const TOWER_OUTLINE_THICKNESS: f32 = 1.0;
+
 pub fn update_draft_input(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
@@ -212,9 +215,19 @@ pub fn place_draft_tower(
         tag.insert(&mut spawner);
     }
 
+    let outline_size = tower_kind.base_size() + Vec2::splat(TOWER_OUTLINE_THICKNESS * 2.0);
     if tower_kind.base_shape().is_rectangle() {
+        spawner.with_child((
+            Sprite::from_color(TOWER_OUTLINE_COLOR, outline_size),
+            Transform::from_translation(Vec3::new(0.0, 0.0, -0.1)),
+        ));
         spawner.insert(tower_kind.body_sprite(1.0));
     } else {
+        spawner.with_child((
+            Mesh2d(meshes.add(tower_kind.base_shape().into_mesh(outline_size))),
+            MeshMaterial2d(materials.add(TOWER_OUTLINE_COLOR)),
+            Transform::from_translation(Vec3::new(0.0, 0.0, -0.1)),
+        ));
         spawner.insert((
             Mesh2d(meshes.add(tower_kind.base_shape().into_mesh(tower_kind.base_size()))),
             MeshMaterial2d(materials.add(tower_kind.base_color())),

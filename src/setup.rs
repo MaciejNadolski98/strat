@@ -12,6 +12,7 @@ use crate::components::{
 use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::{hex_centers_in_bounds, spawn_path_visuals};
 use crate::resources::PathTiles;
+use crate::terrain::spawn_terrain;
 
 const BACKGROUND_COLOR: Color = Color::srgb(0.10, 0.15, 0.13);
 
@@ -31,7 +32,11 @@ pub fn setup(
         Transform::from_translation(Vec3::new(0.0, 0.0, -10.0)),
     )).id();
 
-    spawn_grid(&mut commands, &mut meshes, &mut materials);
+    let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
+    let centers = hex_centers_in_bounds(extent);
+
+    spawn_terrain(&mut commands, &mut meshes, &mut materials, &centers);
+    spawn_grid(&mut commands, &mut meshes, &mut materials, &centers);
 
     spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &path_tiles, &[]);
 
@@ -136,14 +141,8 @@ pub fn setup(
     }
 }
 
-// Draws a honeycomb of hex outlines (a thin hex-shaped ring per cell) as a
-// single merged mesh/entity, so it actually reads as hexagons rather than the
-// triangular mesh you get from drawing lines through hex centers, without
-// spawning one entity per cell across the whole buildable area.
-fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) {
-    let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
-    let centers = hex_centers_in_bounds(extent);
-    let ring_mesh = build_hex_ring_mesh(&centers, HEX_SIZE, HEX_SIZE - 2.0);
+fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>, centers: &[Vec2]) {
+    let ring_mesh = build_hex_ring_mesh(centers, HEX_SIZE, HEX_SIZE - 2.0);
 
     commands.spawn((
         Mesh2d(meshes.add(ring_mesh)),
@@ -152,8 +151,6 @@ fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mu
     ));
 }
 
-/// Builds one merged mesh containing a hex-shaped ring (outer_r to inner_r)
-/// at each of `centers`, so the whole grid renders as a single draw call.
 fn build_hex_ring_mesh(centers: &[Vec2], outer_r: f32, inner_r: f32) -> Mesh {
     let mut positions = Vec::with_capacity(centers.len() * 12);
     let mut indices = Vec::with_capacity(centers.len() * 36);
