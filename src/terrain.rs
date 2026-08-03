@@ -31,7 +31,9 @@ const TERRAIN_SEED: u32 = 1337;
 const NOISE_FREQUENCY: f64 = 1.0 / 200.0;
 
 const MOUNTAIN_THRESHOLD: f64 = 0.20;
-const VOLCANO_THRESHOLD: f64 = 0.75;
+
+const VOLCANO_MIN_HEIGHT: f64 = 0.55;
+const VOLCANO_SPAWN_CHANCE: f64 = 0.05;
 
 const WATER_SEED_MIN_HEIGHT: f64 = 0.55;
 const WATER_SEED_CHANCE: f64 = 0.03;
@@ -42,9 +44,7 @@ const AXIAL_NEIGHBOR_OFFSETS: [(i32, i32); 6] =
     [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
 
 fn base_terrain_kind(height: f64) -> TerrainKind {
-    if height > VOLCANO_THRESHOLD {
-        TerrainKind::Volcano
-    } else if height > MOUNTAIN_THRESHOLD {
+    if height > MOUNTAIN_THRESHOLD {
         TerrainKind::Mountain
     } else {
         TerrainKind::Plains
@@ -75,7 +75,14 @@ pub fn spawn_terrain(
         .collect();
 
     for (&coord, &height) in &heights {
-        if height <= WATER_SEED_MIN_HEIGHT || water_seed_roll(coord) >= WATER_SEED_CHANCE {
+        if height <= VOLCANO_MIN_HEIGHT || tile_roll(coord, Roll::VolcanoSpawn) >= VOLCANO_SPAWN_CHANCE {
+            continue;
+        }
+        kinds.insert(coord, TerrainKind::Volcano);
+    }
+
+    for (&coord, &height) in &heights {
+        if height <= WATER_SEED_MIN_HEIGHT || tile_roll(coord, Roll::WaterSeed) >= WATER_SEED_CHANCE {
             continue;
         }
         carve_river(coord, &heights, &mut kinds);
@@ -109,9 +116,15 @@ pub fn spawn_terrain(
     }
 }
 
-fn water_seed_roll(coord: (i32, i32)) -> f64 {
+#[derive(Clone, Copy, Hash)]
+enum Roll {
+    VolcanoSpawn,
+    WaterSeed,
+}
+
+fn tile_roll(coord: (i32, i32), kind: Roll) -> f64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    (TERRAIN_SEED, coord).hash(&mut hasher);
+    (TERRAIN_SEED, kind, coord).hash(&mut hasher);
     (hasher.finish() >> 11) as f64 / (1u64 << 53) as f64
 }
 
