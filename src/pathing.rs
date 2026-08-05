@@ -281,6 +281,14 @@ pub fn snap_to_grid(position: Vec2) -> Vec2 {
     axial_to_world(rq as f32, rr as f32)
 }
 
+/// Same rounding as `snap_to_grid`, but returns the axial coordinate itself
+/// rather than its world center — for looking up per-cell data (e.g.
+/// terrain) keyed by axial coordinate.
+pub fn world_to_axial_cell(position: Vec2) -> (i32, i32) {
+    let (q, r) = world_to_axial(position);
+    round_axial(q, r)
+}
+
 fn world_to_axial(position: Vec2) -> (f32, f32) {
     let q = (3f32.sqrt() / 3.0 * position.x - 1.0 / 3.0 * position.y) / HEX_SIZE;
     let r = (2.0 / 3.0 * position.y) / HEX_SIZE;

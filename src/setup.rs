@@ -12,7 +12,7 @@ use crate::components::{
 use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::{hex_cells_in_bounds, spawn_path_visuals};
 use crate::resources::PathTiles;
-use crate::terrain::spawn_terrain;
+use crate::terrain::{spawn_terrain, TerrainTileIndex};
 
 const BACKGROUND_COLOR: Color = Color::srgb(0.10, 0.15, 0.13);
 
@@ -21,6 +21,7 @@ pub fn setup(
     path_tiles: Res<PathTiles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut tile_index: ResMut<TerrainTileIndex>,
 ) {
     let camera = commands.spawn((Camera2d, MainCamera)).id();
 
@@ -36,7 +37,7 @@ pub fn setup(
     let cells = hex_cells_in_bounds(extent);
     let centers: Vec<Vec2> = cells.iter().map(|&(_, _, pos)| pos).collect();
 
-    spawn_terrain(&mut commands, &mut meshes, &mut materials, &cells);
+    spawn_terrain(&mut commands, &mut meshes, &mut materials, &mut tile_index, &cells);
     spawn_grid(&mut commands, &mut meshes, &mut materials, &centers);
 
     spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &path_tiles, &[]);

@@ -46,6 +46,7 @@ use resources::{
     WaveNumber, GamePhase, reset_stat_temporaries,
 };
 use setup::setup;
+use terrain::{update_terrain_tooltip, TerrainTileIndex};
 use shop::{activate_shop, update_shop_input, update_shop_text, update_shop_tooltip};
 use spells::{
     update_burning_enemies, update_spell_input, update_spell_slots, update_spell_tooltip,
@@ -108,6 +109,7 @@ fn main() {
         .insert_resource(PathTiles::new())
         .insert_resource(Shop::new_empty())
         .insert_resource(SpellShop::new_empty())
+        .init_resource::<TerrainTileIndex>()
         .add_event::<ItemPurchasedEvent>()
         .add_event::<EnemyKilledEvent>()
         .add_event::<ShootEvent>()
@@ -208,6 +210,7 @@ fn main() {
             (
                 sync_draft_previews,
                 update_shop_tooltip,
+                update_terrain_tooltip,
                 update_spell_tooltip,
                 update_tower_tooltip,
                 update_draft_tooltip,

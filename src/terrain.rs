@@ -4,9 +4,13 @@ use std::hash::{Hash, Hasher};
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy::window::PrimaryWindow;
 use noise::{NoiseFn, Perlin};
 
+use crate::components::ShopTooltip;
 use crate::constants::HEX_SIZE;
+use crate::pathing::world_to_axial_cell;
+use crate::tooltip::{plain, set_tooltip_segments};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TerrainKind {
@@ -14,6 +18,10 @@ pub enum TerrainKind {
     Mountain,
     WaterBody,
     Volcano,
+    Forest,
+    PineForest,
+    AlpineForest,
+    Desert,
 }
 
 impl TerrainKind {
@@ -23,9 +31,44 @@ impl TerrainKind {
             Self::Mountain => Color::srgb(0.44, 0.42, 0.40),
             Self::WaterBody => Color::srgb(0.16, 0.34, 0.50),
             Self::Volcano => Color::srgb(0.46, 0.16, 0.10),
+            Self::Forest => Color::srgb(0.14, 0.42, 0.17),
+            Self::PineForest => Color::srgb(0.09, 0.30, 0.12),
+            Self::AlpineForest => Color::srgb(0.05, 0.20, 0.08),
+            Self::Desert => Color::srgb(0.80, 0.68, 0.40),
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Plains => "Plains",
+            Self::Mountain => "Mountain",
+            Self::WaterBody => "Water",
+            Self::Volcano => "Volcano",
+            Self::Forest => "Forest",
+            Self::PineForest => "Pine Forest",
+            Self::AlpineForest => "Alpine Forest",
+            Self::Desert => "Desert",
         }
     }
 }
+
+/// The actual ECS entity for a hex tile — carries its kind as a component,
+/// so anything that needs "what's at this spot" (e.g. the hover tooltip)
+/// reads it off the entity itself rather than a resource holding a copy of
+/// the same data. Deliberately has no `Transform`/`Mesh2d`/etc.: rendering
+/// is still done via the merged per-kind meshes spawned alongside these, so
+/// these ~34k entities cost only their own tiny component, not a transform
+/// propagation or render-extraction entry each.
+#[derive(Component)]
+pub struct TerrainTile {
+    pub kind: TerrainKind,
+}
+
+/// Spatial index from axial coordinate to that cell's `TerrainTile` entity —
+/// purely a lookup so a world position can find the right entity in O(1)
+/// instead of scanning every tile; it stores no terrain data itself.
+#[derive(Resource, Default)]
+pub struct TerrainTileIndex(pub HashMap<(i32, i32), Entity>);
 
 const TERRAIN_SEED: u32 = 1337;
 const NOISE_FREQUENCY: f64 = 1.0 / 200.0;
@@ -40,6 +83,26 @@ const WATER_SEED_CHANCE: f64 = 0.03;
 const MAX_RIVER_LENGTH: u32 = 400;
 const RIVER_UPHILL_TOLERANCE: f64 = 0.3;
 
+// A second, independent noise map — same idea as the height field above, but
+// its own seed and (smaller) wavelength, so forest patches read as their own
+// layer rather than tracing the terrain's macro shape exactly. Only applies
+// on top of Plains/Mountain tiles; Water/Volcano never grow vegetation.
+const VEGETATION_SEED: u32 = 2027;
+const VEGETATION_NOISE_FREQUENCY: f64 = 1.0 / 130.0;
+// Picked empirically so roughly 40% of eligible tiles end up forested.
+const VEGETATION_THRESHOLD: f64 = 0.10;
+// The low end of the same coverage roll: below this, a Plains tile is
+// barren rather than forested. Only Plains turns to Desert — Mountain just
+// stays bare rock, since low vegetation there isn't a distinct terrain type.
+const DESERT_MAX_COVERAGE: f64 = -0.35;
+
+// Elevation bands for vegetation *type*, independent of the terrain-kind
+// thresholds above so forest banding can be tuned on its own: lowland
+// (Forest) shades into conifer (PineForest) shades into sparse tree-line
+// growth (AlpineForest) as height increases.
+const FOREST_MAX_HEIGHT: f64 = 0.05;
+const PINE_FOREST_MAX_HEIGHT: f64 = 0.40;
+
 const AXIAL_NEIGHBOR_OFFSETS: [(i32, i32); 6] =
     [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
 
@@ -51,10 +114,21 @@ fn base_terrain_kind(height: f64) -> TerrainKind {
     }
 }
 
+fn vegetation_kind_for_height(height: f64) -> TerrainKind {
+    if height < FOREST_MAX_HEIGHT {
+        TerrainKind::Forest
+    } else if height < PINE_FOREST_MAX_HEIGHT {
+        TerrainKind::PineForest
+    } else {
+        TerrainKind::AlpineForest
+    }
+}
+
 pub fn spawn_terrain(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
+    tile_index: &mut TerrainTileIndex,
     cells: &[(i32, i32, Vec2)],
 ) {
     let perlin = Perlin::new(TERRAIN_SEED);
@@ -88,16 +162,44 @@ pub fn spawn_terrain(
         carve_river(coord, &heights, &mut kinds);
     }
 
+    let vegetation_perlin = Perlin::new(VEGETATION_SEED);
+    for &(q, r, pos) in cells {
+        let coord = (q, r);
+        let current_kind = kinds[&coord];
+        if !matches!(current_kind, TerrainKind::Plains | TerrainKind::Mountain) {
+            continue;
+        }
+        let coverage = vegetation_perlin.get([
+            pos.x as f64 * VEGETATION_NOISE_FREQUENCY,
+            pos.y as f64 * VEGETATION_NOISE_FREQUENCY,
+        ]);
+        if coverage > VEGETATION_THRESHOLD {
+            kinds.insert(coord, vegetation_kind_for_height(heights[&coord]));
+        } else if coverage < DESERT_MAX_COVERAGE && current_kind == TerrainKind::Plains {
+            kinds.insert(coord, TerrainKind::Desert);
+        }
+    }
+
     let classified: Vec<(Vec2, TerrainKind)> = cells
         .iter()
         .map(|&(q, r, pos)| (pos, kinds[&(q, r)]))
         .collect();
+
+    for &(q, r, _) in cells {
+        let coord = (q, r);
+        let entity = commands.spawn(TerrainTile { kind: kinds[&coord] }).id();
+        tile_index.0.insert(coord, entity);
+    }
 
     for kind in [
         TerrainKind::Plains,
         TerrainKind::Mountain,
         TerrainKind::WaterBody,
         TerrainKind::Volcano,
+        TerrainKind::Forest,
+        TerrainKind::PineForest,
+        TerrainKind::AlpineForest,
+        TerrainKind::Desert,
     ] {
         let kind_centers: Vec<Vec2> = classified
             .iter()
@@ -182,4 +284,50 @@ fn build_hex_fill_mesh(centers: &[Vec2], radius: f32) -> Mesh {
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
         .with_inserted_indices(Indices::U32(indices))
+}
+
+/// Shows the hovered tile's terrain name — but only as a fallback. This
+/// runs right after `update_shop_tooltip` (which resets the shared tooltip
+/// to Hidden before conditionally showing its own content), so if shop
+/// already claimed the tooltip this frame, terrain must not stomp it; the
+/// more specific systems later in the chain (spell/tower/draft) don't have
+/// this problem since they always run *after* terrain and freely overwrite
+/// on their own match regardless of what terrain just set.
+pub fn update_terrain_tooltip(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    tile_index: Res<TerrainTileIndex>,
+    tiles: Query<&TerrainTile>,
+    mut tooltip: Query<(Entity, &mut Text, &mut Visibility), With<ShopTooltip>>,
+    mut commands: Commands,
+) {
+    let Ok((tooltip_entity, mut tooltip_text, mut tooltip_visibility)) = tooltip.single_mut() else {
+        return;
+    };
+    if *tooltip_visibility == Visibility::Visible {
+        return;
+    }
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let Ok((camera, camera_transform)) = camera.single() else {
+        return;
+    };
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+    let Ok(world_position) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
+        return;
+    };
+
+    let coord = world_to_axial_cell(world_position);
+    let Some(&tile_entity) = tile_index.0.get(&coord) else {
+        return;
+    };
+    let Ok(tile) = tiles.get(tile_entity) else {
+        return;
+    };
+
+    set_tooltip_segments(&mut commands, tooltip_entity, &mut tooltip_text, vec![plain(tile.kind.name())]);
+    *tooltip_visibility = Visibility::Visible;
 }
