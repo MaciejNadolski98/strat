@@ -18,6 +18,7 @@ pub mod nozzle;
 pub mod apple;
 pub mod wood;
 pub mod soul_conduit;
+pub mod surge_coil;
 pub mod extended_reach;
 pub mod soul_toll;
 pub mod infernal_pact;
@@ -239,6 +240,7 @@ impl Plugin for ItemPlugins {
             apple::ApplePlugin,
             wood::WoodPlugin,
             soul_conduit::SoulConduitPlugin,
+            surge_coil::SurgeCoilPlugin,
             extended_reach::ExtendedReachPlugin,
             soul_toll::SoulTollPlugin,
             infernal_pact::InfernalPactPlugin,

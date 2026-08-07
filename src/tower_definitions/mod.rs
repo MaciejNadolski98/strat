@@ -3,19 +3,20 @@ pub use templates::{BarrelTemplate, BaseTemplate, TowerShape};
 
 pub mod ballista;
 pub mod brimstone;
+pub mod cannon;
+pub mod capacitor;
 pub mod catalyst;
 pub mod cyclone;
 pub mod dynamo;
-pub mod pyre;
-pub mod zephyr;
 pub mod gatling;
-pub mod cannon;
 pub mod golem;
 pub mod laser;
+pub mod pyre;
 pub mod sniper;
 pub mod soul_harvester;
 pub mod sprayer;
 pub mod tree;
+pub mod zephyr;
 
 use bevy::prelude::*;
 
@@ -124,12 +125,14 @@ pub struct TowerPlugins;
 impl Plugin for TowerPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((
-            ballista::BallistaPlugin, catalyst::CatalystPlugin, cyclone::CyclonePlugin,
-            pyre::PyrePlugin, zephyr::ZephyrPlugin, gatling::GatlingPlugin,
-            cannon::CannonPlugin, sprayer::SprayerPlugin, sniper::SniperPlugin,
-            golem::GolemPlugin, tree::TreePlugin, laser::LaserPlugin,
-            brimstone::BrimstonePlugin, dynamo::DynamoPlugin,
-            soul_harvester::SoulHarvesterPlugin,
+            ballista::BallistaPlugin, brimstone::BrimstonePlugin, cannon::CannonPlugin,
+            capacitor::CapacitorPlugin, catalyst::CatalystPlugin, cyclone::CyclonePlugin,
+            dynamo::DynamoPlugin, gatling::GatlingPlugin,
+        ));
+        app.add_plugins((
+            golem::GolemPlugin, laser::LaserPlugin, pyre::PyrePlugin,
+            sniper::SniperPlugin, soul_harvester::SoulHarvesterPlugin,
+            sprayer::SprayerPlugin, tree::TreePlugin, zephyr::ZephyrPlugin,
         ));
     }
 }
