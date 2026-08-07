@@ -12,6 +12,7 @@ This is a single-binary Cargo project (no workspace, no test suite yet).
 - Lint: `cargo clippy`
 - Fast playtest (3 waves instead of the full 20): `cargo run -- --test`
 - Force specific towers into the draft queue, one per round, for testing a tower/item combo without RNG: `cargo run -- --towers=laser,sprayer,soul_harvester` (names are case-insensitive, spaces or underscores both work, e.g. `soul_harvester` or `soul harvester`)
+- Launch the terrain map editor instead of the game: `cargo run -- --editor` (see Terrain below)
 
 There's no way to drive the game headlessly — verifying gameplay behavior means running the binary and either playing manually or reading the code path closely, since Bevy pops up a real window.
 
@@ -58,3 +59,9 @@ Note the two-layer shop model: `Shop.item_pool` is the set of items *eligible* t
 ### Draft vs. Shop
 
 These are two independent offer/pick systems that look similar but serve different economies: `TowerDraft` (`draft.rs`) offers 3 towers between waves and is free; `Shop` (`shop.rs`) offers 3 purchasable items and persists through a wave. Don't conflate their reset/activate logic when working on one.
+
+### Terrain: file-authored, not procedural
+
+`terrain.rs` defines `TerrainKind` (Plains/Mountain/WaterBody/Volcano/Forest/PineForest/AlpineForest/Desert) and spawns one merged mesh per kind plus a lightweight `TerrainTile { kind }` entity per hex (indexed by `TerrainTileIndex`, a coord→`Entity` map, so hover systems read the kind off the entity's own component instead of a resource duplicating the data). `spawn_terrain` no longer generates terrain itself — it loads a sparse tile-override list from `terrain_map.txt` via `terrain_file.rs` (`load_terrain_overrides`/`save_terrain_overrides`; `q r Kind` per line, unlisted tiles default to `DEFAULT_TERRAIN_KIND`). The old Perlin/volcano/river/vegetation algorithm still exists as `generate_random_kinds`, but the game never calls it — only the map editor does, as an optional "randomize" starting point.
+
+`cargo run -- --editor` launches `editor.rs`'s `run_editor`, a completely separate `App` (not a game mode/state — it never touches `GameState` or any gameplay system) reusing `game::pan_camera` for WASD panning: click a palette swatch or press 1-8 to pick a tile kind, click/drag on the map to paint, `G` to randomize, click SAVE to write `terrain_map.txt`. Whatever it saves is exactly what `spawn_terrain` loads, since both go through `terrain_file.rs`.

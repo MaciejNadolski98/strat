@@ -153,7 +153,7 @@ fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mu
     ));
 }
 
-fn build_hex_ring_mesh(centers: &[Vec2], outer_r: f32, inner_r: f32) -> Mesh {
+pub fn build_hex_ring_mesh(centers: &[Vec2], outer_r: f32, inner_r: f32) -> Mesh {
     let mut positions = Vec::with_capacity(centers.len() * 12);
     let mut indices = Vec::with_capacity(centers.len() * 36);
 

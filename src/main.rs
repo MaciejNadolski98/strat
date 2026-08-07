@@ -2,6 +2,7 @@ mod charges;
 mod components;
 mod constants;
 mod draft;
+mod editor;
 mod effects;
 mod enemies;
 mod game;
@@ -16,6 +17,7 @@ mod spell_definitions;
 mod spells;
 mod tags;
 mod terrain;
+mod terrain_file;
 mod tooltip;
 mod tower_definitions;
 mod towers;
@@ -69,6 +71,11 @@ fn initialize_spell_shop(registry: Res<SpellRegistry>, mut spell_shop: ResMut<Sp
 }
 
 fn main() {
+    if std::env::args().any(|arg| arg == "--editor") {
+        editor::run_editor();
+        return;
+    }
+
     let run_mode = RunMode::from_args(std::env::args());
 
     let mut app = App::new();
