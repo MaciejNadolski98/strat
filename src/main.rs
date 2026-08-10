@@ -10,6 +10,7 @@ mod hud;
 mod item_definitions;
 mod pathing;
 mod projectiles;
+mod regions;
 mod resources;
 mod setup;
 mod shop;
@@ -47,6 +48,7 @@ use resources::{
     PiercingDamage, Regeneration, Shop, SpawnTimer, Stat, SpellShop, TowerDraft, WaterDamage,
     WaveNumber, GamePhase, reset_stat_temporaries,
 };
+use regions::{track_camera_region, update_region_titles, CurrentRegion, RegionMap};
 use setup::setup;
 use terrain::{update_terrain_tooltip, TerrainTileIndex};
 use shop::{activate_shop, update_shop_input, update_shop_text, update_shop_tooltip};
@@ -117,6 +119,8 @@ fn main() {
         .insert_resource(Shop::new_empty())
         .insert_resource(SpellShop::new_empty())
         .init_resource::<TerrainTileIndex>()
+        .init_resource::<RegionMap>()
+        .init_resource::<CurrentRegion>()
         .add_event::<ItemPurchasedEvent>()
         .add_event::<EnemyKilledEvent>()
         .add_event::<ShootEvent>()
@@ -229,6 +233,8 @@ fn main() {
                 .after(update_spell_slots),
         )
         .add_systems(Update, pan_camera)
+        .add_systems(Update, track_camera_region.after(pan_camera))
+        .add_systems(Update, update_region_titles)
         .add_systems(Update, update_shop_input.after(toggle_pause))
         .add_systems(Update, update_path_input.after(toggle_pause))
         .add_systems(Update, update_path_hints)

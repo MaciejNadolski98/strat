@@ -10,7 +10,8 @@ use noise::{NoiseFn, Perlin};
 use crate::components::ShopTooltip;
 use crate::constants::HEX_SIZE;
 use crate::pathing::world_to_axial_cell;
-use crate::terrain_file::load_terrain_overrides;
+use crate::regions::RegionMap;
+use crate::terrain_file::load_terrain_file;
 use crate::tooltip::{plain, set_tooltip_segments};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -148,17 +149,19 @@ pub fn spawn_terrain(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
     tile_index: &mut TerrainTileIndex,
+    region_map: &mut RegionMap,
     cells: &[(i32, i32, Vec2)],
 ) {
-    let overrides = load_terrain_overrides();
+    let data = load_terrain_file();
     let kinds: HashMap<(i32, i32), TerrainKind> = cells
         .iter()
         .map(|&(q, r, _)| {
-            let kind = overrides.get(&(q, r)).copied().unwrap_or(DEFAULT_TERRAIN_KIND);
+            let kind = data.overrides.get(&(q, r)).copied().unwrap_or(DEFAULT_TERRAIN_KIND);
             ((q, r), kind)
         })
         .collect();
 
+    *region_map = RegionMap::from_definitions(data.regions);
     spawn_terrain_kinds(commands, meshes, materials, tile_index, cells, &kinds);
 }
 

@@ -11,6 +11,7 @@ use crate::components::{
 };
 use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::pathing::{hex_cells_in_bounds, spawn_path_visuals};
+use crate::regions::RegionMap;
 use crate::resources::PathTiles;
 use crate::terrain::{spawn_terrain, TerrainTileIndex};
 
@@ -22,6 +23,7 @@ pub fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut tile_index: ResMut<TerrainTileIndex>,
+    mut region_map: ResMut<RegionMap>,
 ) {
     let camera = commands.spawn((Camera2d, MainCamera)).id();
 
@@ -37,7 +39,7 @@ pub fn setup(
     let cells = hex_cells_in_bounds(extent);
     let centers: Vec<Vec2> = cells.iter().map(|&(_, _, pos)| pos).collect();
 
-    spawn_terrain(&mut commands, &mut meshes, &mut materials, &mut tile_index, &cells);
+    spawn_terrain(&mut commands, &mut meshes, &mut materials, &mut tile_index, &mut region_map, &cells);
     spawn_grid(&mut commands, &mut meshes, &mut materials, &centers);
 
     spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &path_tiles, &[]);

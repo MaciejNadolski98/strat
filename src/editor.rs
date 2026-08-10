@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::math::primitives::RegularPolygon;
+use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -8,11 +9,12 @@ use crate::components::MainCamera;
 use crate::constants::{HEX_SIZE, INITIAL_PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::game::pan_camera;
 use crate::pathing::{hex_cells_in_bounds, world_to_axial_cell};
+use crate::regions::RegionDefinition;
 use crate::setup::build_hex_ring_mesh;
 use crate::terrain::{
     build_hex_fill_mesh, generate_random_kinds, TerrainKind, ALL_TERRAIN_KINDS, DEFAULT_TERRAIN_KIND,
 };
-use crate::terrain_file::{load_terrain_overrides, save_terrain_overrides, TERRAIN_FILE_PATH};
+use crate::terrain_file::{load_terrain_file, save_terrain_file, TERRAIN_FILE_PATH};
 
 const SWATCH_SIZE: f32 = 28.0;
 const SWATCH_SPACING: f32 = 36.0;
@@ -29,6 +31,41 @@ fn palette_x(index: usize) -> f32 {
 const SAVE_BUTTON_POS: Vec3 = Vec3::new(WINDOW_WIDTH * 0.5 - 66.0, WINDOW_HEIGHT * 0.5 - 30.0, 20.0);
 const SAVE_BUTTON_SIZE: Vec2 = Vec2::new(108.0, 40.0);
 
+const MODE_BUTTON_POS: Vec3 = Vec3::new(WINDOW_WIDTH * 0.5 - 190.0, WINDOW_HEIGHT * 0.5 - 30.0, 20.0);
+const MODE_BUTTON_SIZE: Vec2 = Vec2::new(128.0, 40.0);
+
+const REGION_LIST_X: f32 = -WINDOW_WIDTH * 0.5 + 90.0;
+const REGION_LIST_START_Y: f32 = WINDOW_HEIGHT * 0.5 - 80.0;
+const REGION_LIST_SPACING: f32 = 32.0;
+const REGION_SLOT_WIDTH: f32 = 160.0;
+const REGION_SLOT_HEIGHT: f32 = 26.0;
+
+const NEW_REGION_BUTTON_Y_OFFSET: f32 = 10.0;
+
+const REGION_OVERLAY_COLOR: Color = Color::srgba(0.9, 0.75, 0.2, 0.55);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum EditorMode {
+    Terrain,
+    Regions,
+}
+
+impl EditorMode {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Terrain => "Terrain",
+            Self::Regions => "Regions",
+        }
+    }
+
+    fn next(self) -> Self {
+        match self {
+            Self::Terrain => Self::Regions,
+            Self::Regions => Self::Terrain,
+        }
+    }
+}
+
 #[derive(Component)]
 struct EditorSelectionHighlight;
 
@@ -36,15 +73,36 @@ struct EditorSelectionHighlight;
 struct EditorSaveButton;
 
 #[derive(Component)]
+struct EditorModeButton;
+
+#[derive(Component)]
+struct EditorModeLabel;
+
+#[derive(Component)]
 struct EditorHudText;
+
+#[derive(Component)]
+struct TerrainPaletteElement;
+
+#[derive(Component)]
+struct RegionListElement;
+
+#[derive(Component)]
+struct RegionOverlay;
 
 #[derive(Resource)]
 struct EditorState {
+    mode: EditorMode,
     current_kind: TerrainKind,
     kinds: HashMap<(i32, i32), TerrainKind>,
     cells: Vec<(i32, i32, Vec2)>,
     layer_meshes: HashMap<TerrainKind, Handle<Mesh>>,
     painting: bool,
+    regions: Vec<RegionDefinition>,
+    selected_region: Option<usize>,
+    naming_region: bool,
+    region_name_buffer: String,
+    consumed_click: bool,
 }
 
 pub fn run_editor() {
@@ -64,8 +122,12 @@ pub fn run_editor() {
             Update,
             (
                 pan_camera,
+                editor_reset_consumed_click,
+                editor_mode_toggle.after(editor_reset_consumed_click),
                 editor_select_kind_input,
-                editor_click_input,
+                editor_terrain_click.after(editor_mode_toggle),
+                editor_region_click.after(editor_mode_toggle),
+                editor_region_name_input,
                 editor_randomize_input,
                 editor_update_hud,
             ),
@@ -85,16 +147,20 @@ fn positions_for_kind(
         .collect()
 }
 
+fn cell_position(cells: &[(i32, i32, Vec2)], coord: (i32, i32)) -> Option<Vec2> {
+    cells.iter().find(|&&(q, r, _)| (q, r) == coord).map(|&(_, _, pos)| pos)
+}
+
 fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
     let camera = commands.spawn((Camera2d, MainCamera)).id();
 
     let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
     let cells = hex_cells_in_bounds(extent);
-    let overrides = load_terrain_overrides();
+    let data = load_terrain_file();
     let kinds: HashMap<(i32, i32), TerrainKind> = cells
         .iter()
         .map(|&(q, r, _)| {
-            let kind = overrides.get(&(q, r)).copied().unwrap_or(DEFAULT_TERRAIN_KIND);
+            let kind = data.overrides.get(&(q, r)).copied().unwrap_or(DEFAULT_TERRAIN_KIND);
             ((q, r), kind)
         })
         .collect();
@@ -126,6 +192,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
             .spawn((
                 Sprite::from_color(kind.color(), Vec2::splat(SWATCH_SIZE)),
                 Transform::from_translation(Vec3::new(x, palette_y(), 20.0)),
+                TerrainPaletteElement,
             ))
             .id();
         let label = commands
@@ -135,6 +202,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
                 TextColor(Color::srgb(0.92, 0.92, 0.88)),
                 TextShadow::default(),
                 Transform::from_translation(Vec3::new(x, palette_y() - 24.0, 20.0)),
+                TerrainPaletteElement,
             ))
             .id();
         commands.entity(camera).add_child(swatch);
@@ -146,6 +214,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
             Sprite::from_color(Color::srgb(0.95, 0.85, 0.25), Vec2::splat(SWATCH_SIZE + 8.0)),
             Transform::from_translation(Vec3::new(palette_x(0), palette_y(), 19.0)),
             EditorSelectionHighlight,
+            TerrainPaletteElement,
         ))
         .id();
     commands.entity(camera).add_child(highlight);
@@ -169,6 +238,26 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
     commands.entity(camera).add_child(save_button);
     commands.entity(camera).add_child(save_label);
 
+    let mode_button = commands
+        .spawn((
+            Sprite::from_color(Color::srgb(0.28, 0.30, 0.42), MODE_BUTTON_SIZE),
+            Transform::from_translation(MODE_BUTTON_POS),
+            EditorModeButton,
+        ))
+        .id();
+    let mode_label = commands
+        .spawn((
+            Text2d::new("Terrain"),
+            TextFont { font_size: 14.0, ..default() },
+            TextColor(Color::srgb(0.92, 0.92, 0.88)),
+            TextShadow::default(),
+            Transform::from_translation(MODE_BUTTON_POS + Vec3::new(0.0, 0.0, 1.0)),
+            EditorModeLabel,
+        ))
+        .id();
+    commands.entity(camera).add_child(mode_button);
+    commands.entity(camera).add_child(mode_label);
+
     commands.spawn((
         Text::new(""),
         TextFont { font_size: 16.0, ..default() },
@@ -184,11 +273,17 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
     ));
 
     commands.insert_resource(EditorState {
+        mode: EditorMode::Terrain,
         current_kind: DEFAULT_TERRAIN_KIND,
         kinds,
         cells,
         layer_meshes,
         painting: false,
+        regions: data.regions,
+        selected_region: None,
+        naming_region: false,
+        region_name_buffer: String::new(),
+        consumed_click: false,
     });
 }
 
@@ -220,11 +315,177 @@ fn select_palette_index(state: &mut EditorState, highlight_transform: &mut Trans
     highlight_transform.translation.x = palette_x(index);
 }
 
+fn editor_reset_consumed_click(mut state: ResMut<EditorState>) {
+    state.consumed_click = false;
+}
+
+fn editor_mode_toggle(
+    mouse: Res<ButtonInput<MouseButton>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    mut mode_label: Query<&mut Text2d, With<EditorModeLabel>>,
+    mut state: ResMut<EditorState>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    palette_elements: Query<Entity, With<TerrainPaletteElement>>,
+    region_elements: Query<Entity, With<RegionListElement>>,
+    region_overlays: Query<Entity, With<RegionOverlay>>,
+    main_camera: Query<Entity, With<MainCamera>>,
+) {
+    let mut toggled = keyboard.just_pressed(KeyCode::Tab);
+
+    if !toggled && mouse.just_pressed(MouseButton::Left) {
+        let Ok(window) = windows.single() else { return; };
+        let Ok((cam, cam_transform)) = camera.single() else { return; };
+        let Some(cursor_pos) = window.cursor_position() else { return; };
+        let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+        let local_pos = world_pos - cam_transform.translation().truncate();
+
+        let btn = MODE_BUTTON_POS.truncate();
+        if (local_pos.x - btn.x).abs() <= MODE_BUTTON_SIZE.x * 0.5
+            && (local_pos.y - btn.y).abs() <= MODE_BUTTON_SIZE.y * 0.5
+        {
+            toggled = true;
+        }
+    }
+
+    if !toggled {
+        return;
+    }
+
+    state.consumed_click = true;
+    state.mode = state.mode.next();
+    state.naming_region = false;
+    state.region_name_buffer.clear();
+    if state.mode == EditorMode::Terrain {
+        state.selected_region = None;
+    }
+
+    if let Ok(mut label) = mode_label.single_mut() {
+        label.0 = state.mode.label().to_string();
+    }
+
+    let Ok(camera_entity) = main_camera.single() else { return; };
+
+    for entity in &palette_elements {
+        let vis = if state.mode == EditorMode::Terrain { Visibility::Inherited } else { Visibility::Hidden };
+        commands.entity(entity).insert(vis);
+    }
+
+    for entity in &region_elements {
+        commands.entity(entity).despawn();
+    }
+    for entity in &region_overlays {
+        commands.entity(entity).despawn();
+    }
+
+    if state.mode == EditorMode::Regions {
+        spawn_region_list(&mut commands, &mut meshes, &mut materials, &state, camera_entity);
+    }
+}
+
+fn spawn_region_list(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+    state: &EditorState,
+    camera_entity: Entity,
+) {
+    for (index, region) in state.regions.iter().enumerate() {
+        let y = REGION_LIST_START_Y - index as f32 * REGION_LIST_SPACING;
+        let selected = state.selected_region == Some(index);
+        let bg_color = if selected {
+            Color::srgb(0.35, 0.38, 0.50)
+        } else {
+            Color::srgb(0.18, 0.20, 0.22)
+        };
+
+        let slot = commands
+            .spawn((
+                Sprite::from_color(bg_color, Vec2::new(REGION_SLOT_WIDTH, REGION_SLOT_HEIGHT)),
+                Transform::from_translation(Vec3::new(REGION_LIST_X, y, 20.0)),
+                RegionListElement,
+            ))
+            .id();
+        let label = commands
+            .spawn((
+                Text2d::new(&region.name),
+                TextFont { font_size: 13.0, ..default() },
+                TextColor(Color::srgb(0.92, 0.92, 0.86)),
+                TextShadow::default(),
+                Transform::from_translation(Vec3::new(REGION_LIST_X, y, 21.0)),
+                RegionListElement,
+            ))
+            .id();
+        commands.entity(camera_entity).add_child(slot);
+        commands.entity(camera_entity).add_child(label);
+
+        if selected {
+            let positions: Vec<Vec2> = region.tiles.iter()
+                .filter_map(|&coord| cell_position(&state.cells, coord))
+                .collect();
+            if !positions.is_empty() {
+                commands.spawn((
+                    Mesh2d(meshes.add(build_hex_fill_mesh(&positions, HEX_SIZE))),
+                    MeshMaterial2d(materials.add(REGION_OVERLAY_COLOR)),
+                    Transform::from_translation(Vec3::new(0.0, 0.0, 0.5)),
+                    RegionOverlay,
+                ));
+            }
+        }
+    }
+
+    let new_y = REGION_LIST_START_Y - state.regions.len() as f32 * REGION_LIST_SPACING - NEW_REGION_BUTTON_Y_OFFSET;
+    let new_btn = commands
+        .spawn((
+            Sprite::from_color(Color::srgb(0.22, 0.40, 0.25), Vec2::new(REGION_SLOT_WIDTH, REGION_SLOT_HEIGHT)),
+            Transform::from_translation(Vec3::new(REGION_LIST_X, new_y, 20.0)),
+            RegionListElement,
+        ))
+        .id();
+    let new_label = commands
+        .spawn((
+            Text2d::new("+ New Region"),
+            TextFont { font_size: 13.0, ..default() },
+            TextColor(Color::srgb(0.88, 0.95, 0.88)),
+            TextShadow::default(),
+            Transform::from_translation(Vec3::new(REGION_LIST_X, new_y, 21.0)),
+            RegionListElement,
+        ))
+        .id();
+    commands.entity(camera_entity).add_child(new_btn);
+    commands.entity(camera_entity).add_child(new_label);
+}
+
+fn rebuild_region_ui(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+    state: &EditorState,
+    region_elements: &Query<Entity, With<RegionListElement>>,
+    region_overlays: &Query<Entity, With<RegionOverlay>>,
+    camera_entity: Entity,
+) {
+    for entity in region_elements.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in region_overlays.iter() {
+        commands.entity(entity).despawn();
+    }
+    spawn_region_list(commands, meshes, materials, state, camera_entity);
+}
+
 fn editor_select_kind_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<EditorState>,
     mut highlight: Query<&mut Transform, With<EditorSelectionHighlight>>,
 ) {
+    if state.mode != EditorMode::Terrain {
+        return;
+    }
+
     const KEYS: [KeyCode; 8] = [
         KeyCode::Digit1,
         KeyCode::Digit2,
@@ -257,15 +518,18 @@ fn rebuild_layer_mesh(
     meshes.insert(handle, build_hex_fill_mesh(&positions, HEX_SIZE));
 }
 
-fn editor_click_input(
+fn editor_terrain_click(
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    save_button: Query<&GlobalTransform, With<EditorSaveButton>>,
     mut highlight: Query<&mut Transform, With<EditorSelectionHighlight>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut state: ResMut<EditorState>,
 ) {
+    if state.mode != EditorMode::Terrain || state.consumed_click {
+        return;
+    }
+
     if mouse.just_released(MouseButton::Left) {
         state.painting = false;
     }
@@ -279,21 +543,20 @@ fn editor_click_input(
     let Ok((cam, cam_transform)) = camera.single() else { return; };
     let Some(cursor_pos) = window.cursor_position() else { return; };
     let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+    let local_pos = world_pos - cam_transform.translation().truncate();
 
     if just_clicked {
-        if let Ok(button_transform) = save_button.single() {
-            let pos = button_transform.translation().truncate();
-            if (world_pos.x - pos.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
-                && (world_pos.y - pos.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
-            {
-                save_terrain_overrides(&sparse_overrides(&state.kinds));
-                return;
-            }
+        let save_local = SAVE_BUTTON_POS.truncate();
+        if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
+            && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
+        {
+            save_terrain_file(&sparse_overrides(&state.kinds), &state.regions);
+            return;
         }
 
         for index in 0..ALL_TERRAIN_KINDS.len() {
             let x = palette_x(index);
-            if (world_pos.x - x).abs() <= SWATCH_SIZE * 0.5 && (world_pos.y - palette_y()).abs() <= SWATCH_SIZE * 0.5 {
+            if (local_pos.x - x).abs() <= SWATCH_SIZE * 0.5 && (local_pos.y - palette_y()).abs() <= SWATCH_SIZE * 0.5 {
                 if let Ok(mut highlight_transform) = highlight.single_mut() {
                     select_palette_index(&mut state, &mut highlight_transform, index);
                 }
@@ -315,11 +578,147 @@ fn editor_click_input(
     rebuild_layer_mesh(&mut meshes, &state.layer_meshes, &state.cells, &state.kinds, new_kind);
 }
 
+fn editor_region_click(
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    mut state: ResMut<EditorState>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    region_elements: Query<Entity, With<RegionListElement>>,
+    region_overlays: Query<Entity, With<RegionOverlay>>,
+    main_camera: Query<Entity, With<MainCamera>>,
+) {
+    if state.mode != EditorMode::Regions || state.naming_region || state.consumed_click {
+        return;
+    }
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    let Ok(window) = windows.single() else { return; };
+    let Ok((cam, cam_transform)) = camera.single() else { return; };
+    let Some(cursor_pos) = window.cursor_position() else { return; };
+    let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+    let Ok(camera_entity) = main_camera.single() else { return; };
+    let local_pos = world_pos - cam_transform.translation().truncate();
+
+    // Save button (camera child — use local_pos)
+    let save_local = SAVE_BUTTON_POS.truncate();
+    if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
+        && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
+    {
+        save_terrain_file(&sparse_overrides(&state.kinds), &state.regions);
+        return;
+    }
+
+    // Check region list clicks
+    for index in 0..state.regions.len() {
+        let y = REGION_LIST_START_Y - index as f32 * REGION_LIST_SPACING;
+        if (local_pos.x - REGION_LIST_X).abs() <= REGION_SLOT_WIDTH * 0.5
+            && (local_pos.y - y).abs() <= REGION_SLOT_HEIGHT * 0.5
+        {
+            if state.selected_region == Some(index) {
+                state.selected_region = None;
+            } else {
+                state.selected_region = Some(index);
+            }
+            rebuild_region_ui(&mut commands, &mut meshes, &mut materials, &state, &region_elements, &region_overlays, camera_entity);
+            return;
+        }
+    }
+
+    // "+ New Region" button
+    let new_y = REGION_LIST_START_Y - state.regions.len() as f32 * REGION_LIST_SPACING - NEW_REGION_BUTTON_Y_OFFSET;
+    if (local_pos.x - REGION_LIST_X).abs() <= REGION_SLOT_WIDTH * 0.5
+        && (local_pos.y - new_y).abs() <= REGION_SLOT_HEIGHT * 0.5
+    {
+        state.naming_region = true;
+        state.region_name_buffer.clear();
+        return;
+    }
+
+    // Click on map tile — add/remove from selected region
+    let Some(selected) = state.selected_region else { return; };
+    let coord = world_to_axial_cell(world_pos);
+    if !state.kinds.contains_key(&coord) {
+        return;
+    }
+
+    let region = &mut state.regions[selected];
+    if let Some(pos) = region.tiles.iter().position(|&c| c == coord) {
+        region.tiles.remove(pos);
+    } else {
+        region.tiles.push(coord);
+    }
+
+    rebuild_region_ui(&mut commands, &mut meshes, &mut materials, &state, &region_elements, &region_overlays, camera_entity);
+}
+
+fn editor_region_name_input(
+    mut key_events: EventReader<KeyboardInput>,
+    mut state: ResMut<EditorState>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    region_elements: Query<Entity, With<RegionListElement>>,
+    region_overlays: Query<Entity, With<RegionOverlay>>,
+    main_camera: Query<Entity, With<MainCamera>>,
+) {
+    if !state.naming_region {
+        return;
+    }
+
+    for ev in key_events.read() {
+        if !ev.state.is_pressed() {
+            continue;
+        }
+        match &ev.logical_key {
+            Key::Character(s) => {
+                state.region_name_buffer.push_str(s);
+            }
+            Key::Space => {
+                state.region_name_buffer.push(' ');
+            }
+            Key::Backspace => {
+                state.region_name_buffer.pop();
+            }
+            Key::Escape => {
+                state.naming_region = false;
+                state.region_name_buffer.clear();
+                return;
+            }
+            Key::Enter => {
+                let name = state.region_name_buffer.trim().to_string();
+                if !name.is_empty() {
+                    let new_index = state.regions.len();
+                    state.regions.push(RegionDefinition {
+                        name,
+                        tiles: Vec::new(),
+                    });
+                    state.selected_region = Some(new_index);
+                }
+                state.naming_region = false;
+                state.region_name_buffer.clear();
+
+                let Ok(camera_entity) = main_camera.single() else { return; };
+                rebuild_region_ui(&mut commands, &mut meshes, &mut materials, &state, &region_elements, &region_overlays, camera_entity);
+                return;
+            }
+            _ => {}
+        }
+    }
+}
+
 fn editor_randomize_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut state: ResMut<EditorState>,
 ) {
+    if state.mode != EditorMode::Terrain {
+        return;
+    }
     if !keyboard.just_pressed(KeyCode::KeyG) {
         return;
     }
@@ -340,10 +739,36 @@ fn sparse_overrides(kinds: &HashMap<(i32, i32), TerrainKind>) -> HashMap<(i32, i
 
 fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<EditorHudText>>) {
     let Ok(mut text) = hud.single_mut() else { return; };
-    text.0 = format!(
-        "Terrain Map Editor\n\
-         WASD: pan  |  1-8 or click a swatch: pick tile type  |  click/drag: paint  |  G: randomize  |  click SAVE: write {TERRAIN_FILE_PATH}\n\n\
-         Painting: {}",
-        state.current_kind.name(),
-    );
+
+    if state.naming_region {
+        text.0 = format!(
+            "Terrain Map Editor — Regions\n\
+             Type region name: {}_\n\
+             Enter: confirm  |  Esc: cancel",
+            state.region_name_buffer,
+        );
+        return;
+    }
+
+    match state.mode {
+        EditorMode::Terrain => {
+            text.0 = format!(
+                "Terrain Map Editor — Terrain\n\
+                 WASD: pan  |  1-8 or click: pick tile  |  click/drag: paint  |  G: randomize  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
+                 Painting: {}",
+                state.current_kind.name(),
+            );
+        }
+        EditorMode::Regions => {
+            let region_info = match state.selected_region {
+                Some(i) => format!("Selected: {} ({} tiles)", state.regions[i].name, state.regions[i].tiles.len()),
+                None => "No region selected".to_string(),
+            };
+            text.0 = format!(
+                "Terrain Map Editor — Regions\n\
+                 WASD: pan  |  click list: select region  |  click map: toggle tile  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
+                 {region_info}",
+            );
+        }
+    }
 }
