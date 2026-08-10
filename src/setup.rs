@@ -1,25 +1,25 @@
 use bevy::asset::RenderAssetUsages;
-use bevy::math::primitives::{Circle, RegularPolygon};
+use bevy::math::primitives::Circle;
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 
 use crate::components::{
     DraftHeaderText, DraftPanel, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel,
-    HudText, MainCamera, PathEndMarker, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel,
+    HudText, MainCamera, ShopSlot, ShopSlotBarrel, ShopSlotIcon, ShopSlotLabel,
     ShopText, ShopTooltip, SpellSlot, SpellSlotIcon, SpellSlotLabel, TowerPhantom,
     TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::pathing::{hex_cells_in_bounds, spawn_path_visuals};
+use crate::paths::{spawn_all_path_visuals, PathMap};
+use crate::pathing::hex_cells_in_bounds;
 use crate::regions::RegionMap;
-use crate::resources::PathTiles;
 use crate::terrain::{spawn_terrain, TerrainTileIndex};
 
 const BACKGROUND_COLOR: Color = Color::srgb(0.10, 0.15, 0.13);
 
 pub fn setup(
     mut commands: Commands,
-    path_tiles: Res<PathTiles>,
+    mut path_map: ResMut<PathMap>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut tile_index: ResMut<TerrainTileIndex>,
@@ -37,24 +37,12 @@ pub fn setup(
 
     let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
     let cells = hex_cells_in_bounds(extent);
-    let centers: Vec<Vec2> = cells.iter().map(|&(_, _, pos)| pos).collect();
 
-    spawn_terrain(&mut commands, &mut meshes, &mut materials, &mut tile_index, &mut region_map, &cells);
+    spawn_terrain(&mut commands, &mut meshes, &mut materials, &mut tile_index, &mut region_map, &mut path_map, &cells);
+    let centers: Vec<Vec2> = cells.iter().map(|&(_, _, pos)| pos).collect();
     spawn_grid(&mut commands, &mut meshes, &mut materials, &centers);
 
-    spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &path_tiles, &[]);
-
-    commands.spawn((
-        Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE + 6.0, 6))),
-        MeshMaterial2d(materials.add(Color::srgb(0.35, 0.13, 0.12))),
-        Transform::from_translation(path_tiles.start().extend(0.0)),
-    ));
-    commands.spawn((
-        Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE + 9.0, 6))),
-        MeshMaterial2d(materials.add(Color::srgb(0.12, 0.35, 0.36))),
-        Transform::from_translation(path_tiles.end().extend(0.0)),
-        PathEndMarker,
-    ));
+    spawn_all_path_visuals(&mut commands, &mut meshes, &mut materials, &path_map);
 
     commands.spawn((
         Text::new(""),

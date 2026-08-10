@@ -20,18 +20,6 @@ pub struct Projectile;
 pub struct CustomTooltip(pub Vec<Segment>);
 
 #[derive(Component)]
-pub struct PathTile;
-
-#[derive(Component)]
-pub struct PathEdge;
-
-#[derive(Component)]
-pub struct PathEndMarker;
-
-#[derive(Component)]
-pub struct PathExtensionHint;
-
-#[derive(Component)]
 pub struct HudText;
 
 #[derive(Component)]
@@ -328,6 +316,9 @@ pub struct Waypoint {
 pub struct PathProgress {
     pub distance: f32,
 }
+
+#[derive(Component)]
+pub struct EnemyPathIndex(pub crate::paths::PathId);
 
 #[derive(Component)]
 pub struct Direction {

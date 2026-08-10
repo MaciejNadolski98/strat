@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::constants::{
-    HEX_SPACING, INITIAL_PATH, PATH_EXTENSION_BASE_COST, PATH_EXTENSION_COST_STEP, PRICE_GROWTH,
-    SHOP_REROLL_COST,
-};
+use crate::constants::{PRICE_GROWTH, SHOP_REROLL_COST};
 use crate::item_definitions::ItemKind;
 pub use crate::spell_definitions::SpellKind;
 use crate::tower_definitions::TowerKind;
@@ -176,50 +173,6 @@ pub struct NextWaveTimer {
     pub timer: Timer,
 }
 
-#[derive(Resource)]
-pub struct PathTiles {
-    pub tiles: Vec<Vec2>,
-}
-
-impl PathTiles {
-    pub fn new() -> Self {
-        Self {
-            tiles: INITIAL_PATH.to_vec(),
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.tiles = INITIAL_PATH.to_vec();
-    }
-
-    pub fn start(&self) -> Vec2 {
-        self.tiles[0]
-    }
-
-    pub fn end(&self) -> Vec2 {
-        self.tiles[self.tiles.len() - 1]
-    }
-
-    pub fn extension_cost(&self) -> i32 {
-        let extensions = self.tiles.len().saturating_sub(INITIAL_PATH.len()) as i32;
-        PATH_EXTENSION_BASE_COST + extensions * PATH_EXTENSION_COST_STEP
-    }
-
-    pub fn contains(&self, position: Vec2) -> bool {
-        self.tiles
-            .iter()
-            .any(|tile| tile.distance_squared(position) < 1.0)
-    }
-
-    pub fn can_extend_to(&self, position: Vec2) -> bool {
-        let distance_squared = position.distance_squared(self.end());
-        !self.contains(position) && (distance_squared - HEX_SPACING.powi(2)).abs() < 1.0
-    }
-
-    pub fn extend_to(&mut self, position: Vec2) {
-        self.tiles.push(position);
-    }
-}
 
 #[derive(Resource)]
 pub struct SpellShop {

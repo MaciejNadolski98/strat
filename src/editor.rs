@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use bevy::math::primitives::RegularPolygon;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::MainCamera;
-use crate::constants::{HEX_SIZE, INITIAL_PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::game::pan_camera;
 use crate::pathing::{hex_cells_in_bounds, world_to_axial_cell};
+use crate::paths::{PathDefinition, PathId, PathVisual, despawn_path_visuals, spawn_path_filled, spawn_path_line};
 use crate::regions::RegionDefinition;
 use crate::setup::build_hex_ring_mesh;
 use crate::terrain::{
@@ -48,6 +48,7 @@ const REGION_OVERLAY_COLOR: Color = Color::srgba(0.9, 0.75, 0.2, 0.55);
 enum EditorMode {
     Terrain,
     Regions,
+    Paths,
 }
 
 impl EditorMode {
@@ -55,13 +56,15 @@ impl EditorMode {
         match self {
             Self::Terrain => "Terrain",
             Self::Regions => "Regions",
+            Self::Paths => "Paths",
         }
     }
 
     fn next(self) -> Self {
         match self {
             Self::Terrain => Self::Regions,
-            Self::Regions => Self::Terrain,
+            Self::Regions => Self::Paths,
+            Self::Paths => Self::Terrain,
         }
     }
 }
@@ -90,6 +93,12 @@ struct RegionListElement;
 #[derive(Component)]
 struct RegionOverlay;
 
+#[derive(Component)]
+struct PathListElement;
+
+#[derive(Component)]
+struct PathOverlay;
+
 #[derive(Resource)]
 struct EditorState {
     mode: EditorMode,
@@ -99,9 +108,13 @@ struct EditorState {
     layer_meshes: HashMap<TerrainKind, Handle<Mesh>>,
     painting: bool,
     regions: Vec<RegionDefinition>,
+    paths: Vec<PathDefinition>,
     selected_region: Option<usize>,
+    selected_path: Option<usize>,
     naming_region: bool,
+    naming_path: bool,
     region_name_buffer: String,
+    path_name_buffer: String,
     consumed_click: bool,
 }
 
@@ -127,7 +140,9 @@ pub fn run_editor() {
                 editor_select_kind_input,
                 editor_terrain_click.after(editor_mode_toggle),
                 editor_region_click.after(editor_mode_toggle),
+                editor_path_click.after(editor_mode_toggle),
                 editor_region_name_input,
+                editor_path_name_input,
                 editor_randomize_input,
                 editor_update_hud,
             ),
@@ -184,7 +199,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
         Transform::from_translation(Vec3::new(0.0, 0.0, -0.5)),
     ));
 
-    spawn_initial_path_preview(&mut commands, &mut meshes, &mut materials);
+    spawn_editor_path_lines(&mut commands, &mut meshes, &mut materials, &data.paths, None, &cells);
 
     for (index, &kind) in ALL_TERRAIN_KINDS.iter().enumerate() {
         let x = palette_x(index);
@@ -280,35 +295,17 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
         layer_meshes,
         painting: false,
         regions: data.regions,
+        paths: data.paths,
         selected_region: None,
+        selected_path: None,
         naming_region: false,
+        naming_path: false,
         region_name_buffer: String::new(),
+        path_name_buffer: String::new(),
         consumed_click: false,
     });
 }
 
-fn spawn_initial_path_preview(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) {
-    for &position in &INITIAL_PATH {
-        commands.spawn((
-            Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE, 6))),
-            MeshMaterial2d(materials.add(Color::srgb(0.43, 0.39, 0.31))),
-            Transform::from_translation(position.extend(-0.3)),
-        ));
-    }
-
-    let start = INITIAL_PATH[0];
-    let end = INITIAL_PATH[INITIAL_PATH.len() - 1];
-    commands.spawn((
-        Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE + 6.0, 6))),
-        MeshMaterial2d(materials.add(Color::srgb(0.35, 0.13, 0.12))),
-        Transform::from_translation(start.extend(-0.2)),
-    ));
-    commands.spawn((
-        Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE + 9.0, 6))),
-        MeshMaterial2d(materials.add(Color::srgb(0.12, 0.35, 0.36))),
-        Transform::from_translation(end.extend(-0.2)),
-    ));
-}
 
 fn select_palette_index(state: &mut EditorState, highlight_transform: &mut Transform, index: usize) {
     state.current_kind = ALL_TERRAIN_KINDS[index];
@@ -332,6 +329,8 @@ fn editor_mode_toggle(
     palette_elements: Query<Entity, With<TerrainPaletteElement>>,
     region_elements: Query<Entity, With<RegionListElement>>,
     region_overlays: Query<Entity, With<RegionOverlay>>,
+    path_elements: Query<Entity, With<PathListElement>>,
+    path_overlays: Query<Entity, With<PathOverlay>>,
     main_camera: Query<Entity, With<MainCamera>>,
 ) {
     let mut toggled = keyboard.just_pressed(KeyCode::Tab);
@@ -358,9 +357,14 @@ fn editor_mode_toggle(
     state.consumed_click = true;
     state.mode = state.mode.next();
     state.naming_region = false;
+    state.naming_path = false;
     state.region_name_buffer.clear();
-    if state.mode == EditorMode::Terrain {
+    state.path_name_buffer.clear();
+    if state.mode != EditorMode::Regions {
         state.selected_region = None;
+    }
+    if state.mode != EditorMode::Paths {
+        state.selected_path = None;
     }
 
     if let Ok(mut label) = mode_label.single_mut() {
@@ -380,9 +384,18 @@ fn editor_mode_toggle(
     for entity in &region_overlays {
         commands.entity(entity).despawn();
     }
+    for entity in &path_elements {
+        commands.entity(entity).despawn();
+    }
+    for entity in &path_overlays {
+        commands.entity(entity).despawn();
+    }
 
     if state.mode == EditorMode::Regions {
         spawn_region_list(&mut commands, &mut meshes, &mut materials, &state, camera_entity);
+    }
+    if state.mode == EditorMode::Paths {
+        spawn_path_list(&mut commands, &mut meshes, &mut materials, &state, camera_entity);
     }
 }
 
@@ -477,6 +490,258 @@ fn rebuild_region_ui(
     spawn_region_list(commands, meshes, materials, state, camera_entity);
 }
 
+const EDITOR_PATH_LINE_COLOR: Color = Color::srgb(0.55, 0.50, 0.38);
+const SELECTED_PATH_FILL: Color = Color::srgb(0.43, 0.39, 0.31);
+const SELECTED_PATH_EDGE: Color = Color::srgb(0.24, 0.21, 0.16);
+
+fn spawn_editor_path_lines(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+    paths: &[PathDefinition],
+    skip: Option<usize>,
+    cells: &[(i32, i32, Vec2)],
+) {
+    for (i, path) in paths.iter().enumerate() {
+        if skip == Some(i) {
+            continue;
+        }
+        let world_tiles: Vec<Vec2> = path.tiles.iter()
+            .filter_map(|&coord| cell_position(cells, coord))
+            .collect();
+        spawn_path_line(commands, meshes, materials, &world_tiles, EDITOR_PATH_LINE_COLOR, 0.0);
+    }
+}
+
+
+fn spawn_path_list(
+    commands: &mut Commands,
+    _meshes: &mut Assets<Mesh>,
+    _materials: &mut Assets<ColorMaterial>,
+    state: &EditorState,
+    camera_entity: Entity,
+) {
+    for (index, path) in state.paths.iter().enumerate() {
+        let y = REGION_LIST_START_Y - index as f32 * REGION_LIST_SPACING;
+        let selected = state.selected_path == Some(index);
+        let bg_color = if selected {
+            Color::srgb(0.30, 0.42, 0.50)
+        } else {
+            Color::srgb(0.18, 0.20, 0.22)
+        };
+
+        let slot = commands
+            .spawn((
+                Sprite::from_color(bg_color, Vec2::new(REGION_SLOT_WIDTH, REGION_SLOT_HEIGHT)),
+                Transform::from_translation(Vec3::new(REGION_LIST_X, y, 20.0)),
+                PathListElement,
+            ))
+            .id();
+        let label_text = format!("{} (L{})", path.name, path.level);
+        let label = commands
+            .spawn((
+                Text2d::new(label_text),
+                TextFont { font_size: 13.0, ..default() },
+                TextColor(Color::srgb(0.92, 0.92, 0.86)),
+                TextShadow::default(),
+                Transform::from_translation(Vec3::new(REGION_LIST_X, y, 21.0)),
+                PathListElement,
+            ))
+            .id();
+        commands.entity(camera_entity).add_child(slot);
+        commands.entity(camera_entity).add_child(label);
+    }
+
+    let new_y = REGION_LIST_START_Y - state.paths.len() as f32 * REGION_LIST_SPACING - NEW_REGION_BUTTON_Y_OFFSET;
+    let new_btn = commands
+        .spawn((
+            Sprite::from_color(Color::srgb(0.22, 0.30, 0.45), Vec2::new(REGION_SLOT_WIDTH, REGION_SLOT_HEIGHT)),
+            Transform::from_translation(Vec3::new(REGION_LIST_X, new_y, 20.0)),
+            PathListElement,
+        ))
+        .id();
+    let new_label = commands
+        .spawn((
+            Text2d::new("+ New Path"),
+            TextFont { font_size: 13.0, ..default() },
+            TextColor(Color::srgb(0.88, 0.90, 0.98)),
+            TextShadow::default(),
+            Transform::from_translation(Vec3::new(REGION_LIST_X, new_y, 21.0)),
+            PathListElement,
+        ))
+        .id();
+    commands.entity(camera_entity).add_child(new_btn);
+    commands.entity(camera_entity).add_child(new_label);
+}
+
+fn rebuild_path_ui(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+    state: &EditorState,
+    path_elements: &Query<Entity, With<PathListElement>>,
+    path_overlays: &Query<Entity, With<PathOverlay>>,
+    path_visuals: &Query<Entity, With<PathVisual>>,
+    camera_entity: Entity,
+) {
+    for entity in path_elements.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in path_overlays.iter() {
+        commands.entity(entity).despawn();
+    }
+    despawn_path_visuals(commands, path_visuals);
+
+    spawn_editor_path_lines(commands, meshes, materials, &state.paths, state.selected_path, &state.cells);
+
+    if let Some(selected) = state.selected_path {
+        if selected < state.paths.len() {
+            let positions: Vec<Vec2> = state.paths[selected].tiles.iter()
+                .filter_map(|&coord| cell_position(&state.cells, coord))
+                .collect();
+            spawn_path_filled(commands, meshes, materials, &positions, SELECTED_PATH_FILL, SELECTED_PATH_EDGE, 0.2);
+        }
+    }
+
+    spawn_path_list(commands, meshes, materials, state, camera_entity);
+}
+
+fn editor_path_click(
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    mut state: ResMut<EditorState>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    path_elements: Query<Entity, With<PathListElement>>,
+    path_overlays: Query<Entity, With<PathOverlay>>,
+    path_visuals: Query<Entity, With<PathVisual>>,
+    main_camera: Query<Entity, With<MainCamera>>,
+) {
+    if state.mode != EditorMode::Paths || state.naming_path || state.consumed_click {
+        return;
+    }
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    let Ok(window) = windows.single() else { return; };
+    let Ok((cam, cam_transform)) = camera.single() else { return; };
+    let Some(cursor_pos) = window.cursor_position() else { return; };
+    let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+    let Ok(camera_entity) = main_camera.single() else { return; };
+    let local_pos = world_pos - cam_transform.translation().truncate();
+
+    let save_local = SAVE_BUTTON_POS.truncate();
+    if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
+        && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
+    {
+        save_terrain_file(&sparse_overrides(&state.kinds), &state.regions, &state.paths);
+        return;
+    }
+
+    for index in 0..state.paths.len() {
+        let y = REGION_LIST_START_Y - index as f32 * REGION_LIST_SPACING;
+        if (local_pos.x - REGION_LIST_X).abs() <= REGION_SLOT_WIDTH * 0.5
+            && (local_pos.y - y).abs() <= REGION_SLOT_HEIGHT * 0.5
+        {
+            if state.selected_path == Some(index) {
+                state.selected_path = None;
+            } else {
+                state.selected_path = Some(index);
+            }
+            rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &state, &path_elements, &path_overlays, &path_visuals, camera_entity);
+            return;
+        }
+    }
+
+    let new_y = REGION_LIST_START_Y - state.paths.len() as f32 * REGION_LIST_SPACING - NEW_REGION_BUTTON_Y_OFFSET;
+    if (local_pos.x - REGION_LIST_X).abs() <= REGION_SLOT_WIDTH * 0.5
+        && (local_pos.y - new_y).abs() <= REGION_SLOT_HEIGHT * 0.5
+    {
+        state.naming_path = true;
+        state.path_name_buffer.clear();
+        return;
+    }
+
+    let Some(selected) = state.selected_path else { return; };
+    let coord = world_to_axial_cell(world_pos);
+    if !state.kinds.contains_key(&coord) {
+        return;
+    }
+
+    let path = &mut state.paths[selected];
+    if let Some(pos) = path.tiles.iter().position(|&c| c == coord) {
+        path.tiles.remove(pos);
+    } else {
+        path.tiles.push(coord);
+    }
+
+    rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &state, &path_elements, &path_overlays, &path_visuals, camera_entity);
+}
+
+fn editor_path_name_input(
+    mut key_events: EventReader<KeyboardInput>,
+    mut state: ResMut<EditorState>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    path_elements: Query<Entity, With<PathListElement>>,
+    path_overlays: Query<Entity, With<PathOverlay>>,
+    path_visuals: Query<Entity, With<PathVisual>>,
+    main_camera: Query<Entity, With<MainCamera>>,
+) {
+    if !state.naming_path {
+        return;
+    }
+
+    for ev in key_events.read() {
+        if !ev.state.is_pressed() {
+            continue;
+        }
+        match &ev.logical_key {
+            Key::Character(s) => {
+                state.path_name_buffer.push_str(s);
+            }
+            Key::Space => {
+                state.path_name_buffer.push(' ');
+            }
+            Key::Backspace => {
+                state.path_name_buffer.pop();
+            }
+            Key::Escape => {
+                state.naming_path = false;
+                state.path_name_buffer.clear();
+                return;
+            }
+            Key::Enter => {
+                let name = state.path_name_buffer.trim().to_string();
+                if !name.is_empty() {
+                    let new_index = state.paths.len();
+                    state.paths.push(PathDefinition {
+                        id: PathId(new_index),
+                        name,
+                        tiles: Vec::new(),
+                        enemies: Vec::new(),
+                        level: 0,
+                        unlocks: Vec::new(),
+                        excludes: Vec::new(),
+                    });
+                    state.selected_path = Some(new_index);
+                }
+                state.naming_path = false;
+                state.path_name_buffer.clear();
+
+                let Ok(camera_entity) = main_camera.single() else { return; };
+                rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &state, &path_elements, &path_overlays, &path_visuals, camera_entity);
+                return;
+            }
+            _ => {}
+        }
+    }
+}
+
 fn editor_select_kind_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<EditorState>,
@@ -550,7 +815,7 @@ fn editor_terrain_click(
         if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
             && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
         {
-            save_terrain_file(&sparse_overrides(&state.kinds), &state.regions);
+            save_terrain_file(&sparse_overrides(&state.kinds), &state.regions, &state.paths);
             return;
         }
 
@@ -609,7 +874,7 @@ fn editor_region_click(
     if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
         && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
     {
-        save_terrain_file(&sparse_overrides(&state.kinds), &state.regions);
+        save_terrain_file(&sparse_overrides(&state.kinds), &state.regions, &state.paths);
         return;
     }
 
@@ -750,6 +1015,16 @@ fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<Edi
         return;
     }
 
+    if state.naming_path {
+        text.0 = format!(
+            "Terrain Map Editor — Paths\n\
+             Type path name: {}_\n\
+             Enter: confirm  |  Esc: cancel",
+            state.path_name_buffer,
+        );
+        return;
+    }
+
     match state.mode {
         EditorMode::Terrain => {
             text.0 = format!(
@@ -768,6 +1043,20 @@ fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<Edi
                 "Terrain Map Editor — Regions\n\
                  WASD: pan  |  click list: select region  |  click map: toggle tile  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
                  {region_info}",
+            );
+        }
+        EditorMode::Paths => {
+            let path_info = match state.selected_path {
+                Some(i) => {
+                    let p = &state.paths[i];
+                    format!("Selected: {} (L{}, {} tiles, {} enemy groups)", p.name, p.level, p.tiles.len(), p.enemies.len())
+                }
+                None => "No path selected".to_string(),
+            };
+            text.0 = format!(
+                "Terrain Map Editor — Paths\n\
+                 WASD: pan  |  click list: select path  |  click map: toggle tile  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
+                 {path_info}",
             );
         }
     }

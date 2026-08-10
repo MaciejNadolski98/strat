@@ -8,6 +8,7 @@ mod enemies;
 mod game;
 mod hud;
 mod item_definitions;
+mod paths;
 mod pathing;
 mod projectiles;
 mod regions;
@@ -39,12 +40,12 @@ use item_definitions::{ItemPlugins, ItemPoolRestoreSet};
 use spell_definitions::{SpellPlugins, SpellRegistry};
 use tower_definitions::{TowerPlugins, TowerRegistry};
 use hud::update_hud;
-use pathing::{update_path_hints, update_path_input};
+use paths::PathMap;
 use projectiles::move_projectiles;
 use resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, EnemyKilledEvent, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver,
-    GameWon, KillCount, MaxHp, Money, NextWaveTimer, Loot, PathTiles, Paused, Piercing,
+    GameWon, KillCount, MaxHp, Money, NextWaveTimer, Loot, Paused, Piercing,
     PiercingDamage, Regeneration, Shop, SpawnTimer, Stat, SpellShop, TowerDraft, WaterDamage,
     WaveNumber, GamePhase, reset_stat_temporaries,
 };
@@ -115,7 +116,7 @@ fn main() {
         .insert_resource(NextWaveTimer {
             timer: Timer::from_seconds(2.5, TimerMode::Once),
         })
-        .insert_resource(PathTiles::new())
+        .init_resource::<PathMap>()
         .insert_resource(Shop::new_empty())
         .insert_resource(SpellShop::new_empty())
         .init_resource::<TerrainTileIndex>()
@@ -236,8 +237,6 @@ fn main() {
         .add_systems(Update, track_camera_region.after(pan_camera))
         .add_systems(Update, update_region_titles)
         .add_systems(Update, update_shop_input.after(toggle_pause))
-        .add_systems(Update, update_path_input.after(toggle_pause))
-        .add_systems(Update, update_path_hints)
         .add_systems(Update, trigger_restart)
         .run();
 }

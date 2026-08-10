@@ -10,6 +10,7 @@ use noise::{NoiseFn, Perlin};
 use crate::components::ShopTooltip;
 use crate::constants::HEX_SIZE;
 use crate::pathing::world_to_axial_cell;
+use crate::paths::PathMap;
 use crate::regions::RegionMap;
 use crate::terrain_file::load_terrain_file;
 use crate::tooltip::{plain, set_tooltip_segments};
@@ -150,6 +151,7 @@ pub fn spawn_terrain(
     materials: &mut Assets<ColorMaterial>,
     tile_index: &mut TerrainTileIndex,
     region_map: &mut RegionMap,
+    path_map: &mut PathMap,
     cells: &[(i32, i32, Vec2)],
 ) {
     let data = load_terrain_file();
@@ -162,6 +164,8 @@ pub fn spawn_terrain(
         .collect();
 
     *region_map = RegionMap::from_definitions(data.regions);
+    *path_map = PathMap::from_definitions(data.paths);
+    path_map.reset_placed();
     spawn_terrain_kinds(commands, meshes, materials, tile_index, cells, &kinds);
 }
 

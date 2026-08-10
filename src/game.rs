@@ -1,16 +1,16 @@
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use crate::components::{Enemy, MainCamera, PathEdge, PathEndMarker, PathExtensionHint, PathTile, Projectile, Tower};
+use crate::components::{Enemy, MainCamera, Projectile, Tower};
 use crate::constants::{
     BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_REGENERATION, PLAYER_BASE_MAX_HP,
     STARTING_MONEY,
 };
-use crate::pathing::spawn_path_visuals;
+use crate::paths::{despawn_path_visuals, spawn_all_path_visuals, PathMap, PathVisual};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage,
     EnemiesRemaining, ExplosionSize, FireDamage, ForcedTowerOffers, GameOver,
-    GameWon, KillCount, Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, PathTiles, Paused,
+    GameWon, KillCount, Loot, MaxHp, Money, NewRoundEvent, NextWaveTimer, Paused,
     Regeneration, SpawnTimer, SpellShop, TowerDraft, WaterDamage, WaveNumber,
 };
 
@@ -37,7 +37,7 @@ pub struct GameRunState<'w> {
     draft: ResMut<'w, TowerDraft>,
     forced_towers: ResMut<'w, ForcedTowerOffers>,
     paused: ResMut<'w, Paused>,
-    path_tiles: ResMut<'w, PathTiles>,
+    path_map: ResMut<'w, PathMap>,
     regeneration: ResMut<'w, Regeneration>,
     attack_speed: ResMut<'w, AttackSpeed>,
     loot: ResMut<'w, Loot>,
@@ -105,11 +105,8 @@ pub fn start_run(
         Query<Entity, With<Tower>>,
         Query<Entity, With<Enemy>>,
         Query<Entity, With<Projectile>>,
-        Query<Entity, With<PathTile>>,
-        Query<Entity, With<PathEdge>>,
     )>,
-    hints: Query<Entity, With<PathExtensionHint>>,
-    mut end_marker: Query<&mut Transform, With<PathEndMarker>>,
+    path_visuals: Query<Entity, With<PathVisual>>,
 ) {
     for entity in cleanup.p0().iter() {
         commands.entity(entity).despawn();
@@ -120,15 +117,7 @@ pub fn start_run(
     for entity in cleanup.p2().iter() {
         commands.entity(entity).despawn();
     }
-    for entity in cleanup.p3().iter() {
-        commands.entity(entity).despawn();
-    }
-    for entity in cleanup.p4().iter() {
-        commands.entity(entity).despawn();
-    }
-    for entity in &hints {
-        commands.entity(entity).despawn();
-    }
+    despawn_path_visuals(&mut commands, &path_visuals);
 
     state.max_hp.raw_value = PLAYER_BASE_MAX_HP as f32;
     state.money.amount = STARTING_MONEY;
@@ -153,11 +142,8 @@ pub fn start_run(
     state.spell_shop.reset();
     state.forced_towers.reset();
     state.draft.activate(&mut state.forced_towers);
-    state.path_tiles.reset();
-    spawn_path_visuals(&mut commands, &mut meshes, &mut materials, &state.path_tiles, &[]);
-    if let Ok(mut marker_transform) = end_marker.single_mut() {
-        marker_transform.translation = state.path_tiles.end().extend(0.0);
-    }
+    state.path_map.reset_placed();
+    spawn_all_path_visuals(&mut commands, &mut meshes, &mut materials, &state.path_map);
     new_round.write(NewRoundEvent);
     state.paused.value = false;
 }

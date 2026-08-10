@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::components::{DamageDealt, HudText, Tower};
 use crate::resources::{
     AirDamage, AttackSpeed, CriticalChance, CurrentHp, EarthDamage, ExplosionSize, FireDamage,
-    GameOver, GameWon, KillCount, MaxHp, Money, Loot, PathTiles, Paused, Regeneration,
+    GameOver, GameWon, KillCount, MaxHp, Money, Loot, Paused, Regeneration,
     TowerDraft, TowerDraftPhase, WaterDamage, WaveNumber,
 };
 use crate::tower_definitions::TowerKind;
@@ -31,7 +31,6 @@ pub struct HudStats<'w> {
     game_won: Res<'w, GameWon>,
     paused: Res<'w, Paused>,
     run_mode: Res<'w, RunMode>,
-    path_tiles: Res<'w, PathTiles>,
 }
 
 pub fn update_hud(
@@ -56,7 +55,7 @@ pub fn update_hud(
     };
 
     let mut hud_text = format!(
-        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}   Path tile: ${}\nAtk speed: {:.2}x   loot: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}",
+        "Money: ${}   HP: {}/{}   Regen: {}   Wave: {}/{}   Kills: {}   Mode: {}\nAtk speed: {:.2}x   loot: +${}/kill   Crit: {:.0}%   Explosion: {:.0}\nEarth: {:.0}   Fire: {:.0}   Air: {:.0}   Water: {:.0}",
         stats.money.amount,
         stats.hp.amount,
         stats.max_hp.value().round() as i32,
@@ -65,7 +64,6 @@ pub fn update_hud(
         stats.run_mode.final_wave(),
         stats.kills.amount,
         stats.run_mode.label(),
-        stats.path_tiles.extension_cost(),
         stats.attack_speed.value(),
         stats.loot.value().round() as i32,
         stats.critical_chance.value() * 100.0,

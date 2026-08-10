@@ -1,15 +1,16 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    DropsSpell, Enemy, EnemyKind, Health, HealthBar, PathProgress, Reward, Speed,
+    DropsSpell, Enemy, EnemyKind, EnemyPathIndex, Health, HealthBar, PathProgress, Reward, Speed,
     TemporaryEnemySpeed, Waypoint,
 };
+use crate::paths::{PathId, PathMap};
 use crate::resources::{
     CurrentHp, EnemiesRemaining, ForcedTowerOffers, GameOver, GameWon, MaxHp, NewRoundEvent,
-    PathTiles, Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber
+    Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
 };
 use crate::spell_definitions::SlowActive;
-use crate::waves::{RunMode, wave};
+use crate::waves::RunMode;
 
 pub fn reset_temporary_enemy_speed(mut enemies: Query<&mut TemporaryEnemySpeed, With<Enemy>>) {
     for mut temp in &mut enemies {
@@ -29,7 +30,7 @@ pub fn spawn_enemies(
     max_hp: Res<MaxHp>,
     regeneration: Res<Regeneration>,
     run_mode: Res<RunMode>,
-    path_tiles: Res<PathTiles>,
+    path_map: Res<PathMap>,
     mut draft: ResMut<TowerDraft>,
     mut forced_towers: ResMut<ForcedTowerOffers>,
     enemies: Query<(), With<Enemy>>,
@@ -58,33 +59,45 @@ pub fn spawn_enemies(
         return;
     }
 
-    let Some(current_wave) = wave(wave_number.value) else {
-        remaining.count = 0;
-        return;
-    };
-
     spawn_timer.elapsed += time.delta_secs();
 
-    for (group_index, group) in current_wave.groups.iter().enumerate() {
-        let mut spawned = spawn_timer.spawned_in_group(group_index);
-        while spawned < group.count && spawn_timer.elapsed >= group.spawn_time(spawned) {
-            spawn_enemy(&mut commands, group.kind, wave_number.value, &path_tiles);
-            spawned += 1;
-            remaining.count -= 1;
+    let mut group_index = 0;
+    for path in &path_map.paths {
+        if !path_map.is_placed(path.id) {
+            group_index += path.enemies.len();
+            continue;
         }
-        spawn_timer.set_spawned_in_group(group_index, spawned);
+
+        let world_tiles = path_map.path_world_tiles(path.id);
+        if world_tiles.is_empty() {
+            group_index += path.enemies.len();
+            continue;
+        }
+
+        for group in &path.enemies {
+            let mut spawned = spawn_timer.spawned_in_group(group_index);
+            let spawn_time = |n: u32| group.cooldown * n as f32;
+            while spawned < group.count && spawn_timer.elapsed >= spawn_time(spawned) {
+                let spawn_pos = *world_tiles.last().unwrap();
+                spawn_enemy(&mut commands, group.kind, wave_number.value, spawn_pos, path.id);
+                spawned += 1;
+                remaining.count -= 1;
+            }
+            spawn_timer.set_spawned_in_group(group_index, spawned);
+            group_index += 1;
+        }
     }
 }
 
-fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, path_tiles: &PathTiles) {
+fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, spawn_pos: Vec2, path_id: PathId) {
     let max_health = kind.max_health(wave_number);
     let size = kind.size();
     let mut spawner = commands.spawn((
         Sprite::from_color(enemy_color(kind, 1.0), size),
-        Transform::from_translation(path_tiles.start().extend(3.0)),
+        Transform::from_translation(spawn_pos.extend(3.0)),
         Enemy,
         kind,
-        Waypoint { index: 1 },
+        Waypoint { index: 0 },
         PathProgress { distance: 0.0 },
         Health {
             current: max_health,
@@ -97,6 +110,7 @@ fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, path_
             amount: kind.reward(),
         },
         TemporaryEnemySpeed::default(),
+        EnemyPathIndex(path_id),
     ));
 
     if matches!(kind, EnemyKind::Titan) {
@@ -113,7 +127,7 @@ pub fn move_enemies(
     mut hp: ResMut<CurrentHp>,
     mut game_over: ResMut<GameOver>,
     slow: Res<SlowActive>,
-    path_tiles: Res<PathTiles>,
+    path_map: Res<PathMap>,
     mut enemies: Query<
         (
             Entity,
@@ -123,6 +137,7 @@ pub fn move_enemies(
             &Health,
             &Speed,
             &TemporaryEnemySpeed,
+            &EnemyPathIndex,
         ),
         With<Enemy>,
     >,
@@ -131,12 +146,15 @@ pub fn move_enemies(
         return;
     }
 
-    for (entity, mut transform, mut waypoint, mut progress, health, speed, temp_speed) in &mut enemies {
+    for (entity, mut transform, mut waypoint, mut progress, health, speed, temp_speed, path_idx) in &mut enemies {
         if health.current <= 0.0 {
             continue;
         }
 
-        let Some(target) = path_tiles.tiles.get(waypoint.index).copied() else {
+        let world_tiles = path_map.path_world_tiles(path_idx.0);
+        let walk_tiles: Vec<Vec2> = world_tiles.into_iter().rev().collect();
+
+        let Some(target) = walk_tiles.get(waypoint.index).copied() else {
             commands.entity(entity).despawn();
             hp.amount -= 1;
             if hp.amount <= 0 {
@@ -152,7 +170,7 @@ pub fn move_enemies(
         if to_target.length() <= step {
             transform.translation = target.extend(3.0);
             waypoint.index += 1;
-            if waypoint.index >= path_tiles.tiles.len() {
+            if waypoint.index >= walk_tiles.len() {
                 commands.entity(entity).despawn();
                 hp.amount -= 1;
                 if hp.amount <= 0 {
@@ -236,4 +254,3 @@ fn spawn_health_bar(commands: &mut Commands, enemy: Entity, enemy_size: Vec2) {
         ));
     });
 }
-

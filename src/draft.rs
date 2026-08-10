@@ -10,13 +10,13 @@ use crate::components::{
 };
 use crate::tower_definitions::{BarrelTemplate, TowerKind};
 use crate::constants::HEX_SPACING;
+use crate::paths::PathMap;
 use crate::pathing::{is_buildable_cell, snap_to_grid};
 use crate::resources::{
-    EnemiesRemaining, GameOver, PathTiles, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
+    EnemiesRemaining, GameOver, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
 };
 use crate::shop::PlayerStatsMut;
 use crate::towers::apply_tower_effects;
-use crate::waves::enemies_in_wave;
 
 const TOWER_OUTLINE_COLOR: Color = Color::srgb(0.15, 0.15, 0.15);
 const TOWER_OUTLINE_THICKNESS: f32 = 1.0;
@@ -149,9 +149,8 @@ pub fn place_draft_tower(
     camera: Query<(&Camera, &GlobalTransform)>,
     towers: Query<&Transform, With<Tower>>,
     game_over: Res<GameOver>,
-    path_tiles: Res<PathTiles>,
+    path_map: Res<PathMap>,
     mut draft: ResMut<TowerDraft>,
-    wave_number: Res<WaveNumber>,
     mut remaining: ResMut<EnemiesRemaining>,
     mut spawn_timer: ResMut<SpawnTimer>,
     mut stats: PlayerStatsMut,
@@ -172,7 +171,7 @@ pub fn place_draft_tower(
     };
 
     let grid_position = snap_to_grid(world_position);
-    if !is_buildable_cell(grid_position, &path_tiles)
+    if !is_buildable_cell(grid_position, &path_map)
         || towers
             .iter()
             .any(|t| t.translation.truncate().distance(grid_position) < HEX_SPACING * 0.5)
@@ -256,7 +255,7 @@ pub fn place_draft_tower(
     }
 
     draft.phase = TowerDraftPhase::WaveRunning;
-    remaining.count = enemies_in_wave(wave_number.value);
+    remaining.count = path_map.total_enemy_count();
     spawn_timer.reset();
 
     for mut cooldown in &mut cooldowns {
@@ -269,7 +268,7 @@ pub fn update_tower_phantom(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     towers: Query<&Transform, With<Tower>>,
-    path_tiles: Res<PathTiles>,
+    path_map: Res<PathMap>,
     draft: Res<TowerDraft>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -316,7 +315,7 @@ pub fn update_tower_phantom(
 
     let grid_pos = snap_to_grid(world_pos);
 
-    if !is_buildable_cell(grid_pos, &path_tiles)
+    if !is_buildable_cell(grid_pos, &path_map)
         || towers
             .iter()
             .any(|t| t.translation.truncate().distance(grid_pos) < HEX_SPACING * 0.5)
