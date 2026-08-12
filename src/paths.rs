@@ -4,7 +4,7 @@ use bevy::math::primitives::RegularPolygon;
 use bevy::prelude::*;
 
 use crate::components::EnemyKind;
-use crate::constants::{HEX_SIZE, HEX_SPACING};
+use crate::constants::{HEX_SIZE, HEX_SPACING, PATH_EDGE_COLOR, PATH_FILLED_Z, PATH_FILL_COLOR, PATH_LINE_COLOR, PATH_LINE_Z};
 use crate::pathing::axial_to_world;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -264,9 +264,6 @@ fn has_cycle(paths: &[PathDefinition], parents: &HashMap<PathId, Vec<PathId>>) -
 
 // --- Rendering ---
 
-const FILL_COLOR: Color = Color::srgb(0.43, 0.39, 0.31);
-const EDGE_COLOR: Color = Color::srgb(0.24, 0.21, 0.16);
-const UNPLACED_LINE_COLOR: Color = Color::srgb(0.43, 0.39, 0.31);
 const LINE_WIDTH: f32 = 4.0;
 const EDGE_SIZE: Vec2 = Vec2::new(4.0, HEX_SIZE + 4.0);
 const HEX_EDGE_ANGLES_DEG: [f32; 6] = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0];
@@ -280,9 +277,9 @@ pub fn spawn_all_path_visuals(
     for path in &path_map.paths {
         let world_tiles = path_map.path_world_tiles(path.id);
         if path_map.is_placed(path.id) {
-            spawn_path_filled(commands, meshes, materials, &world_tiles, FILL_COLOR, EDGE_COLOR, -2.0);
+            spawn_path_filled(commands, meshes, materials, &world_tiles, PATH_FILL_COLOR, PATH_EDGE_COLOR, PATH_FILLED_Z);
         } else {
-            spawn_path_line(commands, meshes, materials, &world_tiles, UNPLACED_LINE_COLOR, -1.5);
+            spawn_path_line(commands, meshes, materials, &world_tiles, PATH_LINE_COLOR, PATH_LINE_Z);
         }
     }
 }

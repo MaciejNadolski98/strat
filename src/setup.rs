@@ -15,7 +15,7 @@ use crate::pathing::hex_cells_in_bounds;
 use crate::regions::RegionMap;
 use crate::terrain::{spawn_terrain, TerrainTileIndex};
 
-const BACKGROUND_COLOR: Color = Color::srgb(0.10, 0.15, 0.13);
+use crate::constants::{BACKGROUND_COLOR, BACKGROUND_Z};
 
 pub fn setup(
     mut commands: Commands,
@@ -32,7 +32,7 @@ pub fn setup(
             BACKGROUND_COLOR,
             Vec2::new(WINDOW_WIDTH * 4.0, WINDOW_HEIGHT * 4.0),
         ),
-        Transform::from_translation(Vec3::new(0.0, 0.0, -10.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, BACKGROUND_Z)),
     )).id();
 
     let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
@@ -133,17 +133,19 @@ pub fn setup(
     }
 }
 
-fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>, centers: &[Vec2]) {
+pub const GRID_COLOR: Color = Color::srgba(0.68, 0.76, 0.70, 0.16);
+
+pub fn spawn_grid(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>, centers: &[Vec2]) {
     let ring_mesh = build_hex_ring_mesh(centers, HEX_SIZE, HEX_SIZE - 2.0);
 
     commands.spawn((
         Mesh2d(meshes.add(ring_mesh)),
-        MeshMaterial2d(materials.add(Color::srgba(0.68, 0.76, 0.70, 0.16))),
-        Transform::from_translation(Vec3::new(0.0, 0.0, -8.0)),
+        MeshMaterial2d(materials.add(GRID_COLOR)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, crate::constants::GRID_Z)),
     ));
 }
 
-pub fn build_hex_ring_mesh(centers: &[Vec2], outer_r: f32, inner_r: f32) -> Mesh {
+fn build_hex_ring_mesh(centers: &[Vec2], outer_r: f32, inner_r: f32) -> Mesh {
     let mut positions = Vec::with_capacity(centers.len() * 12);
     let mut indices = Vec::with_capacity(centers.len() * 36);
 

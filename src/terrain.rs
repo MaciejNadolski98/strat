@@ -201,7 +201,7 @@ pub fn spawn_terrain_kinds(
         commands.spawn((
             Mesh2d(meshes.add(build_hex_fill_mesh(&kind_centers, HEX_SIZE))),
             MeshMaterial2d(materials.add(kind.color())),
-            Transform::from_translation(Vec3::new(0.0, 0.0, -9.0)),
+            Transform::from_translation(Vec3::new(0.0, 0.0, crate::constants::TERRAIN_Z)),
         ));
     }
 }

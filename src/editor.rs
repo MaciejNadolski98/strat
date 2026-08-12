@@ -5,12 +5,12 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::components::MainCamera;
-use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::constants::{BACKGROUND_COLOR, BACKGROUND_Z, HEX_SIZE, PATH_EDGE_COLOR, PATH_FILLED_Z, PATH_FILL_COLOR, PATH_LINE_COLOR, PATH_LINE_Z, TERRAIN_Z, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::game::pan_camera;
 use crate::pathing::{hex_cells_in_bounds, world_to_axial_cell};
 use crate::paths::{PathDefinition, PathId, PathVisual, are_hex_adjacent, despawn_path_visuals, spawn_path_filled, spawn_path_line, validate_paths};
 use crate::regions::RegionDefinition;
-use crate::setup::build_hex_ring_mesh;
+use crate::setup::spawn_grid;
 use crate::terrain::{
     build_hex_fill_mesh, generate_random_kinds, TerrainKind, ALL_TERRAIN_KINDS, DEFAULT_TERRAIN_KIND,
 };
@@ -174,6 +174,14 @@ fn cell_position(cells: &[(i32, i32, Vec2)], coord: (i32, i32)) -> Option<Vec2> 
 fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
     let camera = commands.spawn((Camera2d, MainCamera)).id();
 
+    commands.spawn((
+        Sprite::from_color(
+            BACKGROUND_COLOR,
+            Vec2::new(WINDOW_WIDTH * 4.0, WINDOW_HEIGHT * 4.0),
+        ),
+        Transform::from_translation(Vec3::new(0.0, 0.0, BACKGROUND_Z)),
+    ));
+
     let extent = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
     let cells = hex_cells_in_bounds(extent);
     let data = load_terrain_file();
@@ -192,17 +200,13 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
         commands.spawn((
             Mesh2d(mesh_handle.clone()),
             MeshMaterial2d(materials.add(kind.color())),
-            Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+            Transform::from_translation(Vec3::new(0.0, 0.0, TERRAIN_Z)),
         ));
         layer_meshes.insert(kind, mesh_handle);
     }
 
     let centers: Vec<Vec2> = cells.iter().map(|&(_, _, pos)| pos).collect();
-    commands.spawn((
-        Mesh2d(meshes.add(build_hex_ring_mesh(&centers, HEX_SIZE, HEX_SIZE - 2.0))),
-        MeshMaterial2d(materials.add(Color::srgba(0.68, 0.76, 0.70, 0.16))),
-        Transform::from_translation(Vec3::new(0.0, 0.0, -0.5)),
-    ));
+    spawn_grid(&mut commands, &mut meshes, &mut materials, &centers);
 
     spawn_editor_path_lines(&mut commands, &mut meshes, &mut materials, &data.paths, None, &cells);
 
@@ -499,9 +503,6 @@ fn rebuild_region_ui(
     spawn_region_list(commands, meshes, materials, state, camera_entity);
 }
 
-const EDITOR_PATH_LINE_COLOR: Color = Color::srgb(0.55, 0.50, 0.38);
-const SELECTED_PATH_FILL: Color = Color::srgb(0.43, 0.39, 0.31);
-const SELECTED_PATH_EDGE: Color = Color::srgb(0.24, 0.21, 0.16);
 
 fn spawn_editor_path_lines(
     commands: &mut Commands,
@@ -518,7 +519,7 @@ fn spawn_editor_path_lines(
         let world_tiles: Vec<Vec2> = path.tiles.iter()
             .filter_map(|&coord| cell_position(cells, coord))
             .collect();
-        spawn_path_line(commands, meshes, materials, &world_tiles, EDITOR_PATH_LINE_COLOR, 0.0);
+        spawn_path_line(commands, meshes, materials, &world_tiles, PATH_LINE_COLOR, PATH_LINE_Z);
     }
 }
 
@@ -608,7 +609,7 @@ fn rebuild_path_ui(
             let positions: Vec<Vec2> = state.paths[selected].tiles.iter()
                 .filter_map(|&coord| cell_position(&state.cells, coord))
                 .collect();
-            spawn_path_filled(commands, meshes, materials, &positions, SELECTED_PATH_FILL, SELECTED_PATH_EDGE, 0.2);
+            spawn_path_filled(commands, meshes, materials, &positions, PATH_FILL_COLOR, PATH_EDGE_COLOR, PATH_FILLED_Z);
         }
     }
 
