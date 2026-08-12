@@ -43,6 +43,7 @@ const REGION_SLOT_HEIGHT: f32 = 26.0;
 const NEW_REGION_BUTTON_Y_OFFSET: f32 = 10.0;
 
 const REGION_OVERLAY_COLOR: Color = Color::srgba(0.9, 0.75, 0.2, 0.55);
+const UNASSIGNED_OVERLAY_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.35);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum EditorMode {
@@ -483,6 +484,22 @@ fn spawn_region_list(
         .id();
     commands.entity(camera_entity).add_child(new_btn);
     commands.entity(camera_entity).add_child(new_label);
+
+    let assigned: std::collections::HashSet<(i32, i32)> = state.regions.iter()
+        .flat_map(|r| r.tiles.iter().copied())
+        .collect();
+    let unassigned: Vec<Vec2> = state.cells.iter()
+        .filter(|&&(q, r, _)| !assigned.contains(&(q, r)))
+        .map(|&(_, _, pos)| pos)
+        .collect();
+    if !unassigned.is_empty() {
+        commands.spawn((
+            Mesh2d(meshes.add(build_hex_fill_mesh(&unassigned, HEX_SIZE))),
+            MeshMaterial2d(materials.add(UNASSIGNED_OVERLAY_COLOR)),
+            Transform::from_translation(Vec3::new(0.0, 0.0, 0.3)),
+            RegionOverlay,
+        ));
+    }
 }
 
 fn rebuild_region_ui(
