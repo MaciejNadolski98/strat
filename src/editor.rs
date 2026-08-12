@@ -99,6 +99,9 @@ struct PathListElement;
 #[derive(Component)]
 struct PathOverlay;
 
+#[derive(Component)]
+struct DragRectVisual;
+
 #[derive(Resource)]
 struct EditorState {
     mode: EditorMode,
@@ -106,7 +109,6 @@ struct EditorState {
     kinds: HashMap<(i32, i32), TerrainKind>,
     cells: Vec<(i32, i32, Vec2)>,
     layer_meshes: HashMap<TerrainKind, Handle<Mesh>>,
-    painting: bool,
     regions: Vec<RegionDefinition>,
     paths: Vec<PathDefinition>,
     selected_region: Option<usize>,
@@ -117,6 +119,7 @@ struct EditorState {
     path_name_buffer: String,
     path_errors: Vec<String>,
     consumed_click: bool,
+    drag_start: Option<Vec2>,
 }
 
 pub fn run_editor() {
@@ -144,6 +147,7 @@ pub fn run_editor() {
                 editor_path_click.after(editor_mode_toggle),
                 editor_region_name_input,
                 editor_path_name_input,
+                editor_drag_select.after(editor_terrain_click).after(editor_region_click),
                 editor_randomize_input,
                 editor_update_hud,
             ),
@@ -294,7 +298,6 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
         kinds,
         cells,
         layer_meshes,
-        painting: false,
         regions: data.regions,
         path_errors: {
             let errs = validate_paths(&data.paths);
@@ -308,6 +311,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
         region_name_buffer: String::new(),
         path_name_buffer: String::new(),
         consumed_click: false,
+        drag_start: None,
     });
 }
 
@@ -799,19 +803,12 @@ fn editor_terrain_click(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     mut highlight: Query<&mut Transform, With<EditorSelectionHighlight>>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut state: ResMut<EditorState>,
 ) {
     if state.mode != EditorMode::Terrain || state.consumed_click {
         return;
     }
-
-    if mouse.just_released(MouseButton::Left) {
-        state.painting = false;
-    }
-
-    let just_clicked = mouse.just_pressed(MouseButton::Left);
-    if !(just_clicked || state.painting && mouse.pressed(MouseButton::Left)) {
+    if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
@@ -821,37 +818,25 @@ fn editor_terrain_click(
     let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
     let local_pos = world_pos - cam_transform.translation().truncate();
 
-    if just_clicked {
-        let save_local = SAVE_BUTTON_POS.truncate();
-        if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
-            && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
-        {
-            save_terrain_file(&sparse_overrides(&state.kinds), &state.regions, &state.paths);
-            return;
-        }
-
-        for index in 0..ALL_TERRAIN_KINDS.len() {
-            let x = palette_x(index);
-            if (local_pos.x - x).abs() <= SWATCH_SIZE * 0.5 && (local_pos.y - palette_y()).abs() <= SWATCH_SIZE * 0.5 {
-                if let Ok(mut highlight_transform) = highlight.single_mut() {
-                    select_palette_index(&mut state, &mut highlight_transform, index);
-                }
-                return;
-            }
-        }
-
-        state.painting = true;
-    }
-
-    let coord = world_to_axial_cell(world_pos);
-    let Some(&old_kind) = state.kinds.get(&coord) else { return; };
-    if old_kind == state.current_kind {
+    let save_local = SAVE_BUTTON_POS.truncate();
+    if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
+        && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
+    {
+        save_terrain_file(&sparse_overrides(&state.kinds), &state.regions, &state.paths);
+        state.consumed_click = true;
         return;
     }
-    let new_kind = state.current_kind;
-    state.kinds.insert(coord, new_kind);
-    rebuild_layer_mesh(&mut meshes, &state.layer_meshes, &state.cells, &state.kinds, old_kind);
-    rebuild_layer_mesh(&mut meshes, &state.layer_meshes, &state.cells, &state.kinds, new_kind);
+
+    for index in 0..ALL_TERRAIN_KINDS.len() {
+        let x = palette_x(index);
+        if (local_pos.x - x).abs() <= SWATCH_SIZE * 0.5 && (local_pos.y - palette_y()).abs() <= SWATCH_SIZE * 0.5 {
+            if let Ok(mut highlight_transform) = highlight.single_mut() {
+                select_palette_index(&mut state, &mut highlight_transform, index);
+            }
+            state.consumed_click = true;
+            return;
+        }
+    }
 }
 
 fn editor_region_click(
@@ -880,16 +865,15 @@ fn editor_region_click(
     let Ok(camera_entity) = main_camera.single() else { return; };
     let local_pos = world_pos - cam_transform.translation().truncate();
 
-    // Save button (camera child — use local_pos)
     let save_local = SAVE_BUTTON_POS.truncate();
     if (local_pos.x - save_local.x).abs() <= SAVE_BUTTON_SIZE.x * 0.5
         && (local_pos.y - save_local.y).abs() <= SAVE_BUTTON_SIZE.y * 0.5
     {
         save_terrain_file(&sparse_overrides(&state.kinds), &state.regions, &state.paths);
+        state.consumed_click = true;
         return;
     }
 
-    // Check region list clicks
     for index in 0..state.regions.len() {
         let y = REGION_LIST_START_Y - index as f32 * REGION_LIST_SPACING;
         if (local_pos.x - REGION_LIST_X).abs() <= REGION_SLOT_WIDTH * 0.5
@@ -901,35 +885,20 @@ fn editor_region_click(
                 state.selected_region = Some(index);
             }
             rebuild_region_ui(&mut commands, &mut meshes, &mut materials, &state, &region_elements, &region_overlays, camera_entity);
+            state.consumed_click = true;
             return;
         }
     }
 
-    // "+ New Region" button
     let new_y = REGION_LIST_START_Y - state.regions.len() as f32 * REGION_LIST_SPACING - NEW_REGION_BUTTON_Y_OFFSET;
     if (local_pos.x - REGION_LIST_X).abs() <= REGION_SLOT_WIDTH * 0.5
         && (local_pos.y - new_y).abs() <= REGION_SLOT_HEIGHT * 0.5
     {
         state.naming_region = true;
         state.region_name_buffer.clear();
+        state.consumed_click = true;
         return;
     }
-
-    // Click on map tile — add/remove from selected region
-    let Some(selected) = state.selected_region else { return; };
-    let coord = world_to_axial_cell(world_pos);
-    if !state.kinds.contains_key(&coord) {
-        return;
-    }
-
-    let region = &mut state.regions[selected];
-    if let Some(pos) = region.tiles.iter().position(|&c| c == coord) {
-        region.tiles.remove(pos);
-    } else {
-        region.tiles.push(coord);
-    }
-
-    rebuild_region_ui(&mut commands, &mut meshes, &mut materials, &state, &region_elements, &region_overlays, camera_entity);
 }
 
 fn editor_region_name_input(
@@ -1013,6 +982,143 @@ fn sparse_overrides(kinds: &HashMap<(i32, i32), TerrainKind>) -> HashMap<(i32, i
         .collect()
 }
 
+fn hex_tiles_in_rect(
+    cells: &[(i32, i32, Vec2)],
+    corner_a: Vec2,
+    corner_b: Vec2,
+) -> Vec<(i32, i32)> {
+    let min_x = corner_a.x.min(corner_b.x);
+    let max_x = corner_a.x.max(corner_b.x);
+    let min_y = corner_a.y.min(corner_b.y);
+    let max_y = corner_a.y.max(corner_b.y);
+    cells
+        .iter()
+        .filter(|&&(_, _, pos)| pos.x >= min_x && pos.x <= max_x && pos.y >= min_y && pos.y <= max_y)
+        .map(|&(q, r, _)| (q, r))
+        .collect()
+}
+
+const DRAG_THRESHOLD: f32 = 10.0;
+
+fn editor_drag_select(
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    mut state: ResMut<EditorState>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    drag_visuals: Query<Entity, With<DragRectVisual>>,
+    region_elements: Query<Entity, With<RegionListElement>>,
+    region_overlays: Query<Entity, With<RegionOverlay>>,
+    main_camera: Query<Entity, With<MainCamera>>,
+) {
+    if !matches!(state.mode, EditorMode::Terrain | EditorMode::Regions) {
+        return;
+    }
+
+    for entity in &drag_visuals {
+        commands.entity(entity).despawn();
+    }
+
+    if mouse.just_pressed(MouseButton::Left) && !state.consumed_click {
+        let Ok(window) = windows.single() else { return; };
+        let Ok((cam, cam_transform)) = camera.single() else { return; };
+        let Some(cursor_pos) = window.cursor_position() else { return; };
+        let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+        state.drag_start = Some(world_pos);
+        return;
+    }
+
+    let Some(start) = state.drag_start else { return; };
+
+    let Ok(window) = windows.single() else { return; };
+    let Ok((cam, cam_transform)) = camera.single() else { return; };
+    let Some(cursor_pos) = window.cursor_position() else { return; };
+    let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+
+    if mouse.pressed(MouseButton::Left) {
+        let dist = start.distance(world_pos);
+        if dist > DRAG_THRESHOLD {
+            let center = (start + world_pos) * 0.5;
+            let size = Vec2::new((world_pos.x - start.x).abs(), (world_pos.y - start.y).abs());
+            commands.spawn((
+                Sprite::from_color(Color::srgba(0.9, 0.85, 0.3, 0.2), size),
+                Transform::from_translation(center.extend(5.0)),
+                DragRectVisual,
+            ));
+        }
+        return;
+    }
+
+    if mouse.just_released(MouseButton::Left) {
+        state.drag_start = None;
+        let dist = start.distance(world_pos);
+        let is_drag = dist > DRAG_THRESHOLD;
+
+        match state.mode {
+            EditorMode::Terrain => {
+                if is_drag {
+                    let tiles = hex_tiles_in_rect(&state.cells, start, world_pos);
+                    let mut changed_kinds = std::collections::HashSet::new();
+                    let new_kind = state.current_kind;
+                    for &coord in &tiles {
+                        if let Some(&old) = state.kinds.get(&coord) {
+                            if old != new_kind {
+                                changed_kinds.insert(old);
+                                state.kinds.insert(coord, new_kind);
+                            }
+                        }
+                    }
+                    changed_kinds.insert(new_kind);
+                    for kind in changed_kinds {
+                        rebuild_layer_mesh(&mut meshes, &state.layer_meshes, &state.cells, &state.kinds, kind);
+                    }
+                } else {
+                    let coord = world_to_axial_cell(world_pos);
+                    if let Some(&old_kind) = state.kinds.get(&coord) {
+                        let new_kind = state.current_kind;
+                        if old_kind != new_kind {
+                            state.kinds.insert(coord, new_kind);
+                            rebuild_layer_mesh(&mut meshes, &state.layer_meshes, &state.cells, &state.kinds, old_kind);
+                            rebuild_layer_mesh(&mut meshes, &state.layer_meshes, &state.cells, &state.kinds, new_kind);
+                        }
+                    }
+                }
+            }
+            EditorMode::Regions => {
+                let Some(selected) = state.selected_region else { return; };
+                if is_drag {
+                    let tiles = hex_tiles_in_rect(&state.cells, start, world_pos);
+                    let valid_tiles: Vec<(i32, i32)> = tiles
+                        .into_iter()
+                        .filter(|c| state.kinds.contains_key(c))
+                        .collect();
+                    let region = &mut state.regions[selected];
+                    for coord in valid_tiles {
+                        if !region.tiles.contains(&coord) {
+                            region.tiles.push(coord);
+                        }
+                    }
+                } else {
+                    let coord = world_to_axial_cell(world_pos);
+                    if state.kinds.contains_key(&coord) {
+                        let region = &mut state.regions[selected];
+                        if let Some(pos) = region.tiles.iter().position(|&c| c == coord) {
+                            region.tiles.remove(pos);
+                        } else {
+                            region.tiles.push(coord);
+                        }
+                    }
+                }
+                let Ok(camera_entity) = main_camera.single() else { return; };
+                rebuild_region_ui(&mut commands, &mut meshes, &mut materials, &state, &region_elements, &region_overlays, camera_entity);
+            }
+            _ => {}
+        }
+    }
+}
+
 fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<EditorHudText>>) {
     let Ok(mut text) = hud.single_mut() else { return; };
 
@@ -1040,7 +1146,7 @@ fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<Edi
         EditorMode::Terrain => {
             text.0 = format!(
                 "Terrain Map Editor — Terrain\n\
-                 WASD: pan  |  1-8 or click: pick tile  |  click/drag: paint  |  G: randomize  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
+                 WASD: pan  |  1-8 or click: pick tile  |  click: paint  |  drag: fill area  |  G: randomize  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
                  Painting: {}",
                 state.current_kind.name(),
             );
@@ -1052,7 +1158,7 @@ fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<Edi
             };
             text.0 = format!(
                 "Terrain Map Editor — Regions\n\
-                 WASD: pan  |  click list: select region  |  click map: toggle tile  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
+                 WASD: pan  |  click list: select region  |  click: toggle tile  |  drag: add area  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
                  {region_info}",
             );
         }
