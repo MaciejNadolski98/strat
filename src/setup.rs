@@ -27,11 +27,10 @@ pub fn setup(
 ) {
     let camera = commands.spawn((Camera2d, MainCamera)).id();
 
+    let bg_size = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
     let background = commands.spawn((
-        Sprite::from_color(
-            BACKGROUND_COLOR,
-            Vec2::new(WINDOW_WIDTH * 4.0, WINDOW_HEIGHT * 4.0),
-        ),
+        Mesh2d(meshes.add(bevy::math::primitives::Rectangle::new(bg_size.x, bg_size.y))),
+        MeshMaterial2d(materials.add(BACKGROUND_COLOR)),
         Transform::from_translation(Vec3::new(0.0, 0.0, BACKGROUND_Z)),
     )).id();
 

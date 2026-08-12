@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
+use bevy::render::view::NoFrustumCulling;
 use bevy::window::PrimaryWindow;
 
 use crate::components::MainCamera;
@@ -107,6 +108,7 @@ struct DragRectVisual;
 struct EditorState {
     mode: EditorMode,
     current_kind: TerrainKind,
+    palette_index: usize,
     kinds: HashMap<(i32, i32), TerrainKind>,
     cells: Vec<(i32, i32, Vec2)>,
     layer_meshes: HashMap<TerrainKind, Handle<Mesh>>,
@@ -175,11 +177,10 @@ fn cell_position(cells: &[(i32, i32, Vec2)], coord: (i32, i32)) -> Option<Vec2> 
 fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
     let camera = commands.spawn((Camera2d, MainCamera)).id();
 
+    let bg_size = Vec2::new(WINDOW_WIDTH * 5.0, WINDOW_HEIGHT * 5.0);
     commands.spawn((
-        Sprite::from_color(
-            BACKGROUND_COLOR,
-            Vec2::new(WINDOW_WIDTH * 4.0, WINDOW_HEIGHT * 4.0),
-        ),
+        Mesh2d(meshes.add(bevy::math::primitives::Rectangle::new(bg_size.x, bg_size.y))),
+        MeshMaterial2d(materials.add(BACKGROUND_COLOR)),
         Transform::from_translation(Vec3::new(0.0, 0.0, BACKGROUND_Z)),
     ));
 
@@ -202,6 +203,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
             Mesh2d(mesh_handle.clone()),
             MeshMaterial2d(materials.add(kind.color())),
             Transform::from_translation(Vec3::new(0.0, 0.0, TERRAIN_Z)),
+            NoFrustumCulling,
         ));
         layer_meshes.insert(kind, mesh_handle);
     }
@@ -220,18 +222,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
                 TerrainPaletteElement,
             ))
             .id();
-        let label = commands
-            .spawn((
-                Text2d::new((index + 1).to_string()),
-                TextFont { font_size: 12.0, ..default() },
-                TextColor(Color::srgb(0.92, 0.92, 0.88)),
-                TextShadow::default(),
-                Transform::from_translation(Vec3::new(x, palette_y() - 24.0, 20.0)),
-                TerrainPaletteElement,
-            ))
-            .id();
         commands.entity(camera).add_child(swatch);
-        commands.entity(camera).add_child(label);
     }
 
     let highlight = commands
@@ -300,6 +291,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
     commands.insert_resource(EditorState {
         mode: EditorMode::Terrain,
         current_kind: DEFAULT_TERRAIN_KIND,
+        palette_index: 0,
         kinds,
         cells,
         layer_meshes,
@@ -322,6 +314,7 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
 
 
 fn select_palette_index(state: &mut EditorState, highlight_transform: &mut Transform, index: usize) {
+    state.palette_index = index;
     state.current_kind = ALL_TERRAIN_KINDS[index];
     highlight_transform.translation.x = palette_x(index);
 }
@@ -784,23 +777,20 @@ fn editor_select_kind_input(
         return;
     }
 
-    const KEYS: [KeyCode; 8] = [
-        KeyCode::Digit1,
-        KeyCode::Digit2,
-        KeyCode::Digit3,
-        KeyCode::Digit4,
-        KeyCode::Digit5,
-        KeyCode::Digit6,
-        KeyCode::Digit7,
-        KeyCode::Digit8,
-    ];
-    let Ok(mut highlight_transform) = highlight.single_mut() else {
-        return;
+    let count = ALL_TERRAIN_KINDS.len();
+    let new_index = if keyboard.just_pressed(KeyCode::ArrowRight) {
+        Some((state.palette_index + 1) % count)
+    } else if keyboard.just_pressed(KeyCode::ArrowLeft) {
+        Some((state.palette_index + count - 1) % count)
+    } else {
+        None
     };
-    for (index, &key) in KEYS.iter().enumerate() {
-        if keyboard.just_pressed(key) {
-            select_palette_index(&mut state, &mut highlight_transform, index);
-        }
+
+    if let Some(index) = new_index {
+        let Ok(mut highlight_transform) = highlight.single_mut() else {
+            return;
+        };
+        select_palette_index(&mut state, &mut highlight_transform, index);
     }
 }
 
@@ -1164,7 +1154,7 @@ fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<Edi
         EditorMode::Terrain => {
             text.0 = format!(
                 "Terrain Map Editor — Terrain\n\
-                 WASD: pan  |  1-8 or click: pick tile  |  click: paint  |  drag: fill area  |  G: randomize  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
+                 WASD: pan  |  arrows or click: pick tile  |  click: paint  |  drag: fill area  |  G: randomize  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
                  Painting: {}",
                 state.current_kind.name(),
             );
