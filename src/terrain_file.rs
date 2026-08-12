@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 
 use crate::components::EnemyKind;
-use crate::paths::{PathDefinition, PathEnemyGroup, PathId};
+use crate::paths::{PathDefinition, PathEnemyGroup, PathId, validate_paths};
 use crate::regions::RegionDefinition;
 use crate::terrain::TerrainKind;
 
@@ -82,6 +82,11 @@ pub fn load_terrain_file() -> TerrainFileData {
         }
     }
 
+    let errors = validate_paths(&paths);
+    for error in &errors {
+        eprintln!("Path warning: {}", error.message(&paths));
+    }
+
     TerrainFileData {
         overrides,
         regions,
@@ -107,7 +112,7 @@ fn parse_region_line(line: &str) -> Option<RegionDefinition> {
 
 fn parse_path_line(line: &str, id: PathId) -> Option<PathDefinition> {
     let parts: Vec<&str> = line.split('|').collect();
-    if parts.len() < 4 {
+    if parts.len() < 3 {
         return None;
     }
 
@@ -128,38 +133,11 @@ fn parse_path_line(line: &str, id: PathId) -> Option<PathDefinition> {
         }
     }
 
-    let level = parts[3].trim().parse::<u8>().unwrap_or(0);
-
-    let unlocks = if parts.len() > 4 {
-        parts[4]
-            .trim()
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect()
-    } else {
-        Vec::new()
-    };
-
-    let excludes = if parts.len() > 5 {
-        parts[5]
-            .trim()
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect()
-    } else {
-        Vec::new()
-    };
-
     Some(PathDefinition {
         id,
         name,
         tiles,
         enemies,
-        level,
-        unlocks,
-        excludes,
     })
 }
 
@@ -200,6 +178,15 @@ pub fn save_terrain_file(
     regions: &[RegionDefinition],
     paths: &[PathDefinition],
 ) {
+    let errors = validate_paths(paths);
+    if !errors.is_empty() {
+        eprintln!("Cannot save — path errors:");
+        for error in &errors {
+            eprintln!("  {}", error.message(paths));
+        }
+        return;
+    }
+
     let mut entries: Vec<((i32, i32), TerrainKind)> = overrides
         .iter()
         .map(|(&coord, &kind)| (coord, kind))
@@ -249,11 +236,6 @@ pub fn save_terrain_file(
                     group.cooldown
                 ));
             }
-            contents.push_str(&format!(" | {}", path.level));
-            contents.push_str(" | ");
-            contents.push_str(&path.unlocks.join(","));
-            contents.push_str(" | ");
-            contents.push_str(&path.excludes.join(","));
             contents.push('\n');
         }
     }

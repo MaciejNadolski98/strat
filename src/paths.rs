@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use bevy::math::primitives::RegularPolygon;
 use bevy::prelude::*;
@@ -23,9 +23,6 @@ pub struct PathDefinition {
     pub name: String,
     pub tiles: Vec<(i32, i32)>,
     pub enemies: Vec<PathEnemyGroup>,
-    pub level: u8,
-    pub unlocks: Vec<String>,
-    pub excludes: Vec<String>,
 }
 
 #[derive(Component)]
@@ -77,24 +74,21 @@ impl PathMap {
             return false;
         }
 
-        let path = self.paths.iter().find(|p| p.id == id).expect("unknown PathId");
-        for exclude_name in &path.excludes {
-            if self.paths.iter().any(|p| p.name == *exclude_name && self.placed.contains(&p.id)) {
-                return false;
-            }
+        let exclusions = compute_exclusions(&self.paths);
+        if exclusions.iter().any(|&(a, b)| {
+            (a == id && self.placed.contains(&b)) || (b == id && self.placed.contains(&a))
+        }) {
+            return false;
         }
 
-        if path.level == 0 {
+        if id == PathId(0) {
             return true;
         }
 
-        for other in &self.paths {
-            if self.placed.contains(&other.id) && other.unlocks.iter().any(|u| *u == path.name) {
-                return true;
-            }
-        }
-
-        false
+        let parents = compute_parents(&self.paths);
+        parents
+            .get(&id)
+            .map_or(false, |ps| ps.iter().any(|p| self.placed.contains(p)))
     }
 
     pub fn total_enemy_count(&self) -> u32 {
@@ -111,13 +105,164 @@ impl PathMap {
 
     pub fn reset_placed(&mut self) {
         self.placed.clear();
-        for path in &self.paths {
-            if path.level == 0 {
-                self.placed.insert(path.id);
-            }
+        if self.paths.iter().any(|p| p.id == PathId(0)) {
+            self.placed.insert(PathId(0));
         }
     }
 }
+
+// --- Validation ---
+
+const HEX_NEIGHBOR_OFFSETS: [(i32, i32); 6] = [
+    (1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1),
+];
+
+pub fn are_hex_adjacent(a: (i32, i32), b: (i32, i32)) -> bool {
+    let dq = b.0 - a.0;
+    let dr = b.1 - a.1;
+    HEX_NEIGHBOR_OFFSETS.contains(&(dq, dr))
+}
+
+pub fn compute_parents(paths: &[PathDefinition]) -> HashMap<PathId, Vec<PathId>> {
+    let mut parents: HashMap<PathId, Vec<PathId>> = HashMap::new();
+    for child in paths {
+        let Some(&child_start) = child.tiles.first() else { continue };
+        for parent in paths {
+            if parent.id == child.id {
+                continue;
+            }
+            let Some(&parent_end) = parent.tiles.last() else { continue };
+            if parent_end == child_start {
+                parents.entry(child.id).or_default().push(parent.id);
+            }
+        }
+    }
+    parents
+}
+
+pub fn compute_exclusions(paths: &[PathDefinition]) -> Vec<(PathId, PathId)> {
+    let mut result = Vec::new();
+    for (i, a) in paths.iter().enumerate() {
+        let a_tiles: HashSet<(i32, i32)> = a.tiles.iter().copied().collect();
+        for b in &paths[i + 1..] {
+            let mut junction = HashSet::new();
+            if a.tiles.last() == b.tiles.first() {
+                junction.insert(*a.tiles.last().unwrap());
+            }
+            if b.tiles.last() == a.tiles.first() {
+                junction.insert(*b.tiles.last().unwrap());
+            }
+            let crosses = b.tiles.iter().any(|t| a_tiles.contains(t) && !junction.contains(t));
+            if crosses {
+                result.push((a.id, b.id));
+            }
+        }
+    }
+    result
+}
+
+pub enum PathError {
+    EmptyPath(PathId),
+    NonAdjacentTile { path_id: PathId, tile_index: usize },
+    OrphanPath(PathId),
+    CycleDetected,
+}
+
+impl PathError {
+    pub fn message(&self, paths: &[PathDefinition]) -> String {
+        let name = |id: &PathId| -> &str {
+            paths.iter().find(|p| p.id == *id).map(|p| p.name.as_str()).unwrap_or("?")
+        };
+        match self {
+            PathError::EmptyPath(id) => format!("'{}': no tiles", name(id)),
+            PathError::NonAdjacentTile { path_id, tile_index } => {
+                format!("'{}': tile {} not adjacent to tile {}", name(path_id), tile_index, tile_index - 1)
+            }
+            PathError::OrphanPath(id) => {
+                format!("'{}': no parent (must start where another path ends)", name(id))
+            }
+            PathError::CycleDetected => "Unlock graph has a cycle".to_string(),
+        }
+    }
+}
+
+pub fn validate_paths(paths: &[PathDefinition]) -> Vec<PathError> {
+    let mut errors = Vec::new();
+
+    for path in paths {
+        if path.tiles.is_empty() {
+            errors.push(PathError::EmptyPath(path.id));
+            continue;
+        }
+        for i in 1..path.tiles.len() {
+            if !are_hex_adjacent(path.tiles[i - 1], path.tiles[i]) {
+                errors.push(PathError::NonAdjacentTile { path_id: path.id, tile_index: i });
+            }
+        }
+    }
+
+    let parents = compute_parents(paths);
+    for path in paths {
+        if path.id == PathId(0) {
+            continue;
+        }
+        if !parents.contains_key(&path.id) {
+            errors.push(PathError::OrphanPath(path.id));
+        }
+    }
+
+    if has_cycle(paths, &parents) {
+        errors.push(PathError::CycleDetected);
+    }
+
+    errors
+}
+
+fn has_cycle(paths: &[PathDefinition], parents: &HashMap<PathId, Vec<PathId>>) -> bool {
+    let mut children: HashMap<PathId, Vec<PathId>> = HashMap::new();
+    for (child, parent_list) in parents {
+        for parent in parent_list {
+            children.entry(*parent).or_default().push(*child);
+        }
+    }
+
+    let mut visited = HashSet::new();
+    let mut in_stack = HashSet::new();
+
+    fn dfs(
+        id: PathId,
+        children: &HashMap<PathId, Vec<PathId>>,
+        visited: &mut HashSet<PathId>,
+        in_stack: &mut HashSet<PathId>,
+    ) -> bool {
+        if in_stack.contains(&id) {
+            return true;
+        }
+        if visited.contains(&id) {
+            return false;
+        }
+        visited.insert(id);
+        in_stack.insert(id);
+        if let Some(kids) = children.get(&id) {
+            for &kid in kids {
+                if dfs(kid, children, visited, in_stack) {
+                    return true;
+                }
+            }
+        }
+        in_stack.remove(&id);
+        false
+    }
+
+    for path in paths {
+        if dfs(path.id, &children, &mut visited, &mut in_stack) {
+            return true;
+        }
+    }
+    false
+}
+
+// --- Rendering ---
 
 const FILL_COLOR: Color = Color::srgb(0.43, 0.39, 0.31);
 const EDGE_COLOR: Color = Color::srgb(0.24, 0.21, 0.16);

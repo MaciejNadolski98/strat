@@ -8,7 +8,7 @@ use crate::components::MainCamera;
 use crate::constants::{HEX_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::game::pan_camera;
 use crate::pathing::{hex_cells_in_bounds, world_to_axial_cell};
-use crate::paths::{PathDefinition, PathId, PathVisual, despawn_path_visuals, spawn_path_filled, spawn_path_line};
+use crate::paths::{PathDefinition, PathId, PathVisual, are_hex_adjacent, despawn_path_visuals, spawn_path_filled, spawn_path_line, validate_paths};
 use crate::regions::RegionDefinition;
 use crate::setup::build_hex_ring_mesh;
 use crate::terrain::{
@@ -115,6 +115,7 @@ struct EditorState {
     naming_path: bool,
     region_name_buffer: String,
     path_name_buffer: String,
+    path_errors: Vec<String>,
     consumed_click: bool,
 }
 
@@ -295,6 +296,10 @@ fn editor_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut ma
         layer_meshes,
         painting: false,
         regions: data.regions,
+        path_errors: {
+            let errs = validate_paths(&data.paths);
+            errs.iter().map(|e| e.message(&data.paths)).collect()
+        },
         paths: data.paths,
         selected_region: None,
         selected_path: None,
@@ -537,7 +542,7 @@ fn spawn_path_list(
                 PathListElement,
             ))
             .id();
-        let label_text = format!("{} (L{})", path.name, path.level);
+        let label_text = path.name.clone();
         let label = commands
             .spawn((
                 Text2d::new(label_text),
@@ -578,7 +583,7 @@ fn rebuild_path_ui(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
-    state: &EditorState,
+    state: &mut EditorState,
     path_elements: &Query<Entity, With<PathListElement>>,
     path_overlays: &Query<Entity, With<PathOverlay>>,
     path_visuals: &Query<Entity, With<PathVisual>>,
@@ -602,6 +607,9 @@ fn rebuild_path_ui(
             spawn_path_filled(commands, meshes, materials, &positions, SELECTED_PATH_FILL, SELECTED_PATH_EDGE, 0.2);
         }
     }
+
+    let errors = validate_paths(&state.paths);
+    state.path_errors = errors.iter().map(|e| e.message(&state.paths)).collect();
 
     spawn_path_list(commands, meshes, materials, state, camera_entity);
 }
@@ -651,7 +659,7 @@ fn editor_path_click(
             } else {
                 state.selected_path = Some(index);
             }
-            rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &state, &path_elements, &path_overlays, &path_visuals, camera_entity);
+            rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &mut state, &path_elements, &path_overlays, &path_visuals, camera_entity);
             return;
         }
     }
@@ -674,11 +682,17 @@ fn editor_path_click(
     let path = &mut state.paths[selected];
     if let Some(pos) = path.tiles.iter().position(|&c| c == coord) {
         path.tiles.remove(pos);
-    } else {
+    } else if path.tiles.is_empty() {
         path.tiles.push(coord);
+    } else if are_hex_adjacent(*path.tiles.last().unwrap(), coord) {
+        path.tiles.push(coord);
+    } else if are_hex_adjacent(*path.tiles.first().unwrap(), coord) {
+        path.tiles.insert(0, coord);
+    } else {
+        return;
     }
 
-    rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &state, &path_elements, &path_overlays, &path_visuals, camera_entity);
+    rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &mut state, &path_elements, &path_overlays, &path_visuals, camera_entity);
 }
 
 fn editor_path_name_input(
@@ -724,9 +738,6 @@ fn editor_path_name_input(
                         name,
                         tiles: Vec::new(),
                         enemies: Vec::new(),
-                        level: 0,
-                        unlocks: Vec::new(),
-                        excludes: Vec::new(),
                     });
                     state.selected_path = Some(new_index);
                 }
@@ -734,7 +745,7 @@ fn editor_path_name_input(
                 state.path_name_buffer.clear();
 
                 let Ok(camera_entity) = main_camera.single() else { return; };
-                rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &state, &path_elements, &path_overlays, &path_visuals, camera_entity);
+                rebuild_path_ui(&mut commands, &mut meshes, &mut materials, &mut state, &path_elements, &path_overlays, &path_visuals, camera_entity);
                 return;
             }
             _ => {}
@@ -1049,14 +1060,19 @@ fn editor_update_hud(state: Res<EditorState>, mut hud: Query<&mut Text, With<Edi
             let path_info = match state.selected_path {
                 Some(i) => {
                     let p = &state.paths[i];
-                    format!("Selected: {} (L{}, {} tiles, {} enemy groups)", p.name, p.level, p.tiles.len(), p.enemies.len())
+                    format!("Selected: {} ({} tiles, {} enemy groups)", p.name, p.tiles.len(), p.enemies.len())
                 }
                 None => "No path selected".to_string(),
+            };
+            let error_info = if state.path_errors.is_empty() {
+                String::new()
+            } else {
+                format!("\n\nErrors (save blocked):\n{}", state.path_errors.join("\n"))
             };
             text.0 = format!(
                 "Terrain Map Editor — Paths\n\
                  WASD: pan  |  click list: select path  |  click map: toggle tile  |  Tab: switch mode  |  SAVE: write {TERRAIN_FILE_PATH}\n\n\
-                 {path_info}",
+                 {path_info}{error_info}",
             );
         }
     }
