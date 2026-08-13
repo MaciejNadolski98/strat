@@ -21,14 +21,11 @@ enum Section {
     Paths,
 }
 
+const EMBEDDED_TERRAIN: &str = include_str!("../terrain_map.txt");
+
 pub fn load_terrain_file() -> TerrainFileData {
-    let Ok(contents) = fs::read_to_string(TERRAIN_FILE_PATH) else {
-        return TerrainFileData {
-            overrides: HashMap::new(),
-            regions: Vec::new(),
-            paths: Vec::new(),
-        };
-    };
+    let contents = fs::read_to_string(TERRAIN_FILE_PATH)
+        .unwrap_or_else(|_| EMBEDDED_TERRAIN.to_string());
 
     let mut overrides = HashMap::new();
     let mut regions = Vec::new();
