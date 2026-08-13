@@ -22,6 +22,7 @@ pub const BACKGROUND_COLOR: Color = Color::srgb(0.10, 0.15, 0.13);
 pub const PATH_FILL_COLOR: Color = Color::srgb(0.43, 0.39, 0.31);
 pub const PATH_EDGE_COLOR: Color = Color::srgb(0.24, 0.21, 0.16);
 pub const PATH_LINE_COLOR: Color = Color::srgb(0.43, 0.39, 0.31);
+pub const PATH_PLACEABLE_COLOR: Color = Color::srgb(0.65, 0.58, 0.35);
 
 pub const MAX_HEALTH_GROWTH: f32 = 0.4;
 pub const PRICE_GROWTH: f32 = 0.4;

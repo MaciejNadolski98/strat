@@ -318,7 +318,7 @@ pub struct PathProgress {
 }
 
 #[derive(Component)]
-pub struct EnemyPathIndex(pub crate::paths::PathId);
+pub struct EnemyRoute(pub Vec<bevy::math::Vec2>);
 
 #[derive(Component)]
 pub struct Direction {

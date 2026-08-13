@@ -32,7 +32,7 @@ use constants::{
     BASE_ATTACK_SPEED, BASE_CRITICAL_CHANCE, BASE_LOOT, BASE_PIERCING_DAMAGE, BASE_REGENERATION,
     PLAYER_BASE_MAX_HP, STARTING_MONEY, WINDOW_HEIGHT, WINDOW_WIDTH,
 };
-use draft::{place_draft_tower, sync_draft_previews, update_draft_input, update_draft_ui, update_tower_phantom};
+use draft::{choose_path, highlight_placeable_paths, place_draft_tower, sync_draft_previews, update_draft_input, update_draft_ui, update_tower_phantom};
 use effects::{update_beam_effects, update_explosion_effects, update_floating_text, update_pulses};
 use enemies::{move_enemies, reset_temporary_enemy_speed, spawn_enemies, update_enemy_colors, update_enemy_health_bars};
 use game::{bounce_to_playing, game_is_running, pan_camera, start_run, trigger_restart, toggle_pause, GameState};
@@ -185,6 +185,8 @@ fn main() {
             Update,
             (
                 progress_cooldown,
+                choose_path,
+                highlight_placeable_paths,
                 place_draft_tower,
                 update_draft_input,
                 update_spell_input,

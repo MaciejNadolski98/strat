@@ -142,6 +142,7 @@ pub fn start_run(
     state.spell_shop.reset();
     state.forced_towers.reset();
     state.draft.activate(&mut state.forced_towers);
+    state.draft.phase = crate::resources::TowerDraftPhase::Picking;
     state.path_map.reset_placed();
     spawn_all_path_visuals(&mut commands, &mut meshes, &mut materials, &state.path_map);
     new_round.write(NewRoundEvent);

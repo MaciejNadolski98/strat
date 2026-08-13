@@ -9,9 +9,9 @@ use crate::components::{
     Aim, AngularSpeed, DefaultAim, DefaultFire, DraftHeaderText, DraftPanel, DraftPreview, DraftSlot, DraftSlotBarrel, DraftSlotIcon, DraftSlotLabel, FireCooldown, TemporaryAttackSpeed, TemporaryDamageBonus, TemporaryProjectiles, TemporarySpread, Tower, TowerPhantom, TowerPhantomBarrel, TowerRangeIndicator,
 };
 use crate::tower_definitions::{BarrelTemplate, TowerKind};
-use crate::constants::HEX_SPACING;
-use crate::paths::PathMap;
-use crate::pathing::{is_buildable_cell, snap_to_grid};
+use crate::constants::{HEX_SPACING, PATH_PLACEABLE_COLOR, PATH_LINE_Z};
+use crate::paths::{PathMap, PathVisual, despawn_path_visuals, spawn_all_path_visuals, spawn_path_line};
+use crate::pathing::{is_buildable_cell, snap_to_grid, world_to_axial_cell};
 use crate::resources::{
     EnemiesRemaining, GameOver, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
 };
@@ -65,7 +65,7 @@ pub fn update_draft_ui(
         Query<(&DraftSlotLabel, &mut Text2d, &mut Visibility)>,
     )>,
 ) {
-    let is_visible = draft.phase == TowerDraftPhase::Picking;
+    let is_visible = matches!(draft.phase, TowerDraftPhase::Picking | TowerDraftPhase::ChoosingPath);
 
     let cursor_world = (|| -> Option<Vec2> {
         let window = windows.single().ok()?;
@@ -80,10 +80,10 @@ pub fn update_draft_ui(
     if let Ok((mut text, mut visibility)) = queries.p1().single_mut() {
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
-            text.0 = if draft.phase == TowerDraftPhase::Picking {
-                format!("Wave {} - Click a tower to pick it", wave_number.value)
-            } else {
-                "Click on the map to place your tower".to_string()
+            text.0 = match draft.phase {
+                TowerDraftPhase::ChoosingPath => format!("Wave {} - Click a path to unlock it, or press Enter to skip", wave_number.value),
+                TowerDraftPhase::Picking => format!("Wave {} - Click a tower to pick it", wave_number.value),
+                _ => "Click on the map to place your tower".to_string(),
             };
         }
     }
@@ -92,7 +92,8 @@ pub fn update_draft_ui(
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
             let pos: Vec2 = global.translation().truncate();
-            let is_hovered = cursor_world
+            let can_interact = draft.phase == TowerDraftPhase::Picking;
+            let is_hovered = can_interact && cursor_world
                 .map(|wp| (wp.x - pos.x).abs() <= 65.0 && (wp.y - pos.y).abs() <= 70.0)
                 .unwrap_or(false);
             sprite.color = if is_hovered {
@@ -379,4 +380,89 @@ pub fn sync_draft_previews(
     }
 
     *last_offers = draft.offers.clone();
+}
+
+pub fn choose_path(
+    mouse: Res<ButtonInput<MouseButton>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    mut draft: ResMut<TowerDraft>,
+    mut path_map: ResMut<PathMap>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    path_visuals: Query<Entity, With<PathVisual>>,
+    game_over: Res<GameOver>,
+) {
+    if game_over.value || draft.phase != TowerDraftPhase::ChoosingPath {
+        return;
+    }
+
+    let placeable = path_map.placeable_paths();
+    if placeable.is_empty() {
+        draft.phase = TowerDraftPhase::Picking;
+        return;
+    }
+
+    if keyboard.just_pressed(KeyCode::Enter) {
+        draft.phase = TowerDraftPhase::Picking;
+        return;
+    }
+
+    if mouse.just_pressed(MouseButton::Left) {
+        let Ok(window) = windows.single() else { return; };
+        let Ok((cam, cam_transform)) = camera.single() else { return; };
+        let Some(cursor_pos) = window.cursor_position() else { return; };
+        let Ok(world_pos) = cam.viewport_to_world_2d(cam_transform, cursor_pos) else { return; };
+        let coord = world_to_axial_cell(world_pos);
+
+        for &id in &placeable {
+            let path = path_map.paths.iter().find(|p| p.id == id).unwrap();
+            if path.tiles.contains(&coord) {
+                path_map.placed.insert(id);
+                despawn_path_visuals(&mut commands, &path_visuals);
+                spawn_all_path_visuals(&mut commands, &mut meshes, &mut materials, &path_map);
+                draft.phase = TowerDraftPhase::Picking;
+                return;
+            }
+        }
+    }
+}
+
+pub fn highlight_placeable_paths(
+    draft: Res<TowerDraft>,
+    path_map: Res<PathMap>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    path_visuals: Query<Entity, With<PathVisual>>,
+    mut last_phase: Local<Option<TowerDraftPhase>>,
+) {
+    let current = draft.phase;
+    let prev = *last_phase;
+    *last_phase = Some(current);
+
+    if prev == Some(current) {
+        return;
+    }
+
+    if current == TowerDraftPhase::ChoosingPath {
+        despawn_path_visuals(&mut commands, &path_visuals);
+        let connected = crate::paths::collect_connected_tiles(&path_map);
+        for path in &path_map.paths {
+            let world_tiles = path_map.path_world_tiles(path.id);
+            if path_map.is_placed(path.id) {
+                crate::paths::spawn_path_filled(
+                    &mut commands, &mut meshes, &mut materials, &path.tiles, &world_tiles, &connected,
+                    crate::constants::PATH_FILL_COLOR, crate::constants::PATH_EDGE_COLOR,
+                    crate::constants::PATH_FILLED_Z,
+                );
+            } else if path_map.is_placeable(path.id) {
+                spawn_path_line(&mut commands, &mut meshes, &mut materials, &world_tiles, PATH_PLACEABLE_COLOR, PATH_LINE_Z);
+            } else {
+                spawn_path_line(&mut commands, &mut meshes, &mut materials, &world_tiles, crate::constants::PATH_LINE_COLOR, PATH_LINE_Z);
+            }
+        }
+    }
 }

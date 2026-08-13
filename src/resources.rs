@@ -286,6 +286,7 @@ impl TowerStatEffect {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TowerDraftPhase {
     WaveRunning,
+    ChoosingPath,
     Picking,
     Placing(TowerKind),
 }
@@ -308,7 +309,7 @@ impl TowerDraft {
 
     pub fn activate(&mut self, forced: &mut ForcedTowerOffers) {
         self.offers = Self::generate_offers(&self.known_kinds, forced);
-        self.phase = TowerDraftPhase::Picking;
+        self.phase = TowerDraftPhase::ChoosingPath;
     }
 
     fn generate_offers(kinds: &[TowerKind], forced: &mut ForcedTowerOffers) -> Vec<TowerKind> {

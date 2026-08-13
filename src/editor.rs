@@ -616,10 +616,16 @@ fn rebuild_path_ui(
 
     if let Some(selected) = state.selected_path {
         if selected < state.paths.len() {
-            let positions: Vec<Vec2> = state.paths[selected].tiles.iter()
+            let tiles = &state.paths[selected].tiles;
+            let positions: Vec<Vec2> = tiles.iter()
                 .filter_map(|&coord| cell_position(&state.cells, coord))
                 .collect();
-            spawn_path_filled(commands, meshes, materials, &positions, PATH_FILL_COLOR, PATH_EDGE_COLOR, PATH_FILLED_Z);
+            let mut connected = std::collections::HashSet::new();
+            for pair in tiles.windows(2) {
+                connected.insert((pair[0], pair[1]));
+                connected.insert((pair[1], pair[0]));
+            }
+            spawn_path_filled(commands, meshes, materials, tiles, &positions, &connected, PATH_FILL_COLOR, PATH_EDGE_COLOR, PATH_FILLED_Z);
         }
     }
 

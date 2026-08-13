@@ -4,7 +4,7 @@ use bevy::math::primitives::RegularPolygon;
 use bevy::prelude::*;
 
 use crate::components::EnemyKind;
-use crate::constants::{HEX_SIZE, HEX_SPACING, PATH_EDGE_COLOR, PATH_FILLED_Z, PATH_FILL_COLOR, PATH_LINE_COLOR, PATH_LINE_Z};
+use crate::constants::{HEX_SIZE, PATH_EDGE_COLOR, PATH_FILLED_Z, PATH_FILL_COLOR, PATH_LINE_COLOR, PATH_LINE_Z};
 use crate::pathing::axial_to_world;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -91,16 +91,82 @@ impl PathMap {
             .map_or(false, |ps| ps.iter().any(|p| self.placed.contains(p)))
     }
 
+    pub fn placeable_paths(&self) -> Vec<PathId> {
+        self.paths.iter()
+            .filter(|p| self.is_placeable(p.id))
+            .map(|p| p.id)
+            .collect()
+    }
+
     pub fn total_enemy_count(&self) -> u32 {
+        let terminals = self.terminal_paths();
         let mut total = 0;
         for path in &self.paths {
-            if self.placed.contains(&path.id) {
+            if terminals.contains(&path.id) {
                 for group in &path.enemies {
                     total += group.count;
                 }
             }
         }
         total
+    }
+
+    pub fn terminal_paths(&self) -> Vec<PathId> {
+        let mut child_starts: HashSet<(i32, i32)> = HashSet::new();
+        for path in &self.paths {
+            if self.placed.contains(&path.id) {
+                if let Some(&start) = path.tiles.first() {
+                    child_starts.insert(start);
+                }
+            }
+        }
+
+        self.paths.iter()
+            .filter(|p| {
+                if !self.placed.contains(&p.id) {
+                    return false;
+                }
+                let Some(&end) = p.tiles.last() else { return false };
+                !self.paths.iter().any(|other| {
+                    other.id != p.id
+                        && self.placed.contains(&other.id)
+                        && other.tiles.first() == Some(&end)
+                })
+            })
+            .map(|p| p.id)
+            .collect()
+    }
+
+    pub fn full_route_tiles(&self, terminal_id: PathId) -> Vec<Vec2> {
+        let parents = compute_parents(&self.paths);
+        let mut chain = Vec::new();
+        let mut current = terminal_id;
+        let mut visited = HashSet::new();
+        loop {
+            if !visited.insert(current) {
+                break;
+            }
+            chain.push(current);
+            match parents.get(&current).and_then(|ps| ps.iter().find(|p| self.placed.contains(p))) {
+                Some(&parent) => current = parent,
+                None => break,
+            }
+        }
+        chain.reverse();
+
+        let mut tiles = Vec::new();
+        for (i, &path_id) in chain.iter().enumerate() {
+            let path = self.paths.iter().find(|p| p.id == path_id).unwrap();
+            let world: Vec<Vec2> = path.tiles.iter()
+                .map(|&(q, r)| axial_to_world(q as f32, r as f32))
+                .collect();
+            if i == 0 {
+                tiles.extend(world);
+            } else {
+                tiles.extend(world.into_iter().skip(1));
+            }
+        }
+        tiles
     }
 
     pub fn reset_placed(&mut self) {
@@ -151,6 +217,11 @@ pub fn compute_exclusions(paths: &[PathDefinition]) -> Vec<(PathId, PathId)> {
             }
             if b.tiles.last() == a.tiles.first() {
                 junction.insert(*b.tiles.last().unwrap());
+            }
+            if a.tiles.first() == b.tiles.first() {
+                if let Some(&start) = a.tiles.first() {
+                    junction.insert(start);
+                }
             }
             let crosses = b.tiles.iter().any(|t| a_tiles.contains(t) && !junction.contains(t));
             if crosses {
@@ -266,7 +337,45 @@ fn has_cycle(paths: &[PathDefinition], parents: &HashMap<PathId, Vec<PathId>>) -
 
 const LINE_WIDTH: f32 = 4.0;
 const EDGE_SIZE: Vec2 = Vec2::new(4.0, HEX_SIZE + 4.0);
-const HEX_EDGE_ANGLES_DEG: [f32; 6] = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0];
+const HEX_EDGE_DIRECTIONS: [(f32, (i32, i32)); 6] = [
+    (0.0, (1, 0)),
+    (60.0, (0, 1)),
+    (120.0, (-1, 1)),
+    (180.0, (-1, 0)),
+    (240.0, (0, -1)),
+    (300.0, (1, -1)),
+];
+
+pub fn collect_connected_tiles(path_map: &PathMap) -> HashSet<((i32, i32), (i32, i32))> {
+    let mut connected = HashSet::new();
+    let placed: Vec<&PathDefinition> = path_map.paths.iter()
+        .filter(|p| path_map.is_placed(p.id))
+        .collect();
+
+    for path in &placed {
+        for pair in path.tiles.windows(2) {
+            connected.insert((pair[0], pair[1]));
+            connected.insert((pair[1], pair[0]));
+        }
+    }
+
+    for (i, a) in placed.iter().enumerate() {
+        for b in &placed[i + 1..] {
+            if a.tiles.last() == b.tiles.first() {
+                let edge = (*a.tiles.last().unwrap(), *b.tiles.first().unwrap());
+                connected.insert(edge);
+                connected.insert((edge.1, edge.0));
+            }
+            if b.tiles.last() == a.tiles.first() {
+                let edge = (*b.tiles.last().unwrap(), *a.tiles.first().unwrap());
+                connected.insert(edge);
+                connected.insert((edge.1, edge.0));
+            }
+        }
+    }
+
+    connected
+}
 
 pub fn spawn_all_path_visuals(
     commands: &mut Commands,
@@ -274,10 +383,12 @@ pub fn spawn_all_path_visuals(
     materials: &mut Assets<ColorMaterial>,
     path_map: &PathMap,
 ) {
+    let connected = collect_connected_tiles(path_map);
+
     for path in &path_map.paths {
         let world_tiles = path_map.path_world_tiles(path.id);
         if path_map.is_placed(path.id) {
-            spawn_path_filled(commands, meshes, materials, &world_tiles, PATH_FILL_COLOR, PATH_EDGE_COLOR, PATH_FILLED_Z);
+            spawn_path_filled(commands, meshes, materials, &path.tiles, &world_tiles, &connected, PATH_FILL_COLOR, PATH_EDGE_COLOR, PATH_FILLED_Z);
         } else {
             spawn_path_line(commands, meshes, materials, &world_tiles, PATH_LINE_COLOR, PATH_LINE_Z);
         }
@@ -288,14 +399,18 @@ pub fn spawn_path_filled(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<ColorMaterial>,
-    tiles: &[Vec2],
+    axial_tiles: &[(i32, i32)],
+    world_tiles: &[Vec2],
+    connected: &HashSet<((i32, i32), (i32, i32))>,
     fill_color: Color,
     edge_color: Color,
     z: f32,
 ) {
     let apothem = HEX_SIZE * 0.8660254;
 
-    for (index, &position) in tiles.iter().enumerate() {
+    for (tile_idx, &position) in world_tiles.iter().enumerate() {
+        let axial = axial_tiles[tile_idx];
+
         commands.spawn((
             Mesh2d(meshes.add(RegularPolygon::new(HEX_SIZE, 6))),
             MeshMaterial2d(materials.add(fill_color)),
@@ -303,20 +418,15 @@ pub fn spawn_path_filled(
             PathVisual,
         ));
 
-        for angle_deg in HEX_EDGE_ANGLES_DEG {
-            let angle = angle_deg.to_radians();
-            let direction = Vec2::from_angle(angle);
-            let neighbor_pos = position + direction * HEX_SPACING;
+        for &(angle_deg, offset) in &HEX_EDGE_DIRECTIONS {
+            let neighbor_axial = (axial.0 + offset.0, axial.1 + offset.1);
 
-            let is_path_neighbor = index.checked_sub(1)
-                .and_then(|i| tiles.get(i))
-                .into_iter()
-                .chain(tiles.get(index + 1))
-                .any(|t| t.distance(neighbor_pos) < 1.0);
-
-            if is_path_neighbor {
+            if connected.contains(&(axial, neighbor_axial)) {
                 continue;
             }
+
+            let angle = angle_deg.to_radians();
+            let direction = Vec2::from_angle(angle);
 
             commands.spawn((
                 Sprite::from_color(edge_color, EDGE_SIZE),

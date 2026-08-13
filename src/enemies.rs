@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
 use crate::components::{
-    DropsSpell, Enemy, EnemyKind, EnemyPathIndex, Health, HealthBar, PathProgress, Reward, Speed,
+    DropsSpell, Enemy, EnemyKind, EnemyRoute, Health, HealthBar, PathProgress, Reward, Speed,
     TemporaryEnemySpeed, Waypoint,
 };
-use crate::paths::{PathId, PathMap};
+use crate::paths::PathMap;
 use crate::resources::{
     CurrentHp, EnemiesRemaining, ForcedTowerOffers, GameOver, GameWon, MaxHp, NewRoundEvent,
     Regeneration, SpawnTimer, TowerDraft, TowerDraftPhase, WaveNumber,
@@ -61,15 +61,16 @@ pub fn spawn_enemies(
 
     spawn_timer.elapsed += time.delta_secs();
 
+    let terminals = path_map.terminal_paths();
     let mut group_index = 0;
     for path in &path_map.paths {
-        if !path_map.is_placed(path.id) {
+        if !terminals.contains(&path.id) {
             group_index += path.enemies.len();
             continue;
         }
 
-        let world_tiles = path_map.path_world_tiles(path.id);
-        if world_tiles.is_empty() {
+        let route = path_map.full_route_tiles(path.id);
+        if route.is_empty() {
             group_index += path.enemies.len();
             continue;
         }
@@ -78,8 +79,8 @@ pub fn spawn_enemies(
             let mut spawned = spawn_timer.spawned_in_group(group_index);
             let spawn_time = |n: u32| group.cooldown * n as f32;
             while spawned < group.count && spawn_timer.elapsed >= spawn_time(spawned) {
-                let spawn_pos = *world_tiles.last().unwrap();
-                spawn_enemy(&mut commands, group.kind, wave_number.value, spawn_pos, path.id);
+                let spawn_pos = *route.last().unwrap();
+                spawn_enemy(&mut commands, group.kind, wave_number.value, spawn_pos, route.clone());
                 spawned += 1;
                 remaining.count -= 1;
             }
@@ -89,7 +90,7 @@ pub fn spawn_enemies(
     }
 }
 
-fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, spawn_pos: Vec2, path_id: PathId) {
+fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, spawn_pos: Vec2, route: Vec<Vec2>) {
     let max_health = kind.max_health(wave_number);
     let size = kind.size();
     let mut spawner = commands.spawn((
@@ -110,7 +111,7 @@ fn spawn_enemy(commands: &mut Commands, kind: EnemyKind, wave_number: u32, spawn
             amount: kind.reward(),
         },
         TemporaryEnemySpeed::default(),
-        EnemyPathIndex(path_id),
+        EnemyRoute(route),
     ));
 
     if matches!(kind, EnemyKind::Titan) {
@@ -127,7 +128,6 @@ pub fn move_enemies(
     mut hp: ResMut<CurrentHp>,
     mut game_over: ResMut<GameOver>,
     slow: Res<SlowActive>,
-    path_map: Res<PathMap>,
     mut enemies: Query<
         (
             Entity,
@@ -137,7 +137,7 @@ pub fn move_enemies(
             &Health,
             &Speed,
             &TemporaryEnemySpeed,
-            &EnemyPathIndex,
+            &EnemyRoute,
         ),
         With<Enemy>,
     >,
@@ -146,15 +146,16 @@ pub fn move_enemies(
         return;
     }
 
-    for (entity, mut transform, mut waypoint, mut progress, health, speed, temp_speed, path_idx) in &mut enemies {
+    for (entity, mut transform, mut waypoint, mut progress, health, speed, temp_speed, route) in &mut enemies {
         if health.current <= 0.0 {
             continue;
         }
 
-        let world_tiles = path_map.path_world_tiles(path_idx.0);
-        let walk_tiles: Vec<Vec2> = world_tiles.into_iter().rev().collect();
+        let walk_tiles: &[Vec2] = &route.0;
+        let walk_len = walk_tiles.len();
+        let rev_index = walk_len.checked_sub(1 + waypoint.index);
 
-        let Some(target) = walk_tiles.get(waypoint.index).copied() else {
+        let Some(target) = rev_index.and_then(|i| walk_tiles.get(i)).copied() else {
             commands.entity(entity).despawn();
             hp.amount -= 1;
             if hp.amount <= 0 {
@@ -170,7 +171,7 @@ pub fn move_enemies(
         if to_target.length() <= step {
             transform.translation = target.extend(3.0);
             waypoint.index += 1;
-            if waypoint.index >= walk_tiles.len() {
+            if waypoint.index >= walk_len {
                 commands.entity(entity).despawn();
                 hp.amount -= 1;
                 if hp.amount <= 0 {
