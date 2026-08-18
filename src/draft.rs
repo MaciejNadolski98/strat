@@ -81,7 +81,7 @@ pub fn update_draft_ui(
         *visibility = if is_visible { Visibility::Visible } else { Visibility::Hidden };
         if is_visible {
             text.0 = match draft.phase {
-                TowerDraftPhase::ChoosingPath => format!("Wave {} - Click a path to unlock it, or press Enter to skip", wave_number.value),
+                TowerDraftPhase::ChoosingPath => format!("Wave {} - Click a path to unlock it", wave_number.value),
                 TowerDraftPhase::Picking => format!("Wave {} - Click a tower to pick it", wave_number.value),
                 _ => "Click on the map to place your tower".to_string(),
             };
@@ -384,7 +384,6 @@ pub fn sync_draft_previews(
 
 pub fn choose_path(
     mouse: Res<ButtonInput<MouseButton>>,
-    keyboard: Res<ButtonInput<KeyCode>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     mut draft: ResMut<TowerDraft>,
@@ -401,11 +400,6 @@ pub fn choose_path(
 
     let placeable = path_map.placeable_paths();
     if placeable.is_empty() {
-        draft.phase = TowerDraftPhase::Picking;
-        return;
-    }
-
-    if keyboard.just_pressed(KeyCode::Enter) {
         draft.phase = TowerDraftPhase::Picking;
         return;
     }
