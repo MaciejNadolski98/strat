@@ -26,9 +26,10 @@ pub enum TerrainKind {
     AlpineForest,
     Desert,
     Hills,
+    HighMountain,
 }
 
-pub const ALL_TERRAIN_KINDS: [TerrainKind; 9] = [
+pub const ALL_TERRAIN_KINDS: [TerrainKind; 10] = [
     TerrainKind::Plains,
     TerrainKind::Mountain,
     TerrainKind::WaterBody,
@@ -38,6 +39,7 @@ pub const ALL_TERRAIN_KINDS: [TerrainKind; 9] = [
     TerrainKind::AlpineForest,
     TerrainKind::Desert,
     TerrainKind::Hills,
+    TerrainKind::HighMountain,
 ];
 
 impl TerrainKind {
@@ -52,6 +54,7 @@ impl TerrainKind {
             Self::AlpineForest => Color::srgb(0.05, 0.20, 0.08),
             Self::Desert => Color::srgb(0.80, 0.68, 0.40),
             Self::Hills => Color::srgb(0.42, 0.50, 0.30),
+            Self::HighMountain => Color::srgb(0.62, 0.60, 0.58),
         }
     }
 
@@ -66,6 +69,7 @@ impl TerrainKind {
             Self::AlpineForest => "Alpine Forest",
             Self::Desert => "Desert",
             Self::Hills => "Hills",
+            Self::HighMountain => "High Mountain",
         }
     }
 
@@ -80,6 +84,7 @@ impl TerrainKind {
             Self::AlpineForest => "AlpineForest",
             Self::Desert => "Desert",
             Self::Hills => "Hills",
+            Self::HighMountain => "HighMountain",
         }
     }
 
@@ -94,6 +99,7 @@ impl TerrainKind {
             "AlpineForest" => Self::AlpineForest,
             "Desert" => Self::Desert,
             "Hills" => Self::Hills,
+            "HighMountain" => Self::HighMountain,
             _ => return None,
         })
     }
